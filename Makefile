@@ -1,6 +1,6 @@
 UV ?= uv
 PNPM ?= pnpm
-.PHONY: env install infra migrate seed api web worker beat lint test contract check down
+.PHONY: env install infra migrate seed seed-sales api web worker beat lint test contract check down
 env:
 	python3 scripts/dev_env.py
 install:
@@ -56,3 +56,6 @@ seed-inventory:
 
 seed-purchasing:
 	$(UV) run --project apps/api python apps/api/scripts/seed_purchasing.py
+
+seed-sales:
+	$(UV) run --project apps/api python apps/api/scripts/seed_sales.py
