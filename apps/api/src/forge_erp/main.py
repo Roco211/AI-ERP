@@ -123,7 +123,7 @@ class Health(BaseModel):
 class Version(BaseModel):
     name: str = "Forge ERP"
     version: str = "0.6.0"
-    milestone: str = "Bootstrap"
+    milestone: str = "Inventory"
 
 
 @app.get("/healthz", response_model=Health, operation_id="healthz")

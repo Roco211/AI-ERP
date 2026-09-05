@@ -2614,7 +2614,7 @@ export interface components {
         Version: {
             /**
              * Milestone
-             * @default Bootstrap
+             * @default Inventory
              */
             milestone: string;
             /**
