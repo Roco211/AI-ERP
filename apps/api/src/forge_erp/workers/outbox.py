@@ -1,28 +1,42 @@
 import asyncio
+from uuid import UUID
 
 import structlog
 from sqlalchemy import text
 
+from forge_erp.core.config import settings
 from forge_erp.core.db import engine, sessions, set_tenant, verify_database_role
+from forge_erp.modules.catalog.application.semantic import index_product
+from forge_erp.modules.catalog.infrastructure.embeddings import EmbeddingUnavailable
+from forge_erp.modules.catalog.infrastructure.resources import RESOURCES
 from forge_erp.workers.celery_app import celery_app
 
 KNOWN_EVENTS = {"identity.session.created", "identity.session.revoked"}
+# Product events also refresh the local vector projection when enabled.
+
+KNOWN_EVENTS |= {
+    f"catalog.{resource}.{action}"
+    for resource in RESOURCES
+    for action in ("create", "update", "activate", "deactivate")
+}
 log = structlog.get_logger()
 
 
-async def drain_outbox() -> int:
+async def drain_outbox(organization_id: UUID | None = None) -> int:
     await verify_database_role()
     processed = 0
     async with sessions.begin() as db:
         tenants = (await db.execute(text("SELECT * FROM forge.pending_outbox_tenants()"))).all()
     for (org,) in tenants:
+        if organization_id is not None and org != organization_id:
+            continue
         async with sessions.begin() as db:
             await set_tenant(db, org)
             rows = (
                 (
                     await db.execute(
                         text(
-                            "SELECT id,event_type,request_id FROM forge.outbox_events "
+                            "SELECT id,event_type,request_id,payload FROM forge.outbox_events "
                             "WHERE organization_id=:org AND processed_at IS NULL "
                             "ORDER BY created_at,id LIMIT 100 FOR UPDATE SKIP LOCKED"
                         ),
@@ -36,8 +50,27 @@ async def drain_outbox() -> int:
                 if row["event_type"] not in KNOWN_EVENTS:
                     log.warning("unknown_outbox_event", event_id=str(row["id"]))
                     continue
+                if row["event_type"].startswith("catalog.products."):
+                    if not settings().embedding_enabled:
+                        continue  # Keep pending for a later enabled worker.
+                    try:
+                        await index_product(db, org, UUID(row["payload"]["resource_id"]))
+                    except EmbeddingUnavailable:
+                        await db.execute(
+                            text(
+                                "UPDATE forge.outbox_events SET attempts=attempts+1 "
+                                "WHERE organization_id=:org AND id=:id"
+                            ),
+                            {"org": org, "id": row["id"]},
+                        )
+                        log.warning(
+                            "product_embedding_retry",
+                            event_id=str(row["id"]),
+                            request_id=row["request_id"],
+                        )
+                        break  # Retry on the next scheduled poll; do not hammer the model.
                 log.info(
-                    "identity_event_processed",
+                    "outbox_event_processed",
                     event_id=str(row["id"]),
                     organization_id=str(org),
                     request_id=row["request_id"],

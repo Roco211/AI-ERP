@@ -59,6 +59,17 @@ def identities(password_hash):
     with admin.begin() as db:
         for rec in records:
             for table in (
+                "product_embeddings",
+                "supplier_products",
+                "product_prices",
+                "product_units",
+                "products",
+                "customers",
+                "suppliers",
+                "warehouses",
+                "categories",
+                "brands",
+                "units",
                 "idempotency_keys",
                 "outbox_events",
                 "audit_events",
@@ -87,3 +98,9 @@ async def client():
 async def dispose_pool():
     yield
     await engine.dispose()
+
+
+@pytest.fixture(autouse=True)
+def disable_live_model_in_tests(monkeypatch):
+    # Real model behavior is covered by the separate semantic eval command.
+    monkeypatch.setattr(settings(), "embedding_enabled", False)

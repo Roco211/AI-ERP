@@ -19,6 +19,8 @@ from forge_erp.core.config import settings
 from forge_erp.core.db import engine, verify_database_role
 from forge_erp.core.errors import Problem, ProblemDetails
 from forge_erp.core.observability import configure_logging
+from forge_erp.modules.catalog.api.router import router as catalog_router
+from forge_erp.modules.catalog.api.search_router import router as catalog_search_router
 from forge_erp.modules.identity.api.router import router
 
 configure_logging()
@@ -47,8 +49,9 @@ ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
     }
     for code in (401, 403, 409, 422, 429, 500, 503)
 }
-app = FastAPI(title="Forge ERP", version="0.4.0", lifespan=lifespan, responses=ERROR_RESPONSES)
+app = FastAPI(title="Forge ERP", version="0.5.0", lifespan=lifespan, responses=ERROR_RESPONSES)
 app.include_router(router)
+app.include_router(catalog_router)
 
 
 def problem_response(request: Request, status: int, code: str, detail: str) -> JSONResponse:
@@ -117,7 +120,7 @@ class Health(BaseModel):
 
 class Version(BaseModel):
     name: str = "Forge ERP"
-    version: str = "0.4.0"
+    version: str = "0.5.0"
     milestone: str = "Bootstrap"
 
 
@@ -144,3 +147,6 @@ async def version() -> Version:
 
 
 FastAPIInstrumentor.instrument_app(app)
+
+
+app.include_router(catalog_search_router)

@@ -1,8 +1,8 @@
-name: Bootstrap CI
+name: Forge ERP CI
 on:
   pull_request:
   push:
-    branches: [main, 'bootstrap/**']
+    branches: [main, 'bootstrap/**', 'catalog/**']
 permissions:
   contents: read
 jobs:
