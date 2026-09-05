@@ -1,7 +1,7 @@
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import Field, model_validator
+from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -25,6 +25,11 @@ class Settings(BaseSettings):
     embedding_model: str = "bge-m3:567m"
     embedding_model_digest: str = ""
     embedding_min_similarity: float = Field(default=0.55, ge=0, le=1)
+
+    ai_timeout_seconds: int = Field(default=20, ge=1, le=20)
+    ai_trace_enabled: bool = False
+    ai_trace_api_key: SecretStr = Field(default=SecretStr(""), repr=False)
+    ai_trace_project: str = "forge-erp"
 
     @model_validator(mode="after")
     def secure_production(self) -> Settings:
@@ -56,6 +61,8 @@ class Settings(BaseSettings):
             r"(?:sha256:)?[0-9a-f]{64}", self.embedding_model_digest
         ):
             raise ValueError("Enabled embeddings require a pinned local model digest")
+        if self.ai_trace_enabled and not self.ai_trace_api_key.get_secret_value():
+            raise ValueError("Enabled metadata tracing requires its own trace credential")
         return self
 
 

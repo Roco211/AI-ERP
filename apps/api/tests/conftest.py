@@ -59,9 +59,19 @@ def identities(password_hash):
     with admin.begin() as db:
         # Isolated TEST_* cleanup only; immutable facts remain protected for forge_app.
         db.execute(text("SET LOCAL session_replication_role = replica"))
+        installed = set(
+            db.execute(text("SELECT tablename FROM pg_tables WHERE schemaname='forge'")).scalars()
+        )
         for rec in records:
             for table in (
                 "outbox_events",
+                "assistant_checkpoint_writes",
+                "assistant_checkpoints",
+                "assistant_draft_receipts",
+                "assistant_proposals",
+                "assistant_turns",
+                "assistant_conversations",
+                "ai_provider_settings",
                 "import_rows",
                 "import_batches",
                 "replenishment_creations",
@@ -105,6 +115,8 @@ def identities(password_hash):
                 "roles",
                 "users",
             ):
+                if table not in installed:
+                    continue
                 db.execute(text(f"DELETE FROM forge.{table} WHERE organization_id=:org"), rec)
             db.execute(text("DELETE FROM forge.organizations WHERE id=:org"), rec)
     admin.dispose()

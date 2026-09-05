@@ -1,9 +1,9 @@
 import { api } from "@/lib/api";
 import { unwrap } from "@/features/inventory/client";
-import type { components } from "@/generated/api/schema";
+import type { components, paths } from "@/generated/api/schema";
 export type Order = components["schemas"]["PurchaseOrderRead"];
 export type StockDocument = components["schemas"]["PurchaseDocumentRead"];
-export type OrderInput = components["schemas"]["PurchaseOrderInput"];
+export type OrderInput = paths["/api/v1/purchasing/orders"]["post"]["requestBody"]["content"]["application/json"];
 export type DocumentInput = components["schemas"]["PurchaseDocumentInput"];
 export type Receipt = components["schemas"]["PurchaseReceipt"];
 export type Action = "confirm" | "cancel" | "close" | "post" | "reverse";

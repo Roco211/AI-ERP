@@ -1,6 +1,6 @@
 # AI 助手 v0.11 施工规范
 
-状态：A0 规范已冻结，A1–A5 待实施与验证。用户于 2026-09-06 明确选择“明确规范后直接分步实现”。基线为已发布 operations-v0.10 / `ed7749d03b291073d2d86bb846dfa87130422be5`，数据库 `0015_reporting`。原迁移上下文和已有业务规则继续有效。
+状态：A0 规范完成，A1–A5 实施中；用户追加网页供应商配置要求已纳入。用户于 2026-09-06 明确选择“明确规范后直接分步实现”。基线为已发布 operations-v0.10 / `ed7749d03b291073d2d86bb846dfa87130422be5`，数据库 `0015_reporting`。原迁移上下文和已有业务规则继续有效。
 
 ## 1. 交付范围
 
@@ -11,19 +11,19 @@
 ## 2. 模型与执行栈
 
 - LangGraph 为单助手状态机；LangChain Core 的消息、工具/运行组件；PostgreSQL 持久 checkpoint；LangSmith 的显式脱敏诊断接口及评估。所有 Python 依赖使用 uv 锁定，保留 Python 3.14。
-- 保留用户指定的 CommandCode chat endpoint `https://api.commandcode.ai/provider/v1/chat/completions` 和 `deepseek-v4-flash-vision-exp`。模型名尚需真实连接验证；如服务不支持，报告错误，不静默换模型或服务商。
-- 对话模型凭据仅服务端配置，缺失时清楚提示未配置；CI 使用固定模型响应进行控制逻辑评估，绝不将其计为真实模型验收。
+- 用户追加要求：在网页自由配置 LLM 供应商。设置→模型服务支持自定义 OpenAI 兼容 API 基础地址、模型名、密钥、本机/内网开关、启停及连接测试；保留 CommandCode 和原模型名为未启用预填，不强制固定服务商。服务商/模型不可用时报告错误，不静默切换。
+- 模型设置属于组织，由 ai.provider.manage 独立授权。密钥只经同源表单提交，服务端以 HKDF 按组织派生的 Fernet 密钥加密；页面/日志/审计仅回显 key_set。根密钥为既有 SESSION_SECRET，轮换或恢复时需保留对应秘密，否则重新录入模型凭据。切换地址来源必须重新输入或清除旧密钥，不把旧密钥默发至新服务。CI 固定响应不计为真实模型验收。
 - 本地 Ollama/BGE-M3 仍仅用于 Catalog 语义回退，聊天与 embedding 互不依赖。
 - 使用受限 JSON 决策协议，不假定选定模型支持原生 tool calling/JSON schema。每次响应 Pydantic 校验，未知工具、额外身份字段、无效/过大结果一律拒绝。
 - 模型网络调用在数据库事务之外。每轮上限 5 次模型调用、8 次工具、80 秒总时限；单次模型等待不超过 20 秒，输入 4000 字，20 行草稿，工具页默认 10/最大 25 条，总结果有界。超限清楚结束，禁止无限修复/重试。
 
 ## 3. 身份、会话与 checkpoint
 
-所有接口沿用 opaque HttpOnly session、同源 `/api`、CSRF、request ID、Problem Details。增加 `ai.use`、`ai.draft.create`；AI 权限不代替业务权限。RuntimeContext 的组织、用户、权限、请求和会话 ID 均由服务端绑定，`source=AI`，不来自模型参数。
+所有接口沿用 opaque HttpOnly session、同源 `/api`、CSRF、request ID、Problem Details。增加 `ai.use`、`ai.draft.create`、`ai.provider.manage`；AI 权限不代替业务权限。RuntimeContext 的组织、用户、权限、请求和会话 ID 均由服务端绑定，`source=AI`，不来自模型参数。
 
 会话属于组织内的创建者，暂不支持共享。会话、轮次、checkpoint、pending writes、提案和永久创建回执全部具备 organization_id 和 owner_id，以及对应复合外键、FORCE RLS。RLS 同时约束当前组织与所有者，缺失上下文默认无可见行。客户端 UUID 只定位已经授权的对象。
 
-会话记录当前权限指纹；历史读取、继续、恢复、复核、批准时重验身份和指纹。权限发生变化时阻断旧上下文并要求新会话，不能把旧工具结果、成本或客户资料再发给模型/浏览器。注销、停用或会话过期同样阻止后续执行。持久 state 不能保存 cookie、key、权限集合或可被恢复为授权的 RuntimeContext。
+组织模型配置表单独按组织 FORCE RLS；它是组织共享的管理员设置，不是个人对话。会话记录当前权限与供应商配置版本指纹；历史读取、继续、恢复、复核、批准时重验身份和指纹。权限或模型配置发生变化时阻断旧上下文并要求新会话，不能把旧工具结果、成本或客户资料再发给模型/浏览器。注销、停用或会话过期同样阻止后续执行。持久 state 不能保存 cookie、key、权限集合或可被恢复为授权的 RuntimeContext。
 
 使用实现 LangGraph checkpointer 协议的 PostgreSQL 存储适配器，复用 SQLAlchemy/psycopg3 与受限 forge_app。新表经 Alembic 建立，禁止运行时 saver.setup()/DDL 或 migration 连接。只保存 JSON 状态，禁用 pickle 反序列化；保留中断/重启恢复测试。checkpoint 是进度，不是业务事实。
 
@@ -85,7 +85,7 @@ LangSmith 默认不向外发送提示/业务数据。可配置诊断上传只允
 | A4 | /ai 会话、事实卡片、日报、草稿编辑/批准及原单追溯 | Vitest、真实浏览器、权限/错误/重试、同源契约 |
 | A5 | 真实模型连接与任务评估、升级/回归、CI、交付 | 验收清单逐项证据；未真实验证项不得勾选 |
 
-每个增量运行相关测试后提交；全部完成前不进入 v1.0 试点、不隐式合并/tag/release。保留原数据、密码、历史迁移和已发布标签。必要的本地模型服务凭据由用户配置，不在聊天中索取明文。
+每个增量运行相关测试后提交；全部完成前不进入 v1.0 试点、不隐式合并/tag/release。保留原数据、密码、历史迁移和已发布标签。模型凭据由用户在网页配置，不在聊天中索取明文。连接测试只发送固定测试文本；实际问答仅发送当前问题需要且用户有权读取的资料。任意外部网页/HTTP 工具仍不注册。服务地址解析后固定IP连接，公网要求HTTPS，本机/内网需显式开启；禁止metadata等受限地址、重定向及URL内凭据。
 
 ## 9. 技术依据
 

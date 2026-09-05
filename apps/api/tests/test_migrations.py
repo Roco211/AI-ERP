@@ -27,6 +27,7 @@ from forge_erp.core.config import settings
         "0009_sales",
         "0010_sales_shipments",
         "0011_sales_returns",
+        "0015_reporting",
     ],
 )
 def test_clean_and_bootstrap_migrations(baseline):
@@ -106,7 +107,7 @@ def test_clean_and_bootstrap_migrations(baseline):
         with target.connect() as db:
             assert (
                 db.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
-                == "0015_reporting"
+                == "0018_ai_retention"
             )
             assert db.execute(text("SELECT count(*) FROM forge.products")).scalar_one() == (
                 1
@@ -556,8 +557,9 @@ def seed_return_upgrade_fixture(db):
         db.execute(text(statement), params)
 
 
-def test_operations_upgrade_preserves_every_funds_and_commercial_fact():
-    """A populated accepted v0.9 database is unchanged apart from new schema/permissions."""
+@pytest.mark.parametrize("baseline", ["0012_funds", "0015_reporting"])
+def test_operations_upgrade_preserves_every_funds_and_commercial_fact(baseline):
+    """Populated released databases preserve all original facts through the current head."""
     cfg = settings()
     name = "forge_migration_test_" + uuid4().hex
     root = Path(__file__).resolve().parents[3]
@@ -594,7 +596,7 @@ def test_operations_upgrade_preserves_every_funds_and_commercial_fact():
         with target.begin() as db:
             db.execute(text("CREATE EXTENSION vector"))
             db.execute(text("CREATE EXTENSION pg_trgm"))
-        migrate("0012_funds")
+        migrate(baseline)
         with target.begin() as db:
             seed_upgrade_fixture(db, with_stock=True)
             seed_purchase_upgrade_fixture(db)
@@ -671,7 +673,7 @@ def test_operations_upgrade_preserves_every_funds_and_commercial_fact():
         with target.connect() as db:
             assert (
                 db.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
-                == "0015_reporting"
+                == "0018_ai_retention"
             )
             assert fingerprints(db, tables) == before
             for table in ("import_batches", "import_rows", "replenishment_creations"):
