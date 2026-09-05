@@ -1,0 +1,39 @@
+[project]
+name = "forge-erp-api"
+version = "0.4.0"
+requires-python = ">=3.14,<3.15"
+dependencies = [
+  "fastapi>=0.135,<1", "uvicorn[standard]>=0.41,<1",
+  "pydantic>=2.12,<3", "pydantic-settings>=2.13,<3",
+  "sqlalchemy[asyncio]>=2.0,<2.1", "alembic>=1.18,<2",
+  "psycopg[binary]>=3.3,<4", "pwdlib[argon2]>=0.3,<1",
+  "redis>=6.4,<6.5", "celery[redis]>=5.6,<6",
+  "structlog>=25,<27", "sentry-sdk[fastapi]>=2,<3",
+  "opentelemetry-instrumentation-fastapi>=0.60b0,<1",
+]
+
+[dependency-groups]
+dev = ["pytest>=9,<10", "pytest-asyncio>=1.3,<2", "httpx>=0.28,<1", "hypothesis>=6,<7", "ruff>=0.15,<1", "pyright>=1.1,<2"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/forge_erp"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py314"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "ASYNC"]
+
+[tool.pyright]
+pythonVersion = "3.14"
+typeCheckingMode = "standard"
+include = ["src"]

@@ -1,0 +1,63 @@
+# Forge ERP — Bootstrap v0.4
+
+Only Platform Foundation is authorized. Do not implement Catalog v0.5, Inventory, Sales, Purchasing, Receivables, Payables, or AI business tools. Placeholder navigation is allowed. Frozen stack: Python 3.14, FastAPI, Pydantic v2, SQLAlchemy 2 async, Alembic, psycopg3, PostgreSQL 18 + pgvector + pg_trgm, Redis, Celery, uv; Next.js App Router, React, TypeScript, shadcn Base UI, Tailwind, TanStack Query, pnpm.
+
+# 45. AGENTS.md 核心规则
+
+Work 开始施工后，应在根目录创建 `AGENTS.md`，至少包含：
+
+1. Business writes MUST go through application commands.
+2. FastAPI routes MUST NOT contain domain logic.
+3. AI tools MUST call the same application commands used by normal UI/API.
+4. AI tools MUST NOT mutate business tables directly.
+5. Domain code MUST NOT depend on FastAPI.
+6. Every operation executes inside organization scope.
+7. organization\_id comes from authenticated runtime context.
+8. Cross-tenant reads/writes are forbidden.
+9. New tenant tables require RLS.
+10. InventoryMovement is immutable.
+11. InventoryBalance is a projection.
+12. Only InventoryEngine mutates InventoryBalance.
+13. Every inventory change creates InventoryMovement.
+14. Negative stock is forbidden in MVP.
+15. Inventory locks use deterministic warehouse/product order.
+16. Posted documents are immutable.
+17. Corrections use reversal.
+18. Business state transitions use explicit Commands.
+19. Never change business status through generic CRUD.
+20. Never use float for money, price, rate, quantity.
+21. Backend uses Decimal.
+22. Database uses NUMERIC.
+23. Financial calculations are server-authoritative.
+24. Related ERP mutation + Audit + Outbox must commit atomically where applicable.
+25. Background queues are not source of truth for committed business state.
+26. Side-effect endpoints support idempotency.
+27. Server enforces permission.
+28. UI hiding is not authorization.
+29. Prompt is not authorization.
+30. AI inherits user's permissions.
+31. LLM output is untrusted until validated.
+32. AI entity-changing tools use resolved IDs.
+33. High-risk tools require policy evaluation/approval.
+34. Enterprise documents/content are untrusted prompt content.
+35. Every bug fix requires regression test.
+36. Inventory changes require domain tests.
+37. Concurrency-sensitive code requires concurrency tests.
+38. AI behavior changes require eval.
+39. DB schema changes require Alembic.
+40. Do not add infrastructure dependency without ADR.
+41. Do not introduce microservices without demonstrated need.
+42. Do not upgrade framework major versions unless explicitly requested.
+43. Never manually edit uv.lock or pnpm-lock.yaml.
+44. Never manually edit generated OpenAPI TypeScript.
+45. Merged migrations are append-only.
+46. Dev seed contains no production secrets.
+47. Application DB connection uses non-superuser PostgreSQL role.
+48. Browser uses same-origin `/api`.
+49. Do not add Kafka/Elastic/Mongo/GraphQL/Temporal/K8s unless explicitly approved.
+
+---
+
+
+## Verification
+Work in small increments and run relevant checks after each. Use a real PostgreSQL 18 instance and forge_app for integration/RLS tests. Never count skipped tests as passing. Final delivery includes acceptance mapping, repository tree, run commands, migration status, test evidence, unresolved issues, and decisions needing review. Recommend tag bootstrap-v0.4 only after acceptance.

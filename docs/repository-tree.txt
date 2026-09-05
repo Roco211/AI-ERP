@@ -1,0 +1,114 @@
+forge-erp/
+├── .github/
+│   └── workflows/
+│       └── ci.yml
+├── apps/
+│   ├── api/
+│   │   ├── migrations/
+│   │   │   ├── versions/
+│   │   │   │   ├── 0001_bootstrap.py
+│   │   │   │   └── 0001_bootstrap.sql
+│   │   │   ├── env.py
+│   │   │   └── script.py.mako
+│   │   ├── scripts/
+│   │   │   ├── export_openapi.py
+│   │   │   └── seed.py
+│   │   ├── src/
+│   │   │   └── forge_erp/
+│   │   │       ├── core/
+│   │   │       │   ├── config.py
+│   │   │       │   ├── context.py
+│   │   │       │   ├── db.py
+│   │   │       │   ├── errors.py
+│   │   │       │   ├── idempotency.py
+│   │   │       │   ├── rate_limit.py
+│   │   │       │   └── security.py
+│   │   │       ├── modules/
+│   │   │       │   ├── audit/
+│   │   │       │   │   └── service.py
+│   │   │       │   └── identity/
+│   │   │       │       ├── api/
+│   │   │       │       │   ├── router.py
+│   │   │       │       │   └── schemas.py
+│   │   │       │       └── application/
+│   │   │       │           └── commands.py
+│   │   │       ├── workers/
+│   │   │       │   ├── celery_app.py
+│   │   │       │   └── outbox.py
+│   │   │       ├── __init__.py
+│   │   │       └── main.py
+│   │   ├── tests/
+│   │   │   ├── conftest.py
+│   │   │   ├── test_platform.py
+│   │   │   └── test_security_boundaries.py
+│   │   ├── alembic.ini
+│   │   ├── pyproject.toml
+│   │   └── uv.lock
+│   └── web/
+│       ├── app/
+│       │   ├── [section]/
+│       │   │   └── page.tsx
+│       │   ├── login/
+│       │   │   └── page.tsx
+│       │   ├── globals.css
+│       │   ├── layout.tsx
+│       │   └── page.tsx
+│       ├── components/
+│       │   ├── ui/
+│       │   │   ├── button.tsx
+│       │   │   ├── input.tsx
+│       │   │   └── label.tsx
+│       │   ├── erp-shell.tsx
+│       │   └── providers.tsx
+│       ├── e2e/
+│       │   └── bootstrap.spec.ts
+│       ├── generated/
+│       │   └── api/
+│       │       └── schema.d.ts
+│       ├── lib/
+│       │   ├── api.ts
+│       │   └── utils.ts
+│       ├── tests/
+│       │   ├── login.test.tsx
+│       │   └── setup.ts
+│       ├── components.json
+│       ├── eslint.config.mjs
+│       ├── next-env.d.ts
+│       ├── next.config.ts
+│       ├── package.json
+│       ├── playwright.config.ts
+│       ├── postcss.config.mjs
+│       ├── tsconfig.json
+│       └── vitest.config.ts
+├── docs/
+│   ├── adr/
+│   │   ├── 0001-modular-monolith.md
+│   │   ├── 0002-postgresql-primary-database.md
+│   │   ├── 0003-server-authoritative-domain.md
+│   │   ├── 0004-cookie-session-auth.md
+│   │   ├── 0005-postgresql-row-level-security.md
+│   │   ├── 0006-transactional-outbox.md
+│   │   ├── 0007-openapi-contract-generation.md
+│   │   └── 0008-langgraph-agent-runtime.md
+│   ├── api/
+│   │   └── openapi.json
+│   ├── architecture/
+│   │   ├── migration-context.md
+│   │   └── runtime.md
+│   ├── acceptance.md
+│   └── repository-tree.txt
+├── infra/
+│   └── postgres/
+│       └── init.sh
+├── scripts/
+│   └── dev_env.py
+├── .env.example
+├── .gitignore
+├── .python-version
+├── AGENTS.md
+├── Makefile
+├── README.md
+├── docker-compose.yml
+├── package.json
+├── pnpm-lock.yaml
+└── pnpm-workspace.yaml

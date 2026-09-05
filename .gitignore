@@ -1,0 +1,15 @@
+.env
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+node_modules/
+.next/
+*.tsbuildinfo
+test-results/
+playwright-report/
+.coverage
+coverage.xml
+*.log
+.hypothesis/
+celerybeat-schedule*

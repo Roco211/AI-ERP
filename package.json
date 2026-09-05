@@ -1,0 +1,15 @@
+{
+  "name": "forge-erp",
+  "private": true,
+  "packageManager": "pnpm@11.7.0",
+  "scripts": {
+    "dev": "pnpm --filter @forge/web dev",
+    "build": "pnpm --filter @forge/web build",
+    "typecheck": "pnpm --filter @forge/web typecheck",
+    "lint": "pnpm --filter @forge/web lint",
+    "test": "pnpm --filter @forge/web test",
+    "test:e2e": "pnpm --filter @forge/web test:e2e",
+    "api:generate": "openapi-typescript docs/api/openapi.json -o apps/web/generated/api/schema.d.ts"
+  },
+  "devDependencies": {"openapi-typescript": "^7.13.0"}
+}

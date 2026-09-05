@@ -1,0 +1,35 @@
+name: Bootstrap CI
+on:
+  pull_request:
+  push:
+    branches: [main, 'bootstrap/**']
+permissions:
+  contents: read
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.12.10"
+          python-version: "3.14"
+      - uses: pnpm/action-setup@v4
+        with:
+          version: "11.7.0"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: pnpm
+      - run: make env install infra migrate seed
+      - run: make lint test
+      - run: make contract
+      - name: Reject contract drift
+        run: git diff --exit-code -- docs/api/openapi.json apps/web/generated/api/schema.d.ts
+      - run: pnpm build
+      - run: pnpm --filter @forge/web exec playwright install --with-deps chromium
+      - run: pnpm test:e2e
+      - name: Stop infrastructure
+        if: always()
+        run: docker compose down
