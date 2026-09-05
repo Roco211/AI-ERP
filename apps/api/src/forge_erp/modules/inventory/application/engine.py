@@ -19,6 +19,9 @@ class InventoryEngine:
     def __init__(self, db: AsyncSession, ctx: RuntimeContext, permission: str = "inventory.adjust"):
         if permission not in {
             "inventory.adjust",
+            "sales.order.confirm",
+            "sales.order.cancel",
+            "sales.order.close",
             "purchase.receive",
             "purchase.return",
             "inventory.opening",
@@ -91,7 +94,7 @@ class InventoryEngine:
             (
                 await self.db.execute(
                     text(
-                        "SELECT l.*,d.warehouse_id,d.target_warehouse_id "
+                        "SELECT l.*,d.warehouse_id,d.target_warehouse_id,d.type AS document_type "
                         "FROM forge.inventory_document_lines l JOIN forge.inventory_documents d "
                         "ON (d.organization_id,d.id)=(l.organization_id,l.document_id) "
                         "WHERE l.organization_id=:org AND l.id=:id"
@@ -124,6 +127,12 @@ class InventoryEngine:
     ) -> dict:
         self.ctx.require(self.permission)
         source = await self.source(line_id, key)
+        if self.permission.startswith("sales.order."):
+            expected_kind = "RESERVE" if self.permission == "sales.order.confirm" else "RELEASE"
+            if source["document_type"] != "SALES_RESERVATION" or kind != expected_kind:
+                raise Problem(409, "INVALID_SOURCE", "销售订单只能建立或释放其库存占用")
+        elif source["document_type"].startswith("SALES_"):
+            raise Problem(409, "SALES_COMMAND_REQUIRED", "销售库存必须通过销售命令操作")
         old = self.state(key)
         reservation = None
         if reservation_id:
@@ -328,6 +337,11 @@ class InventoryEngine:
         return movement
 
     async def reverse(self, movement: dict, reversal_id: UUID) -> dict:
+        source = await self.source(
+            movement["line_id"], (movement["warehouse_id"], movement["product_id"])
+        )
+        if source["document_type"].startswith("SALES_"):
+            raise Problem(409, "SALES_COMMAND_REQUIRED", "销售库存必须通过销售命令操作")
         self.ctx.require(
             "purchase.reverse" if self.permission.startswith("purchase.") else "inventory.reverse"
         )
@@ -346,7 +360,6 @@ class InventoryEngine:
             )
         except InventoryError as exc:
             raise Problem(409, exc.code, exc.detail) from exc
-        source = await self.source(movement["line_id"], key)
         return await self._append(
             key,
             source,

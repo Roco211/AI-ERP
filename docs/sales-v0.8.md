@@ -1,6 +1,6 @@
 # 销售 v0.8 施工规范
 
-状态：规格增量 S0，供施工评审；销售功能尚未实施。基线为已发布 `purchasing-v0.7` / main `64bec0aecdbaef6c694a2fdb47b8fc93c34b57a7`，数据库 `0008_purchasing`。本次发布后的新工作不修改旧标签。实施建议见[ADR0014](adr/0014-sales-reservations-returns-and-margin.md)，验收见[清单](sales-v0.8-acceptance.md)。
+状态：S0 已完成，S1 订单、价格快照与占用后端已实现；S2–S5 待施工。基线为已发布 `purchasing-v0.7` / main `64bec0aecdbaef6c694a2fdb47b8fc93c34b57a7`，数据库 `0008_purchasing`。本次发布后的新工作不修改旧标签。实施建议见[ADR0014](adr/0014-sales-reservations-returns-and-margin.md)，验收见[清单](sales-v0.8-acceptance.md)。
 
 依据：[权威迁移上下文](architecture/migration-context.md)第4.3、4.5、5、7、8、9、10、12、41、45节；已实施ADR0009、0012、0013。下文明确区分原文硬约束与原文未细化的本阶段建议，不重新设计ERP。
 
@@ -99,11 +99,11 @@
 
 ## 7. 数据和引擎接入（建议S7）
 
-模块建议 `modules/sales/{domain,application,api}`，前端 `features/sales/`，接入现有 `/sales` 导航。新migration从0008追加，计划0009_sales（以实施时唯一head为准）；本规格增量不创建或执行migration。
+模块建议 `modules/sales/{domain,application,api}`，前端 `features/sales/`，接入现有 `/sales` 导航。S1 已从0008追加并验证0009_sales；后续引擎跨凭据消费字段在S2追加新迁移，不改已发布旧迁移。
 
 建议增加sales_orders、sales_order_lines、sales_documents、sales_document_lines；所有新业务表organization_id、FORCE RLS、租户复合外键、有限数字约束。销售订单与库存单据附属表保留强来源，不复制库存余额或另建一套流水。
 
-确认创建内部SALES_RESERVATION凭据及不可变行快照，只记录RESERVE/RELEASE来源，不能被界面当作实物出库单。内部凭据POSTED表示占用建立；后续关闭/取消追加RELEASE事实，不改写凭据。出库/退货类型为SALES_SHIPMENT/SALES_RETURN。通用库存和采购Command必须拒绝销售类型，不提供手工创建、修改或冲销内部占用凭据的公开路由。
+确认创建内部SALES_RESERVATION凭据及不可变行快照（sales_documents.kind=RESERVATION，sales_document_lines关联原订单行；库存凭据行使用独立ID），只记录RESERVE/RELEASE来源，不能被界面当作实物出库单。内部凭据POSTED表示占用建立；后续关闭/取消追加RELEASE事实，不改写凭据。出库/退货类型为SALES_SHIPMENT/SALES_RETURN。通用库存和采购Command必须拒绝销售类型，不提供手工创建、修改或冲销内部占用凭据的公开路由。
 
 现有Engine要求消费行ID=占用来源行ID，销售出库不能直接复用这一假设。建议在库存行追加可空的reservation_source_line_id及租户自引用外键，由销售Command从冻结订单来源填写；出库行消费独立占用行时，引擎验证占用行、商品/仓库键、租户及命令能力全部匹配。既有非销售路径保留同来源校验。API/AI输入不得提交reservation_id或reservation_source_line_id。
 
@@ -155,3 +155,7 @@ REST前缀 `/api/v1/sales`：orders列表/详情/保存草稿/confirm/cancel/clo
 每个增量跑相关测试后提交，最后完整回归Catalog/Inventory/Purchasing。只改文档时验证引用、编号、链接和Git差异，不把基线132项当作未实现销售的验收。S1施工时将sales/**纳入push CI，PR检查继续保留。
 
 全部销售验收通过后再建议`sales-v0.8`标签；本阶段文档提交不发布版本、不自动合并PR，也不进入应收/收款或AI工具。
+
+## S1实施记录
+
+用户在S0草稿PR #4交付后回复“好的，请继续。”，已实施S1。详见[本增量交付记录](sales-v0.8-s1-delivery.md)。Catalog商品读取沿用现有catalog.read权限；报价另需customer.read、sales.read、product.price.read。没有新增product.read权限。S2的跨出库凭据占用消费、S3退货毛利及S4销售页面均未实现。

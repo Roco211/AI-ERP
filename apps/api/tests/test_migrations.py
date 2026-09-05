@@ -22,6 +22,7 @@ from forge_erp.core.config import settings
         "0005_inventory",
         "0006_inventory_snapshot",
         "0007_inventory_projection",
+        "0008_purchasing",
     ],
 )
 def test_clean_and_bootstrap_migrations(baseline):
@@ -62,6 +63,7 @@ def test_clean_and_bootstrap_migrations(baseline):
                 "0005_inventory",
                 "0006_inventory_snapshot",
                 "0007_inventory_projection",
+                "0008_purchasing",
             ):
                 with target.begin() as db:
                     seed_upgrade_fixture(
@@ -71,12 +73,16 @@ def test_clean_and_bootstrap_migrations(baseline):
                             "0005_inventory",
                             "0006_inventory_snapshot",
                             "0007_inventory_projection",
+                            "0008_purchasing",
                         ),
                     )
+                if revision == "0008_purchasing":
+                    with target.begin() as db:
+                        seed_purchase_upgrade_fixture(db)
         with target.connect() as db:
             assert (
                 db.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
-                == "0008_purchasing"
+                == "0009_sales"
             )
             assert db.execute(text("SELECT count(*) FROM forge.products")).scalar_one() == (
                 1
@@ -86,6 +92,7 @@ def test_clean_and_bootstrap_migrations(baseline):
                     "0005_inventory",
                     "0006_inventory_snapshot",
                     "0007_inventory_projection",
+                    "0008_purchasing",
                 )
                 else 0
             )
@@ -94,6 +101,7 @@ def test_clean_and_bootstrap_migrations(baseline):
                 "0005_inventory",
                 "0006_inventory_snapshot",
                 "0007_inventory_projection",
+                "0008_purchasing",
             ):
                 assert db.execute(text("SELECT price FROM forge.product_prices")).scalar_one() == 2
                 assert (
@@ -106,6 +114,7 @@ def test_clean_and_bootstrap_migrations(baseline):
                 "0005_inventory",
                 "0006_inventory_snapshot",
                 "0007_inventory_projection",
+                "0008_purchasing",
             ):
                 assert (
                     db.execute(
@@ -123,6 +132,31 @@ def test_clean_and_bootstrap_migrations(baseline):
                     db.execute(text("SELECT status FROM forge.inventory_documents")).scalar_one()
                     == "POSTED"
                 )
+            if baseline == "0008_purchasing":
+                assert (
+                    db.execute(text("SELECT status FROM forge.purchase_orders")).scalar_one()
+                    == "CONFIRMED"
+                )
+                assert (
+                    db.execute(text("SELECT amount FROM forge.purchase_order_lines")).scalar_one()
+                    == 14
+                )
+                assert (
+                    db.execute(text("SELECT count(*) FROM forge.role_permissions")).scalar_one()
+                    == 1
+                )
+            for table in (
+                "sales_orders",
+                "sales_order_lines",
+                "sales_documents",
+                "sales_document_lines",
+            ):
+                assert db.execute(
+                    text(
+                        "SELECT relforcerowsecurity FROM pg_class WHERE oid=CAST(:name AS regclass)"
+                    ),
+                    {"name": "forge." + table},
+                ).scalar_one()
             assert db.execute(
                 text(
                     "SELECT relforcerowsecurity FROM pg_class WHERE oid='forge.products'::regclass"
@@ -205,3 +239,38 @@ def seed_upgrade_fixture(db, with_stock):
             ),
             p,
         )
+
+
+def seed_purchase_upgrade_fixture(db):
+    row = (
+        db.execute(
+            text(
+                "SELECT b.organization_id AS org,b.warehouse_id AS wh,b.product_id AS product,"
+                "p.base_unit_id AS unit,u.id AS actor FROM "
+                "forge.inventory_balances b JOIN forge.products p "
+                "ON p.id=b.product_id JOIN forge.users u ON u.organization_id=b.organization_id"
+            )
+        )
+        .mappings()
+        .one()
+    )
+    params = dict(row) | {"supplier": uuid4(), "order": uuid4(), "role": uuid4()}
+    statements = [
+        "INSERT INTO forge.suppliers(id,organization_id,code,name) "
+        "VALUES (:supplier,:org,'OLD','Old supplier')",
+        "INSERT INTO forge.roles(id,organization_id,code,name) VALUES "
+        "(:role,:org,'OLD','Old role')",
+        "INSERT INTO forge.role_permissions VALUES (:org,:role,'purchase.order.confirm')",
+        "INSERT INTO forge.purchase_orders(id,organization_id,number,supplier_id,supplier_name,"
+        "warehouse_id,warehouse_name,reason,amount,created_by) VALUES "
+        "(:order,:org,'OLD-PO',:supplier,'Old supplier',:wh,'主仓','历史采购',14,:actor)",
+        "INSERT INTO "
+        "forge.purchase_order_lines(organization_id,order_id,line_no,product_id,unit_id,"
+        "product_label,unit_label,qty,unit_to_base_factor,base_qty,"
+        "conversion_version,unit_price,amount) "
+        "VALUES (:org,:order,1,:product,:unit,'Bolt','个',7,1,7,1,2,14)",
+        "UPDATE forge.purchase_orders SET "
+        "status='CONFIRMED',confirmed_at=now(),version=2 WHERE id=:order",
+    ]
+    for sql in statements:
+        db.execute(text(sql), params)

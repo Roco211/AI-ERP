@@ -57,6 +57,8 @@ async def lines(db: AsyncSession, ctx: RuntimeContext, id: UUID) -> list[dict]:
 
 
 def require(ctx: RuntimeContext, kind: str, action: str):
+    if kind.startswith("SALES_"):
+        raise Problem(409, "SALES_COMMAND_REQUIRED", "请通过销售命令处理此单据")
     if kind not in PERMISSIONS:
         raise Problem(409, "PURCHASE_COMMAND_REQUIRED", "请从采购工作台处理此单据")
     ctx.require(PERMISSIONS[kind])

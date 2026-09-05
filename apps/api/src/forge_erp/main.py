@@ -24,6 +24,7 @@ from forge_erp.modules.catalog.api.search_router import router as catalog_search
 from forge_erp.modules.identity.api.router import router
 from forge_erp.modules.inventory.api.router import router as inventory_router
 from forge_erp.modules.purchasing.api.router import router as purchasing_router
+from forge_erp.modules.sales.api.router import router as sales_router
 
 configure_logging()
 log = structlog.get_logger()
@@ -56,6 +57,7 @@ app.include_router(router)
 app.include_router(catalog_router)
 app.include_router(inventory_router)
 app.include_router(purchasing_router)
+app.include_router(sales_router)
 
 
 def problem_response(request: Request, status: int, code: str, detail: str) -> JSONResponse:

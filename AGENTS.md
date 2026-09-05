@@ -1,6 +1,6 @@
-# Forge ERP — Sales v0.8 specification
+# Forge ERP — Sales v0.8 implementation
 
-The user authorized Catalog v0.5 after Bootstrap passed acceptance. Implement Category, Brand, Unit, Product, ProductUnit, ProductPrice, Customer, Supplier, SupplierProduct, Warehouse, Product Search and ProductPicker. Excel work is template/validation/workflow design only. The user authorized local embeddings; implement optional Ollama/BGE-M3 without cloud calls (ADR 0011). The user authorized Inventory v0.6 implementation after reviewing the specification. The user subsequently authorized Purchasing v0.7: clarify the specification and directly implement it incrementally. Implement procurement orders, partial receipts, returns and purchase price history. Do not implement Sales, Receivables, Payables or AI business tools. Frozen stack: Python 3.14, FastAPI, Pydantic v2, SQLAlchemy 2 async, Alembic, psycopg3, PostgreSQL 18 + pgvector + pg_trgm, Redis, Celery, uv; Next.js App Router, React, TypeScript, shadcn Base UI, Tailwind, TanStack Query, pnpm.
+The user authorized Catalog v0.5 after Bootstrap passed acceptance. Implement Category, Brand, Unit, Product, ProductUnit, ProductPrice, Customer, Supplier, SupplierProduct, Warehouse, Product Search and ProductPicker. Excel work is template/validation/workflow design only. The user authorized local embeddings; implement optional Ollama/BGE-M3 without cloud calls (ADR 0011). The user authorized Inventory v0.6 implementation after reviewing the specification. The user subsequently authorized Purchasing v0.7: clarify the specification and directly implement it incrementally. Implement procurement orders, partial receipts, returns and purchase price history. Do not implement Receivables, Payables or AI business tools. Frozen stack: Python 3.14, FastAPI, Pydantic v2, SQLAlchemy 2 async, Alembic, psycopg3, PostgreSQL 18 + pgvector + pg_trgm, Redis, Celery, uv; Next.js App Router, React, TypeScript, shadcn Base UI, Tailwind, TanStack Query, pnpm.
 
 ## Inventory v0.6 implementation authorization
 
@@ -14,7 +14,7 @@ On 2026-09-05 the user explicitly selected “规范明确后直接分步实现�
 
 After explicit user approval, PRs #1/#2/#3 were merged into main and `purchasing-v0.7` was published as a GitHub prerelease. Released main is `64bec0aecdbaef6c694a2fdb47b8fc93c34b57a7`; database head is `0008_purchasing`. Earlier statements about open dependency PRs describe their implementation-time state, not the present repository.
 
-The user asked to continue after release. The current increment prepares `docs/sales-v0.8.md`, its acceptance checklist and proposed ADR0014 on `sales/v0.8`, based on released main. It defines sales orders, reservations, shipments, returns, deterministic customer pricing and gross margin; it does not implement those business features or migrate the database yet. Keep business acceptance items unchecked until implementation has actual evidence. Receivables, Payables, payments and AI business tools remain outside this increment. Preserve the published tag; a new stage does not implicitly merge or publish itself.
+The user asked to continue after release. The completed S0 increment prepared `docs/sales-v0.8.md`, its acceptance checklist and proposed ADR0014 on `sales/v0.8`, based on released main. It defines sales orders, reservations, shipments, returns, deterministic customer pricing and gross margin; S0 did not implement business features or migrate the database. Keep business acceptance items unchecked until implementation has actual evidence. Receivables, Payables, payments and AI business tools remain outside this increment. Preserve the published tag; a new stage does not implicitly merge or publish itself.
 
 # 45. AGENTS.md 核心规则
 
@@ -75,3 +75,7 @@ Work 开始施工后，应在根目录创建 `AGENTS.md`，至少包含：
 
 ## Verification
 Work in small increments and run relevant checks after each. Use a real PostgreSQL 18 instance and forge_app for integration/RLS tests. Never count skipped tests as passing. Final delivery includes acceptance mapping, repository tree, run commands, migration status, test evidence, unresolved issues, and decisions needing review. Recommend tag bootstrap-v0.4 only after acceptance.
+
+## Sales v0.8 implementation authorization
+
+After delivery of the specification and draft PR #4, the user said “好的，请继续。” Proceed with S1 on sales/v0.8: forward migration, server pricing/snapshots, order save/confirm/cancel/close and InventoryEngine reservations. Follow docs/sales-v0.8.md and ADR0014. Test each increment; keep S2–S5 acceptance pending until implemented. This does not authorize merging or publishing this PR.

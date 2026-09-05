@@ -1,6 +1,6 @@
 # ADR 0014 — 销售占用、退货成本与毛利
 
-Status: Proposed for Sales v0.8。当前为规格增量，尚未实施销售业务；基线为已发布main64bec0a / purchasing-v0.7。依据权威迁移上下文4.3、5、7–10、12、41及ADR0009/0012/0013。详见[施工规范](../sales-v0.8.md)和[验收清单](../sales-v0.8-acceptance.md)。
+Status: Accepted for incremental implementation after user continuation。S1后端已实施，后续规则在S2–S5按验收落实；基线为已发布main64bec0a / purchasing-v0.7。依据权威迁移上下文4.3、5、7–10、12、41及ADR0009/0012/0013。详见[施工规范](../sales-v0.8.md)和[验收清单](../sales-v0.8-acceptance.md)。
 
 ## 原文已经固定
 
@@ -28,3 +28,7 @@ Status: Proposed for Sales v0.8。当前为规格增量，尚未实施销售业�
 重点复核S1全量占用、S2退货不补发、S3原出库成本回收、S4闭单后不冲销出库、S5全退历史价保留以及S6仓管无成本仍可过账。这些是明确建议，不是原文已经逐字定义的规定；变化时同步改规范、迁移约束与验收样例。
 
 本阶段没有发现需要推翻原文的真正冲突。引擎同来源消费限制是现有接口尚未覆盖销售流程，需受控扩展；ProductPrice基础单位语义是既有契约，不能改成销售包装价；function scope事务提交修复必须保留。
+
+## S1落地
+
+占用凭据使用sales_documents的内部RESERVATION种类和sales_document_lines映射，库存凭据行与订单行ID独立，不伪造实物出库来源。0009_sales建立四张租户表、不可变来源和权限；跨凭据消费字段延至S2的新迁移。报价商品读取权限沿用catalog.read。有效成交历史解析已用隔离查询fixture验证；尚未实现销售出库Command，不能据此认定出库业务通过验收。

@@ -9,15 +9,17 @@ from sqlalchemy import event, text
 from sqlalchemy.orm import Session
 from sqlalchemy.util.concurrency import await_only
 from test_catalog import catalog_client as catalog_client
+from test_catalog import create
 from test_purchasing import action, po, receive
 from test_purchasing import purchase as purchase
+from test_sales_orders import opening, so
 
 from forge_erp.core.config import settings
 from forge_erp.core.db import sessions, set_tenant
 from forge_erp.main import app
 
 
-@pytest.mark.parametrize("operation", ["catalog", "inventory", "purchasing"])
+@pytest.mark.parametrize("operation", ["catalog", "inventory", "purchasing", "sales"])
 async def test_success_headers_require_committed_data(
     catalog_client, purchase, identities, operation
 ):
@@ -40,6 +42,20 @@ async def test_success_headers_require_committed_data(
         }
         query = "SELECT count(*) FROM forge.inventory_documents WHERE reason=:code"
         params = {"code": code}
+    elif operation == "sales":
+        customer = (await create(c, "customers", {"code": "COMMIT-C", "name": "Sales"})).json()
+        sales_body = {
+            "customer_id": customer["id"],
+            "warehouse_id": purchase["warehouse_id"],
+            "reason": code,
+            "lines": [purchase["lines"][0] | {"pricing_mode": "MANUAL", "qty": "7"}],
+        }
+        await opening(c, sales_body)
+        row = await so(c, sales_body)
+        path = "/api/v1/sales/orders/" + row["id"] + "/confirm"
+        body = {"expected_version": row["version"]}
+        query = "SELECT count(*) FROM forge.sales_orders WHERE id=:id AND status='CONFIRMED'"
+        params = {"id": row["id"]}
     else:
         order = await po(c, purchase)
         await action(c, order)

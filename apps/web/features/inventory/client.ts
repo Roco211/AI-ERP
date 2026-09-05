@@ -7,7 +7,7 @@ export type Draft = Omit<
 >;
 export type Kind = Exclude<
   Document["type"],
-  "PURCHASE_RECEIPT" | "PURCHASE_RETURN"
+  "PURCHASE_RECEIPT" | "PURCHASE_RETURN" | "SALES_RESERVATION" | "SALES_SHIPMENT" | "SALES_RETURN"
 >;
 export const labels: Record<Kind, string> = {
   OPENING: "期初库存",
@@ -132,4 +132,7 @@ export const documentLabels: Record<Document["type"], string> = {
   ...labels,
   PURCHASE_RECEIPT: "采购收货",
   PURCHASE_RETURN: "采购退货",
+  SALES_RESERVATION: "销售库存占用",
+  SALES_SHIPMENT: "销售出库",
+  SALES_RETURN: "销售退货",
 };
