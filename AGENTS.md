@@ -1,6 +1,6 @@
 # Forge ERP — Catalog v0.5
 
-The user authorized Catalog v0.5 after Bootstrap passed acceptance. Implement Category, Brand, Unit, Product, ProductUnit, ProductPrice, Customer, Supplier, SupplierProduct, Warehouse, Product Search and ProductPicker. Excel work is template/validation/workflow design only. External embedding integration awaits the user's provider/credential decision. Do not implement Inventory, Sales, Purchasing, Receivables, Payables, or AI business tools. Frozen stack: Python 3.14, FastAPI, Pydantic v2, SQLAlchemy 2 async, Alembic, psycopg3, PostgreSQL 18 + pgvector + pg_trgm, Redis, Celery, uv; Next.js App Router, React, TypeScript, shadcn Base UI, Tailwind, TanStack Query, pnpm.
+The user authorized Catalog v0.5 after Bootstrap passed acceptance. Implement Category, Brand, Unit, Product, ProductUnit, ProductPrice, Customer, Supplier, SupplierProduct, Warehouse, Product Search and ProductPicker. Excel work is template/validation/workflow design only. The user authorized local embeddings; implement optional Ollama/BGE-M3 without cloud calls (ADR 0011). Do not implement Inventory, Sales, Purchasing, Receivables, Payables, or AI business tools. Frozen stack: Python 3.14, FastAPI, Pydantic v2, SQLAlchemy 2 async, Alembic, psycopg3, PostgreSQL 18 + pgvector + pg_trgm, Redis, Celery, uv; Next.js App Router, React, TypeScript, shadcn Base UI, Tailwind, TanStack Query, pnpm.
 
 # 45. AGENTS.md 核心规则
 

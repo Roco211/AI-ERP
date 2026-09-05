@@ -50,7 +50,7 @@ def test_clean_and_bootstrap_migrations(from_bootstrap):
         with target.connect() as db:
             assert (
                 db.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
-                == "0003_catalog_records"
+                == "0004_product_embeddings"
             )
             assert db.execute(text("SELECT count(*) FROM forge.products")).scalar_one() == 0
             assert db.execute(

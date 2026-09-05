@@ -39,3 +39,14 @@ check: lint test
 	$(PNPM) test:e2e
 down:
 	docker compose down
+
+semantic-infra:
+	docker compose --profile semantic up -d --wait ollama
+semantic-pull:
+	docker compose exec -T ollama ollama pull bge-m3:567m
+semantic-rebuild:
+	$(UV) run --project apps/api python apps/api/scripts/rebuild_embeddings.py --organization DEMO
+semantic-eval:
+	$(UV) run --project apps/api python apps/api/scripts/eval_embeddings.py
+semantic-enable:
+	$(UV) run --project apps/api python apps/api/scripts/configure_embeddings.py

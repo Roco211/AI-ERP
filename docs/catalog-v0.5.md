@@ -16,3 +16,6 @@ Every increment must pass relevant tests. Final checks include Bootstrap regress
 Use the root `.env` generated during Bootstrap. `make infra migrate seed` starts infrastructure, upgrades existing or empty databases and ensures the demo administrator has Catalog permissions. `make seed-catalog` optionally creates eight hardware demo products and related dictionaries, contacts, conversions, prices and a warehouse; repeatable without overwriting user-edited master records. `make api` and `make web` open the app at http://localhost:3100. Catalog lives under 商品 / 客户 / 供应商; 设置 contains 分类 / 品牌 / 单位 / 仓库. 商品 → 快捷选品 supports keyboard lookup and conversion preview.
 
 `make lint test contract` verifies backend/frontend contracts and tests. Run `pnpm build` before `pnpm test:e2e`; browser tests need Playwright Chromium and its Linux dependencies. `make seed-catalog` is opt-in and not required for tests. Existing Bootstrap seed credentials remain unchanged. Semantic search is not enabled; see ADR 0010.
+
+
+Local embedding decision completed: see [local setup](local-embeddings.md) and ADR 0011. The optional runtime uses BGE-M3 and pgvector; no cloud API keys are needed.

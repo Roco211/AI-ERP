@@ -46,6 +46,7 @@ async def search_products(
     if attributes:
         clauses.append("p.attributes @> CAST(:attributes AS jsonb)")
         params["attributes"] = json.dumps(attributes)
+    base_clauses = clauses.copy()
     exact = "lower(p.sku)=:q OR lower(p.barcode)=:q"
     supplier_exact = "false"
     if "supplier.read" in ctx.permissions:
@@ -71,6 +72,21 @@ async def search_products(
     total = (
         await db.execute(text(f"SELECT count(*) FROM forge.products p WHERE {where}"), params)
     ).scalar_one()
+    if total == 0 and q:
+        from forge_erp.modules.catalog.application.semantic import semantic_ids
+
+        ids = await semantic_ids(db, ctx, q, base_clauses, params)
+        if ids:
+            from forge_erp.modules.catalog.infrastructure.embeddings import model_identity
+
+            params["semantic_ids"] = [str(i) for i in ids]
+            params["semantic_model"] = model_identity()
+            where = " AND ".join(base_clauses) + " AND p.id=ANY(CAST(:semantic_ids AS uuid[]))"
+            where += " AND p.active AND EXISTS (SELECT 1 FROM forge.product_embeddings e "
+            where += "WHERE e.organization_id=p.organization_id AND e.product_id=p.id "
+            where += "AND e.product_version=p.version AND e.model_identity=:semantic_model)"
+            rank = "array_position(CAST(:semantic_ids AS uuid[]),p.id)"
+            total = len(ids)
     rows = (
         await db.execute(
             text(

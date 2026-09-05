@@ -144,6 +144,23 @@ async def seed_catalog() -> None:
                 "price": "0.60",
             },
         )
+        tools = await add("categories", {"code": "TOOLS", "name": "工具与辅料"})
+        for code, name, specification in [
+            ("WRENCH-250", "活动扳手 250mm", "可调节开口，拧紧或松开不同尺寸的六角螺母"),
+            ("DRIVER-PH2", "十字螺丝刀 PH2", "拆装十字槽螺钉"),
+            ("PTFE-TAPE", "聚四氟乙烯生料带", "水管螺纹接口密封防漏"),
+            ("INSULATION-TAPE", "电工绝缘胶带", "包扎电线接头，绝缘防漏电"),
+        ]:
+            await add(
+                "products",
+                {
+                    "sku": code,
+                    "name": name,
+                    "category_id": tools["id"],
+                    "base_unit_id": pcs["id"],
+                    "specification": specification,
+                },
+            )
     await engine.dispose()
     print("Demo catalog seeded through tenant-scoped application commands.")
 
