@@ -40,7 +40,14 @@ with create_engine(cfg.migration_database_url).begin() as db:
             text("INSERT INTO forge.user_roles VALUES (:org,:user,:role)"),
             {"org": org, "user": user, "role": role},
         )
-        for permission in ("profile.read", "inventory.read", "catalog.read", "warehouse.read"):
+        for permission in (
+            "profile.read",
+            "inventory.read",
+            "purchase.read",
+            "supplier.read",
+            "catalog.read",
+            "warehouse.read",
+        ):
             db.execute(
                 text("INSERT INTO forge.role_permissions VALUES (:org,:role,:permission)"),
                 {"org": org, "role": role, "permission": permission},

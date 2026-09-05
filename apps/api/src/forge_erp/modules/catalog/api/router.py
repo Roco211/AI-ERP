@@ -10,7 +10,9 @@ from forge_erp.modules.catalog.application.service import get_record, list_recor
 from forge_erp.modules.catalog.domain import schemas as s
 
 router = APIRouter(prefix="/api/v1", tags=["catalog"])
-Transaction = Annotated[tuple[AsyncSession, RuntimeContext], Depends(authenticated_transaction)]
+Transaction = Annotated[
+    tuple[AsyncSession, RuntimeContext], Depends(authenticated_transaction, scope="function")
+]
 Key = Annotated[str, Header(alias="Idempotency-Key", min_length=8, max_length=128)]
 
 

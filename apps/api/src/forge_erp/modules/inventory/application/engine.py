@@ -19,6 +19,8 @@ class InventoryEngine:
     def __init__(self, db: AsyncSession, ctx: RuntimeContext, permission: str = "inventory.adjust"):
         if permission not in {
             "inventory.adjust",
+            "purchase.receive",
+            "purchase.return",
             "inventory.opening",
             "inventory.transfer",
             "inventory.stocktake",
@@ -326,7 +328,9 @@ class InventoryEngine:
         return movement
 
     async def reverse(self, movement: dict, reversal_id: UUID) -> dict:
-        self.ctx.require("inventory.reverse")
+        self.ctx.require(
+            "purchase.reverse" if self.permission.startswith("purchase.") else "inventory.reverse"
+        )
         key = (movement["warehouse_id"], movement["product_id"])
         if self.rows[key]["movement_sequence"] != movement["sequence"]:
             raise Problem(

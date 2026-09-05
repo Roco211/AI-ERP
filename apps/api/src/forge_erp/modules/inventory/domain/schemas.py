@@ -91,7 +91,7 @@ class InventoryLineRead(BaseModel):
 class InventoryDocumentRead(BaseModel):
     id: UUID
     number: str
-    type: Kind
+    type: Kind | Literal["PURCHASE_RECEIPT", "PURCHASE_RETURN"]
     status: Status
     version: int
     reason: str

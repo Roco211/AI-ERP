@@ -1,0 +1,228 @@
+forge-erp/
+├── .env.example
+├── .github/
+│   └── workflows/
+│       └── ci.yml
+├── .gitignore
+├── .python-version
+├── AGENTS.md
+├── Makefile
+├── README.md
+├── apps/
+│   ├── api/
+│   │   ├── alembic.ini
+│   │   ├── migrations/
+│   │   │   ├── env.py
+│   │   │   ├── script.py.mako
+│   │   │   └── versions/
+│   │   │       ├── 0001_bootstrap.py
+│   │   │       ├── 0001_bootstrap.sql
+│   │   │       ├── 0002_catalog_dictionaries.py
+│   │   │       ├── 0003_catalog_records.py
+│   │   │       ├── 0004_product_embeddings.py
+│   │   │       ├── 0005_inventory.py
+│   │   │       ├── 0005_inventory.sql
+│   │   │       ├── 0006_inventory_snapshot.py
+│   │   │       ├── 0007_inventory_projection_version.py
+│   │   │       ├── 0008_purchasing.py
+│   │   │       └── 0008_purchasing.sql
+│   │   ├── pyproject.toml
+│   │   ├── scripts/
+│   │   │   ├── configure_embeddings.py
+│   │   │   ├── eval_embeddings.py
+│   │   │   ├── export_openapi.py
+│   │   │   ├── rebuild_embeddings.py
+│   │   │   ├── reconcile_inventory.py
+│   │   │   ├── seed.py
+│   │   │   ├── seed_catalog.py
+│   │   │   ├── seed_inventory.py
+│   │   │   └── seed_purchasing.py
+│   │   ├── src/
+│   │   │   └── forge_erp/
+│   │   │       ├── __init__.py
+│   │   │       ├── core/
+│   │   │       │   ├── auth_dependencies.py
+│   │   │       │   ├── config.py
+│   │   │       │   ├── context.py
+│   │   │       │   ├── db.py
+│   │   │       │   ├── errors.py
+│   │   │       │   ├── idempotency.py
+│   │   │       │   ├── observability.py
+│   │   │       │   ├── rate_limit.py
+│   │   │       │   └── security.py
+│   │   │       ├── main.py
+│   │   │       ├── modules/
+│   │   │       │   ├── audit/
+│   │   │       │   │   └── service.py
+│   │   │       │   ├── catalog/
+│   │   │       │   │   ├── api/
+│   │   │       │   │   │   ├── router.py
+│   │   │       │   │   │   └── search_router.py
+│   │   │       │   │   ├── application/
+│   │   │       │   │   │   ├── rules.py
+│   │   │       │   │   │   ├── search.py
+│   │   │       │   │   │   ├── semantic.py
+│   │   │       │   │   │   └── service.py
+│   │   │       │   │   ├── domain/
+│   │   │       │   │   │   ├── schemas.py
+│   │   │       │   │   │   └── values.py
+│   │   │       │   │   └── infrastructure/
+│   │   │       │   │       ├── embeddings.py
+│   │   │       │   │       └── resources.py
+│   │   │       │   ├── identity/
+│   │   │       │   │   ├── api/
+│   │   │       │   │   │   ├── router.py
+│   │   │       │   │   │   └── schemas.py
+│   │   │       │   │   └── application/
+│   │   │       │   │       └── commands.py
+│   │   │       │   ├── inventory/
+│   │   │       │   │   ├── api/
+│   │   │       │   │   │   └── router.py
+│   │   │       │   │   ├── application/
+│   │   │       │   │   │   ├── documents.py
+│   │   │       │   │   │   ├── engine.py
+│   │   │       │   │   │   ├── maintenance.py
+│   │   │       │   │   │   └── queries.py
+│   │   │       │   │   └── domain/
+│   │   │       │   │       ├── schemas.py
+│   │   │       │   │       └── values.py
+│   │   │       │   └── purchasing/
+│   │   │       │       ├── __init__.py
+│   │   │       │       ├── api/
+│   │   │       │       │   ├── __init__.py
+│   │   │       │       │   └── router.py
+│   │   │       │       ├── application/
+│   │   │       │       │   ├── __init__.py
+│   │   │       │       │   ├── documents.py
+│   │   │       │       │   ├── orders.py
+│   │   │       │       │   └── queries.py
+│   │   │       │       └── domain/
+│   │   │       │           ├── __init__.py
+│   │   │       │           ├── schemas.py
+│   │   │       │           └── values.py
+│   │   │       └── workers/
+│   │   │           ├── celery_app.py
+│   │   │           └── outbox.py
+│   │   ├── tests/
+│   │   │   ├── browser_readonly_fixture.py
+│   │   │   ├── conftest.py
+│   │   │   ├── test_api_commit_boundary.py
+│   │   │   ├── test_catalog.py
+│   │   │   ├── test_embeddings.py
+│   │   │   ├── test_inventory_documents.py
+│   │   │   ├── test_inventory_engine.py
+│   │   │   ├── test_inventory_safety.py
+│   │   │   ├── test_migrations.py
+│   │   │   ├── test_platform.py
+│   │   │   ├── test_purchasing.py
+│   │   │   ├── test_purchasing_safety.py
+│   │   │   └── test_security_boundaries.py
+│   │   └── uv.lock
+│   └── web/
+│       ├── app/
+│       │   ├── [section]/
+│       │   │   └── page.tsx
+│       │   ├── globals.css
+│       │   ├── layout.tsx
+│       │   ├── login/
+│       │   │   └── page.tsx
+│       │   ├── page.tsx
+│       │   └── settings/
+│       │       └── [resource]/
+│       │           └── page.tsx
+│       ├── components.json
+│       ├── components/
+│       │   ├── erp-shell.tsx
+│       │   ├── providers.tsx
+│       │   └── ui/
+│       │       ├── button.tsx
+│       │       ├── input.tsx
+│       │       └── label.tsx
+│       ├── e2e/
+│       │   ├── bootstrap.spec.ts
+│       │   ├── catalog.spec.ts
+│       │   ├── inventory.spec.ts
+│       │   └── purchasing.spec.ts
+│       ├── eslint.config.mjs
+│       ├── features/
+│       │   ├── catalog/
+│       │   │   ├── client.ts
+│       │   │   ├── config.ts
+│       │   │   ├── manager.tsx
+│       │   │   ├── picker.tsx
+│       │   │   └── workspace.tsx
+│       │   ├── inventory/
+│       │   │   ├── client.ts
+│       │   │   └── workspace.tsx
+│       │   └── purchasing/
+│       │       ├── client.ts
+│       │       └── workspace.tsx
+│       ├── generated/
+│       │   └── api/
+│       │       └── schema.d.ts
+│       ├── lib/
+│       │   ├── api.ts
+│       │   └── utils.ts
+│       ├── next-env.d.ts
+│       ├── next.config.ts
+│       ├── package.json
+│       ├── playwright.config.ts
+│       ├── postcss.config.mjs
+│       ├── tests/
+│       │   ├── inventory.test.tsx
+│       │   ├── login.test.tsx
+│       │   ├── picker.test.tsx
+│       │   ├── purchasing.test.tsx
+│       │   └── setup.ts
+│       ├── tsconfig.json
+│       └── vitest.config.ts
+├── docker-compose.yml
+├── docs/
+│   ├── acceptance.md
+│   ├── adr/
+│   │   ├── 0001-modular-monolith.md
+│   │   ├── 0002-postgresql-primary-database.md
+│   │   ├── 0003-server-authoritative-domain.md
+│   │   ├── 0004-cookie-session-auth.md
+│   │   ├── 0005-postgresql-row-level-security.md
+│   │   ├── 0006-transactional-outbox.md
+│   │   ├── 0007-openapi-contract-generation.md
+│   │   ├── 0008-langgraph-agent-runtime.md
+│   │   ├── 0009-catalog-master-data.md
+│   │   ├── 0010-catalog-search.md
+│   │   ├── 0011-local-embeddings.md
+│   │   ├── 0012-inventory-ledger-and-posting.md
+│   │   └── 0013-purchasing-receipts-and-returns.md
+│   ├── api/
+│   │   └── openapi.json
+│   ├── architecture/
+│   │   ├── migration-context.md
+│   │   └── runtime.md
+│   ├── catalog-v0.5.md
+│   ├── evidence/
+│   │   ├── inventory-v0.6-benchmark.json
+│   │   └── inventory-v0.6-browser-measurement.json
+│   ├── import/
+│   │   ├── catalog-import-design.md
+│   │   └── templates/
+│   │       ├── product-prices.csv
+│   │       ├── product-units.csv
+│   │       └── products.csv
+│   ├── inventory-v0.6-acceptance.md
+│   ├── inventory-v0.6-delivery.md
+│   ├── inventory-v0.6-tree.txt
+│   ├── inventory-v0.6.md
+│   ├── local-embeddings.md
+│   ├── purchasing-v0.7-acceptance.md
+│   ├── purchasing-v0.7-delivery.md
+│   ├── purchasing-v0.7-tree.txt
+│   ├── purchasing-v0.7.md
+│   └── repository-tree.txt
+├── infra/
+│   └── postgres/
+│       └── init.sh
+├── package.json
+├── pnpm-lock.yaml
+├── pnpm-workspace.yaml
+└── scripts/
+    └── dev_env.py

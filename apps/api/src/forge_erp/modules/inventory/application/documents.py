@@ -57,6 +57,8 @@ async def lines(db: AsyncSession, ctx: RuntimeContext, id: UUID) -> list[dict]:
 
 
 def require(ctx: RuntimeContext, kind: str, action: str):
+    if kind not in PERMISSIONS:
+        raise Problem(409, "PURCHASE_COMMAND_REQUIRED", "请从采购工作台处理此单据")
     ctx.require(PERMISSIONS[kind])
     # Inventory documents carry estimates and require informed valuation decisions.
     ctx.require("product.cost.read")

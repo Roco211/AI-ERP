@@ -1,6 +1,6 @@
-# Forge ERP · Inventory v0.6
+# Forge ERP · Purchasing v0.7
 
-五金商贸 ERP。基于已验收的 Bootstrap v0.4，Catalog 增加分类、品牌、单位、商品、价格、客户、供应商、供货关系、仓库资料和快捷选品。可选本地语义搜索使用 Ollama/BGE-M3（[安装说明](docs/local-embeddings.md)）；库存 v0.6 已加入期初、调整、调拨、盘点、库存流水与低库存查询。销售、采购、资金和 AI 业务功能未开放。详见 [Catalog 使用与验收](docs/catalog-v0.5.md) 和 [Excel 导入基础设计](docs/import/catalog-import-design.md)。
+五金商贸 ERP。基于已验收的 Bootstrap v0.4，Catalog 增加分类、品牌、单位、商品、价格、客户、供应商、供货关系、仓库资料和快捷选品。可选本地语义搜索使用 Ollama/BGE-M3（[安装说明](docs/local-embeddings.md)）；库存 v0.6 已加入期初、调整、调拨、盘点、库存流水与低库存查询。采购 v0.7 已加入订单、分批收货、退货、冲销与历史采购价。销售、资金和 AI 业务功能未开放。详见 [Catalog 使用与验收](docs/catalog-v0.5.md) 和 [Excel 导入基础设计](docs/import/catalog-import-design.md)。
 
 ## 本地启动
 
@@ -59,7 +59,7 @@ Outbox consumer 使用 `FOR UPDATE SKIP LOCKED`，身份/库存事件记录处�
 
 OpenTelemetry 接入点已启用；可选 `SENTRY_DSN` 配置错误收集，不发送请求体。当前未配置外部追踪收集端或告警。FastAPI 的业务日志为 JSON；uvicorn access log 在标准启动命令中禁用，避免 URL 参数进入日志。
 
-停止服务使用 `make down`，保留数据库卷。不要以删除卷作为常规升级手段。全部验收通过且 GitHub CI 绿色后，建议创建 `inventory-v0.6` 标签；本次交付使用独立评审分支，不自动合并依赖 PR。
+停止服务使用 `make down`，保留数据库卷。不要以删除卷作为常规升级手段。全部验收通过且 GitHub CI 绿色后，建议创建 `purchasing-v0.7` 标签；本次交付使用独立评审分支，不自动合并依赖 PR。
 
 ## 库存使用与维护
 
@@ -84,3 +84,14 @@ uv run --project apps/api python apps/api/scripts/reconcile_inventory.py \
 ```
 
 演示 seed 不替换用户库存；重复执行保留已有期初单。浏览器验收会在开发 DEMO 中留下标记为 INV-E2E 的真实单据和流水，不能删除流水来清理历史。重启电脑后需重新启动基础设施、API、Web 及所需 worker/beat；当前启动方式不是系统自启动服务。
+
+## 采购 v0.7
+
+入口：`http://localhost:3100/purchase`，沿用现有 DEMO 账户。
+
+- [施工规范](docs/purchasing-v0.7.md)、[验收清单](docs/purchasing-v0.7-acceptance.md)、[ADR 0013](docs/adr/0013-purchasing-receipts-and-returns.md)。
+- 升级：`make migrate seed`；可选演示：`make seed-purchasing`。演示订单100件，已收60件，待收40件；重复运行保留已有单据。
+- 确认采购订单不会增加库存，收货过账才增加库存；退货不重开订单待收量。
+- 一张订单一个供应商、一个仓库；禁止超收。单价按所选采购单位输入，数量与金额由服务端精确核算。
+- 退货参考金额与库存扣减成本分别记录，不代表应付、付款或退款。
+- 冲销沿用严格末笔整单规则；存在后续库存变动时不能直接冲销。
