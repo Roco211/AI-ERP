@@ -4,9 +4,18 @@ import structlog
 from sqlalchemy import text
 
 from forge_erp.core.db import engine, sessions, set_tenant, verify_database_role
+from forge_erp.modules.catalog.infrastructure.resources import RESOURCES
 from forge_erp.workers.celery_app import celery_app
 
 KNOWN_EVENTS = {"identity.session.created", "identity.session.revoked"}
+# Catalog events currently have only an observability consumer. Future search indexing
+# must add a durable handler before enabling semantic search.
+
+KNOWN_EVENTS |= {
+    f"catalog.{resource}.{action}"
+    for resource in RESOURCES
+    for action in ("create", "update", "activate", "deactivate")
+}
 log = structlog.get_logger()
 
 
@@ -37,7 +46,7 @@ async def drain_outbox() -> int:
                     log.warning("unknown_outbox_event", event_id=str(row["id"]))
                     continue
                 log.info(
-                    "identity_event_processed",
+                    "outbox_event_processed",
                     event_id=str(row["id"]),
                     organization_id=str(org),
                     request_id=row["request_id"],

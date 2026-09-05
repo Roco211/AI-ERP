@@ -12,6 +12,8 @@ migrate:
 	$(UV) run --project apps/api alembic -c apps/api/alembic.ini upgrade head
 seed:
 	$(UV) run --project apps/api python apps/api/scripts/seed.py
+seed-catalog:
+	$(UV) run --project apps/api python apps/api/scripts/seed_catalog.py
 api:
 	$(UV) run --project apps/api uvicorn forge_erp.main:app --host 127.0.0.1 --port 8100 --no-access-log
 web:

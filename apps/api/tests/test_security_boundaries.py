@@ -50,7 +50,15 @@ async def test_all_tenant_tables_force_rls_and_both_policies():
                 )
             )
         ).all()
-        assert len(rows) == 9
+        tenant_tables = (
+            await db.execute(
+                text(
+                    "SELECT count(*) FROM information_schema.columns "
+                    "WHERE table_schema='forge' AND column_name='organization_id'"
+                )
+            )
+        ).scalar_one() + 1
+        assert len(rows) == tenant_tables
         assert all(
             row.relrowsecurity and row.relforcerowsecurity and row.polqual and row.polwithcheck
             for row in rows

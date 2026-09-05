@@ -1,6 +1,6 @@
-# Forge ERP · Bootstrap v0.4
+# Forge ERP · Catalog v0.5
 
-五金商贸 ERP 的平台基础工程。当前已实现登录、租户与权限基础、审计/Outbox/幂等、API 契约及 ERP 导航壳。Catalog v0.5 及库存、销售、采购、资金、AI 业务功能未开放。
+五金商贸 ERP。基于已验收的 Bootstrap v0.4，Catalog 增加分类、品牌、单位、商品、价格、客户、供应商、供货关系、仓库资料和快捷选品。向量搜索等待独立 embedding 服务；库存、销售、采购、资金和 AI 业务功能未开放。详见 [Catalog 使用与验收](docs/catalog-v0.5.md) 和 [Excel 导入基础设计](docs/import/catalog-import-design.md)。
 
 ## 本地启动
 
@@ -12,6 +12,7 @@ make install
 make infra               # PostgreSQL 18 + vector + pg_trgm，Redis
 make migrate
 make seed                # DEMO / ADMIN；账户来自 .env 的 SEED_ADMIN_*
+make seed-catalog        # 可选：八件五金示例商品及关联资料
 make api                 # 终端 1
 make web                 # 终端 2
 make worker              # 终端 3，可选后台消费者

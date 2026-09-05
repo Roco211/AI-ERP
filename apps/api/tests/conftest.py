@@ -59,6 +59,16 @@ def identities(password_hash):
     with admin.begin() as db:
         for rec in records:
             for table in (
+                "supplier_products",
+                "product_prices",
+                "product_units",
+                "products",
+                "customers",
+                "suppliers",
+                "warehouses",
+                "categories",
+                "brands",
+                "units",
                 "idempotency_keys",
                 "outbox_events",
                 "audit_events",
