@@ -158,7 +158,7 @@ export function ERPShell({
         <div className="mt-auto hidden border-t border-border px-3 pt-4 md:block">
           <p className="text-xs font-medium">一步一步，把生意做好。</p>
           <p className="mt-2 text-[10px] text-muted-foreground">
-            Forge ERP · v0.7
+            Forge ERP · v0.8
           </p>
         </div>
       </aside>

@@ -52,7 +52,7 @@ ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
     }
     for code in (401, 403, 409, 422, 429, 500, 503)
 }
-app = FastAPI(title="Forge ERP", version="0.7.0", lifespan=lifespan, responses=ERROR_RESPONSES)
+app = FastAPI(title="Forge ERP", version="0.8.0", lifespan=lifespan, responses=ERROR_RESPONSES)
 app.include_router(router)
 app.include_router(catalog_router)
 app.include_router(inventory_router)
@@ -126,8 +126,8 @@ class Health(BaseModel):
 
 class Version(BaseModel):
     name: str = "Forge ERP"
-    version: str = "0.7.0"
-    milestone: str = "Purchasing"
+    version: str = "0.8.0"
+    milestone: str = "Sales"
 
 
 @app.get("/healthz", response_model=Health, operation_id="healthz")

@@ -4061,7 +4061,7 @@ export interface components {
         Version: {
             /**
              * Milestone
-             * @default Purchasing
+             * @default Sales
              */
             milestone: string;
             /**
@@ -4071,7 +4071,7 @@ export interface components {
             name: string;
             /**
              * Version
-             * @default 0.7.0
+             * @default 0.8.0
              */
             version: string;
         };
