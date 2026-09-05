@@ -106,7 +106,7 @@ def test_clean_and_bootstrap_migrations(baseline):
         with target.connect() as db:
             assert (
                 db.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
-                == "0012_funds"
+                == "0015_reporting"
             )
             assert db.execute(text("SELECT count(*) FROM forge.products")).scalar_one() == (
                 1
@@ -249,6 +249,9 @@ def test_clean_and_bootstrap_migrations(baseline):
             assert db.execute(text("SELECT count(*) FROM forge.funds_sources")).scalar_one() == 0
             assert db.execute(text("SELECT count(*) FROM forge.funds_activation")).scalar_one() == 0
             for table in (
+                "import_batches",
+                "import_rows",
+                "replenishment_creations",
                 "funds_activation",
                 "funds_sources",
                 "funds_entries",
@@ -551,3 +554,137 @@ def seed_return_upgrade_fixture(db):
     ]
     for statement in statements:
         db.execute(text(statement), params)
+
+
+def test_operations_upgrade_preserves_every_funds_and_commercial_fact():
+    """A populated accepted v0.9 database is unchanged apart from new schema/permissions."""
+    cfg = settings()
+    name = "forge_migration_test_" + uuid4().hex
+    root = Path(__file__).resolve().parents[3]
+    admin = create_engine(cfg.migration_database_url, isolation_level="AUTOCOMMIT")
+    url = make_url(cfg.migration_database_url).set(database=name)
+    target = create_engine(url)
+
+    def migrate(revision):
+        result = subprocess.run(
+            [sys.executable, "-m", "alembic", "-c", "apps/api/alembic.ini", "upgrade", revision],
+            cwd=root,
+            env=dict(os.environ, MIGRATION_DATABASE_URL=url.render_as_string(hide_password=False)),
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+        assert result.returncode == 0, "Operations migration failed in disposable database"
+
+    def fingerprints(db, tables):
+        return {
+            table: db.execute(
+                text(
+                    "SELECT count(*),md5(string_agg(to_jsonb(t)::text,'' "
+                    "ORDER BY to_jsonb(t)::text)) "
+                    f"FROM forge.{table} t"
+                )
+            ).one()
+            for table in tables
+        }
+
+    try:
+        with admin.connect() as db:
+            db.execute(text(f'CREATE DATABASE "{name}"'))
+        with target.begin() as db:
+            db.execute(text("CREATE EXTENSION vector"))
+            db.execute(text("CREATE EXTENSION pg_trgm"))
+        migrate("0012_funds")
+        with target.begin() as db:
+            seed_upgrade_fixture(db, with_stock=True)
+            seed_purchase_upgrade_fixture(db)
+            seed_sales_upgrade_fixture(db)
+            seed_shipment_upgrade_fixture(db)
+            seed_return_upgrade_fixture(db)
+            p = dict(
+                db.execute(
+                    text("""
+                SELECT o.organization_id org,o.created_by actor,o.customer_id customer,
+                d.id shipment,r.id returned FROM forge.sales_orders o
+                JOIN forge.sales_documents d ON d.order_id=o.id AND d.kind='SHIPMENT'
+                JOIN forge.sales_documents r ON r.original_document_id=d.id AND r.kind='RETURN'
+            """)
+                )
+                .mappings()
+                .one()
+            ) | {"source": uuid4(), "cash": uuid4()}
+            for sql in (
+                "INSERT INTO forge.funds_activation(organization_id,business_date,reason,"
+                "created_by) "
+                "VALUES(:org,current_date,'Verified historical cutover',:actor)",
+                "INSERT INTO forge.funds_sources(id,organization_id,number,side,party_id,"
+                "customer_id,"
+                "party_name,kind,source_document_id,source_document_number,commercial_amount,"
+                "business_date,reason,created_by) VALUES(:source,:org,'OLD-AR','AR',:customer,"
+                ":customer,'Sales customer','SHIPMENT',:shipment,'OLD-SS',2,current_date,"
+                "'Actual commercial source',:actor)",
+                "INSERT INTO forge.funds_entries(organization_id,source_id,kind,amount,"
+                "document_id,reason,created_by) VALUES(:org,:source,'ORIGIN',2,:shipment,"
+                "'Actual posted amount',:actor),(:org,:source,'RETURN',-0.8,:returned,"
+                "'Frozen commercial return',:actor)",
+                "INSERT INTO forge.funds_cash_documents(id,organization_id,number,side,party_id,"
+                "customer_id,party_name,kind,amount,business_date,method,external_reference,"
+                "reason,created_by) VALUES(:cash,:org,'OLD-CASH','AR',:customer,:customer,"
+                "'Sales customer','SETTLEMENT',0.5,current_date,'CASH','',"
+                "'Historical receipt',:actor)",
+                "INSERT INTO forge.funds_cash_allocations(organization_id,cash_id,source_id,side,"
+                "party_id,amount) VALUES(:org,:cash,:source,'AR',:customer,0.5)",
+                "INSERT INTO forge.funds_cash_reversals(organization_id,cash_id,reason,created_by) "
+                "VALUES(:org,:cash,'Historical correction retained',:actor)",
+                "INSERT INTO forge.funds_operations(organization_id,actor_id,operation,key,"
+                "request_hash,response) VALUES(:org,:actor,'funds.cash.post','old-intent',"
+                "'old-hash',jsonb_build_object('id',CAST(:cash AS text),'status','POSTED'))",
+            ):
+                db.execute(text(sql), p)
+            tables = (
+                db.execute(
+                    text(
+                        "SELECT tablename FROM pg_tables WHERE schemaname='forge' "
+                        "AND tablename<>'permissions' ORDER BY tablename"
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            before = fingerprints(db, tables)
+            assert all(
+                before[t][0] > 0
+                for t in (
+                    "funds_activation",
+                    "funds_sources",
+                    "funds_entries",
+                    "funds_cash_documents",
+                    "funds_cash_allocations",
+                    "funds_cash_reversals",
+                    "funds_operations",
+                    "inventory_movements",
+                    "inventory_balances",
+                    "sales_document_lines",
+                )
+            )
+        migrate("head")
+        with target.connect() as db:
+            assert (
+                db.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
+                == "0015_reporting"
+            )
+            assert fingerprints(db, tables) == before
+            for table in ("import_batches", "import_rows", "replenishment_creations"):
+                assert db.execute(text(f"SELECT count(*) FROM forge.{table}")).scalar_one() == 0
+                assert db.execute(
+                    text(
+                        "SELECT relrowsecurity AND relforcerowsecurity "
+                        "FROM pg_class WHERE oid=CAST(:name AS regclass)"
+                    ),
+                    {"name": "forge." + table},
+                ).scalar_one()
+    finally:
+        target.dispose()
+        with admin.connect() as db:
+            db.execute(text(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)'))
+        admin.dispose()

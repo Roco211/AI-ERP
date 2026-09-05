@@ -7,6 +7,8 @@ const sections = [
   "sales",
   "purchase",
   "inventory",
+  "imports",
+  "replenishment",
   "products",
   "customers",
   "suppliers",

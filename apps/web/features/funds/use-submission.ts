@@ -11,7 +11,10 @@ type Pending = {
 };
 
 /** Retain the original funds request until a successful receipt resolves it. */
-export function useFundsSubmission() {
+export function useFundsSubmission(messages?: {
+  success: string;
+  committedRefreshFailure: string;
+}) {
   const pending = useRef<Pending | null>(null);
   const inFlight = useRef(false);
   const [busy, setBusy] = useState(false);
@@ -37,10 +40,13 @@ export function useFundsSubmission() {
       pending.current = null;
       setUncertain(false);
       await afterReceipt();
-      setNotice("操作已完成，资金记录已更新。");
+      setNotice(messages?.success ?? "操作已完成，资金记录已更新。");
     } catch (error) {
       if (committed) {
-        setNotice("操作已提交，详情暂时无法刷新。请重新加载后核对资金记录。");
+        setNotice(
+          messages?.committedRefreshFailure ??
+            "操作已提交，详情暂时无法刷新。请重新加载后核对资金记录。",
+        );
       } else {
         const rejected =
           error instanceof ApiError &&

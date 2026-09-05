@@ -45,6 +45,14 @@ KNOWN_EVENTS |= {
     "funds.source.return",
     "funds.source.document.reverse",
 }
+KNOWN_EVENTS |= {
+    "catalog.import.preview",
+    "catalog.import.confirm",
+    "catalog.import.retry",
+    "catalog.import.row.succeeded",
+    "catalog.import.expired",
+    "replenishment.purchase.created",
+}
 log = structlog.get_logger()
 
 

@@ -1,5 +1,9 @@
 # Forge ERP — Funds v0.9 and Operations v0.10 implementation
 
+## Operations implementation baseline
+
+Funds final commit `7fded4f730d87a8bedaf60491bbaf52f7d358564` passed push CI 33983285324 and PR CI 33983287501: 473 backend tests, 74 frontend tests and 14 browser scenarios. Its 27-item acceptance is complete; exact evidence is in `../Forge-ERP-Funds-v0.9-verification.json`. Operations implementation now proceeds on `operations/v0.10` from that accepted commit, with database baseline `0012_funds`. Read `docs/operations-v0.10.md`, its 42-item checklist and ADR0016. Implement O1–O5 within the existing authorization; do not stop at funds or automatically merge/tag/release.
+
 ## Current authorization (2026-09-06)
 
 The user explicitly requested “OK，请进行阶段v0.9和V0.10” after reviewing the development plan. This authorizes specification and incremental implementation of lightweight funds (receivables, receipts, payables, payments, allocations, return credits/refunds, reversals, opening balances), followed by formal Excel import, deterministic replenishment and a traceable operating overview. Finish and verify v0.9 before implementing v0.10 business features. No further permission is required for this authorized implementation. Earlier stage-specific prohibitions below are historical boundaries, superseded only for this scope. AI business tools, general accounting and new infrastructure remain excluded.
@@ -113,3 +117,17 @@ S1–S5 implementation is complete: 357 backend tests, 44 frontend tests and 11 
 F0–F5 implementation and local acceptance are complete. The baseline `f8a110b` passed both CI runs 33982396517/33982398145 with 471 backend tests. Final local verification is 74 frontend tests and 14 production-browser scenarios; two real zero-price source cases additionally passed. Independent review fixed frontend reversal permissions and the test-fixture/Outbox cleanup lock order without changing business rules. The local database is 0012_funds; application metadata is 0.9.0 / Funds.
 
 See docs/funds-v0.9-delivery.md, its 27-item acceptance and tree. The final commit includes these last review fixes and documentation and MUST pass its own push/PR CI, recorded in ../Forge-ERP-Funds-v0.9-verification.json. Only after those results are verified may the already-authorized v0.10 implementation begin. Use operations/v0.10 from that accepted result; read docs/operations-v0.10.md and ADR0016, preserve historical facts and published tags, and do not implement AI business tools or automatically merge/release.
+
+
+## Operations O5 local verification
+
+Operations implementation on `operations/v0.10` is based on accepted funds `7fded4f`. Backend increment `67e4d58` and workspace/browser increment `3189c7c` implement O1–O4. Local full backend: 643 passed; final imports/migrations after eight additional safety cases and first-batch query optimization: 116 passed. Frontend: 99 passed. Production browser via the CI-owned worker/beat script: 18 passed. These runs overlap and must not be summed. The final CI must run the entire current suite.
+
+Local runtime is 0.10.0 / Operations, head0015_reporting, with a pre-upgrade backup, existing DEMO/user/password/sales facts retained, funds not auto-activated, new FORCE RLS tables, and zero remaining BROWSER tenants or scoped fault triggers. The unpublished import claim index change has been applied to this already-upgraded local database and is also present in migration0013 for clean installs.
+
+See docs/operations-v0.10-delivery.md, its 42-item checklist and full tree. PR #6 targets funds/v0.9 (#5). Exact last commit and both final CI results belong in ../Forge-ERP-Operations-v0.10-verification.json after verification; do not claim old CI covers a new commit. No implicit merge/tag/release, production deployment, AI business tools or additional stage implementation is authorized.
+
+
+## Operations accepted code and final-delivery gate
+
+Code `3189c7c5b169c4218eabee23ed8c928bdfe26107` passed push CI33985790211 and PR CI33985818640, each with 651 backend, 99 frontend and 18 production-browser tests. The 42-item implementation acceptance and delivery documentation are complete. The final documentation commit MUST also pass its own push/PR CI before final delivery; record its exact SHA and results in ../Forge-ERP-Operations-v0.10-verification.json. No required implementation remains after that gate. Do not start another phase or merge/tag/release implicitly.

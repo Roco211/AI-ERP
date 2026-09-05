@@ -1,6 +1,8 @@
-# Forge ERP · Funds v0.9
+# Forge ERP · Operations v0.10
 
-五金商贸 ERP。Bootstrap、Catalog、库存、采购和销售已验收发布；保留单位换算、库存流水、订单占用、分批履约、原单退货和实际成本毛利。可选本地语义搜索使用 Ollama/BGE-M3（[安装说明](docs/local-embeddings.md)）。当前资金 v0.9 增加应收应付、收付款、退款、期初衔接及来源追溯，入口 `/funds`；启用之前的旧单需要明确核对，不会自动变为欠款。详见[资金规范](docs/funds-v0.9.md)、[验收清单](docs/funds-v0.9-acceptance.md)和[交付记录](docs/funds-v0.9-delivery.md)。后续 v0.10 的[批量导入、补货与经营概览](docs/operations-v0.10.md)已授权，须在资金验收后实施。AI 业务工具与完整会计仍未开放。
+五金商贸 ERP。Bootstrap、Catalog、库存、采购和销售已验收发布。资金 v0.9 提供应收应付、收付款、退款及期初衔接；运营 v0.10 增加正式 Excel 导入、可解释补货建议和可追溯经营概览，保留现有单位换算、库存流水、状态及成本规则。可选本地语义搜索使用 Ollama/BGE-M3（[安装说明](docs/local-embeddings.md)）。AI 业务工具和完整会计仍在范围之外。
+
+本次两个评审分支按资金→运营依赖顺序交付，不自动合并或发布。详见[资金交付](docs/funds-v0.9-delivery.md)、[运营规范](docs/operations-v0.10.md)、[运营验收](docs/operations-v0.10-acceptance.md)和[运营交付](docs/operations-v0.10-delivery.md)。
 
 ## 本地启动
 
@@ -17,8 +19,8 @@ make seed-inventory      # 可选：独立 INV-DEMO 商品/仓库，通过期初
 make seed-sales          # 可选：独立销售演示订单/出库/退货，重复保留既有事实
 make api                 # 终端 1
 make web                 # 终端 2
-make worker              # 终端 3，可选后台消费者
-make beat                # 终端 4，可选 Outbox 定时轮询
+make worker              # 终端 3，执行已确认导入及后台事件
+make beat                # 终端 4，定时恢复导入、清理到期正文及处理 Outbox
 ```
 
 打开 http://localhost:3100，输入 DEMO 和 `.env` 中配置的邮箱、密码。不要公开 `.env`。重复 seed 保留已有密码；修改环境变量不会重置现有账户。
@@ -34,7 +36,7 @@ make contract            # FastAPI OpenAPI → TypeScript
 git diff --exit-code -- docs/api/openapi.json apps/web/generated/api/schema.d.ts
 pnpm build
 pnpm --filter @forge/web exec playwright install --with-deps chromium
-pnpm test:e2e            # 启动 API 和生产 Web，登录、Catalog、库存、只读权限、移动端真实流程
+bash scripts/test_browser_with_worker.sh  # 独立 worker/beat + API/生产 Web 的完整浏览器测试
 uv run --project apps/api alembic -c apps/api/alembic.ini current
 ```
 
@@ -60,7 +62,7 @@ Outbox consumer 使用 `FOR UPDATE SKIP LOCKED`，身份/库存事件记录处�
 
 OpenTelemetry 接入点已启用；可选 `SENTRY_DSN` 配置错误收集，不发送请求体。当前未配置外部追踪收集端或告警。FastAPI 的业务日志为 JSON；uvicorn access log 在标准启动命令中禁用，避免 URL 参数进入日志。
 
-停止服务使用 `make down`，保留数据库卷。不要以删除卷作为常规升级手段。`sales-v0.8` 已发布；当前资金工作在独立 `funds/v0.9` 评审分支，不自动合并、创建资金标签或发布版本。
+停止服务使用 `make down`，保留数据库卷。不要以删除卷作为常规升级手段。`sales-v0.8` 已发布；资金和运营分别在 `funds/v0.9`、`operations/v0.10` 评审分支，不自动合并、打标签或发布。
 
 ## 库存使用与维护
 
@@ -73,7 +75,7 @@ OpenTelemetry 接入点已启用；可选 `SENTRY_DSN` 配置错误收集，不�
 - 查看数量使用 `inventory.read`；成本另需 `product.cost.read`；期初/调整/调拨/盘点/冲销/对账分别授权。现有角色不会自动被批量升级；开发 ADMIN 通过 `make seed` 补齐权限。
 - 浏览器提交结果不明时保留原请求和幂等键，选择“重试原提交”。不要在另一窗口重建同一业务来猜测结果。
 
-库存 v0.6 的迁移止于 `0007_inventory_projection`：0005 创建库存表、约束与权限，0006 固定流水翻页快照，0007 分离流水顺序与余额修订版本。当前资金分支的迁移 head 为 `0012_funds`。升级使用 `make migrate`，保留原 Catalog 资料和库存事实；不要删除数据库卷。
+库存 v0.6 的迁移止于 `0007_inventory_projection`：0005 创建库存表、约束与权限，0006 固定流水翻页快照，0007 分离流水顺序与余额修订版本。当前运营分支的迁移 head 为 `0015_reporting`（资金为 `0012_funds`）。升级使用 `make migrate`，保留原 Catalog 资料和库存事实；不要删除数据库卷。
 
 对账工具要求现存、有 `inventory.reconcile` 和 `product.cost.read` 的操作者，以及明确的组织、仓库、商品范围。默认 dry-run，实际修复必须加 `--repair`；工具与正常过账使用相同库存键锁，修复只更新投影并留审计：
 
@@ -126,3 +128,22 @@ make seed-sales          # 可选，仅 development；需要现有活跃 DEMO �
 - 错误用冲销纠正，保留原记录；有后续依赖时先处理依赖。冲销不会绕过原库存的严格末笔规则。
 - 不确定提交使用原请求重试；资金操作有永久回执，普通幂等缓存清理后仍不会重复写入。页面刷新或关闭后的未确认操作仍应先查服务端记录。
 - 本阶段仅 CNY、四位金额精度，无预收预付、自动抹零、账龄、会计凭证或银行转账执行。业务时区默认 `Asia/Shanghai`，可通过 `BUSINESS_TIMEZONE` 配置。
+
+
+## 运营 v0.10
+
+- `/imports`：下载一种资料的 xlsx 模板，上传后查看原值、清洗结果和错误，明确确认后后台逐行执行。成功行永久记录来源；只重试失败行，版本冲突需要重新预览。支持 10 种现有 Catalog 资料，单批最多 10,000 行、64 列、10MB；正文 7 天后清理，已成功的业务资料保留。[模板、字段和恢复指南](docs/import/catalog-import-v0.10-guide.md)。
+- `/replenishment`：按全组织可用库存、有效在途及过去 30 个完整业务日净销量计算，展示依据。复核供应商、仓库、单位和价格后只生成采购草稿；依据变化须重新复核。不会自动确认采购、入库或付款。
+- `/dashboard`：期间销售、实际收付款与当前应收应付/库存分开展示；支持日期、每日趋势与原单来源。金额和实际成本按独立权限控制，当前有效事实发生冲销后历史窗口会重新计算。
+
+升级使用 `make migrate seed` 并重启 API、Web、worker 和 beat；已有数据与密码保留，其他角色的新增权限需要明确配置。资金仍须在 `/funds` 明确启用并核对旧账，不会自动为 DEMO 开启。补货与概览使用 `BUSINESS_TIMEZONE`（默认 Asia/Shanghai）。导入通过同源 `/api`，服务端代理等待上限 120 秒；这不是万行性能承诺。
+
+已确认导入的手动恢复和到期清理使用同一个受限 worker 入口（不会提升执行者权限）：
+
+```sh
+IMPORT_ORGANIZATION_ID='替换为目标组织UUID'
+uv run --project apps/api python -m forge_erp.workers.catalog_import \
+  --organization "$IMPORT_ORGANIZATION_ID" --limit 100
+```
+
+先将变量替换为目标组织的 UUID。`--limit` 是每组织本轮最多尝试行数；省略 `--organization` 会自动发现并实际处理各组织已确认任务及到期正文，不是仅列举或仅清理。失败行仍由创建者在界面明确重试。Redis 恢复后常规定时轮询继续；也可直接运行上面命令，不依赖 embedding。

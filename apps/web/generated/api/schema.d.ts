@@ -125,6 +125,142 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/catalog-imports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Batches */
+        get: operations["list_batches_api_v1_catalog_imports_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog-imports/previews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Upload Preview */
+        post: operations["upload_preview_api_v1_catalog_imports_previews_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog-imports/templates/{resource}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download Template */
+        get: operations["download_template_api_v1_catalog_imports_templates__resource__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog-imports/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Batch */
+        get: operations["get_batch_api_v1_catalog_imports__id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog-imports/{id}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm Import */
+        post: operations["confirm_import_api_v1_catalog_imports__id__confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog-imports/{id}/result.xlsx": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Export Results */
+        get: operations["export_results_api_v1_catalog_imports__id__result_xlsx_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog-imports/{id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Retry Import */
+        post: operations["retry_import_api_v1_catalog_imports__id__retry_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog-imports/{id}/rows": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Rows */
+        get: operations["get_rows_api_v1_catalog_imports__id__rows_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/catalog/conversion": {
         parameters: {
             query?: never;
@@ -1242,6 +1378,108 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/replenishment/purchase-orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Purchase Order */
+        post: operations["create_purchase_order_api_v1_replenishment_purchase_orders_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/replenishment/purchase-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Purchase Preview */
+        post: operations["purchase_preview_api_v1_replenishment_purchase_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/replenishment/suggestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Suggestions */
+        get: operations["list_suggestions_api_v1_replenishment_suggestions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/replenishment/warehouses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Warehouse Options */
+        get: operations["warehouse_options_api_v1_replenishment_warehouses_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reporting/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Operating Overview */
+        get: operations["operating_overview_api_v1_reporting_overview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reporting/sources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Operating Sources */
+        get: operations["operating_sources_api_v1_reporting_sources_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sales/documents": {
         parameters: {
             query?: never;
@@ -1872,6 +2110,102 @@ export interface components {
              */
             unit: string;
         };
+        /** BatchRead */
+        BatchRead: {
+            /** Body Available */
+            body_available: boolean;
+            /** Can Confirm */
+            can_confirm: boolean;
+            /** Can Retry */
+            can_retry: boolean;
+            /** Confirmed At */
+            confirmed_at: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Created By
+             * Format: uuid
+             */
+            created_by: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /** Failed */
+            failed: number;
+            /** Filename */
+            filename: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Invalid */
+            invalid: number;
+            /** Is Creator */
+            is_creator: boolean;
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "CREATE_ONLY" | "UPDATE_EXISTING";
+            /** Pending */
+            pending: number;
+            /** Preview Hash */
+            preview_hash: string;
+            /** Ready */
+            ready: number;
+            /**
+             * Resource
+             * @enum {string}
+             */
+            resource: "categories" | "brands" | "units" | "customers" | "suppliers" | "warehouses" | "products" | "product-units" | "product-prices" | "supplier-products";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "PREVIEW_READY" | "PREVIEW_INVALID" | "QUEUED" | "RUNNING" | "COMPLETED" | "PARTIAL_FAILED" | "FAILED" | "BLOCKED" | "EXPIRED";
+            /** Succeeded */
+            succeeded: number;
+            /** Total */
+            total: number;
+            /** Version */
+            version: number;
+            /** Worksheet */
+            worksheet: string;
+        };
+        /** BatchReceipt */
+        BatchReceipt: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Request Id */
+            request_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "PREVIEW_READY" | "PREVIEW_INVALID" | "QUEUED" | "RUNNING" | "COMPLETED" | "PARTIAL_FAILED" | "FAILED" | "BLOCKED" | "EXPIRED";
+            /** Version */
+            version: number;
+        };
+        /** BatchesPage */
+        BatchesPage: {
+            /** Items */
+            items: components["schemas"]["BatchRead"][];
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Total */
+            total: number;
+        };
         /** BrandCreate */
         BrandCreate: {
             /** Code */
@@ -1928,6 +2262,20 @@ export interface components {
              * @default
              */
             notes: string;
+        };
+        /** CashDay */
+        CashDay: {
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** Net Cash Amount */
+            net_cash_amount: string;
+            /** Refund Amount */
+            refund_amount: string;
+            /** Settlement Amount */
+            settlement_amount: string;
         };
         /** CategoryCreate */
         CategoryCreate: {
@@ -1998,6 +2346,13 @@ export interface components {
             /** Parent Id */
             parent_id?: string | null;
         };
+        /** ConfirmInput */
+        ConfirmInput: {
+            /** Expected Version */
+            expected_version: number;
+            /** Preview Hash */
+            preview_hash: string;
+        };
         /** ConversionSnapshot */
         ConversionSnapshot: {
             /** Base Qty */
@@ -2018,6 +2373,40 @@ export interface components {
             unit_id: string;
             /** Unit To Base Factor */
             unit_to_base_factor: string;
+        };
+        /** CurrentFunds */
+        CurrentFunds: {
+            /** Balance */
+            balance?: string | null;
+            /**
+             * Integration Status
+             * @enum {string}
+             */
+            integration_status: "ACTIVE" | "INCOMPLETE" | "NOT_ENABLED";
+            /** Refund Amount */
+            refund_amount?: string | null;
+            /** Settlement Amount */
+            settlement_amount?: string | null;
+            /** Source Count */
+            source_count?: number | null;
+            /** Unmapped Document Count */
+            unmapped_document_count: number;
+        };
+        /** CurrentInventory */
+        CurrentInventory: {
+            /** Low Stock Count */
+            low_stock_count: number;
+            /** Product Count */
+            product_count: number;
+            /** Valuation */
+            valuation?: string | null;
+        };
+        /** CurrentReplenishment */
+        CurrentReplenishment: {
+            /** Candidate Count */
+            candidate_count: number;
+            /** Suggested Count */
+            suggested_count: number;
         };
         /** CustomerCreate */
         CustomerCreate: {
@@ -2814,6 +3203,50 @@ export interface components {
             /** Status */
             status: string;
         };
+        /** HistoricalPrice */
+        HistoricalPrice: {
+            /** Conversion Version */
+            conversion_version: number;
+            /**
+             * Document Id
+             * Format: uuid
+             */
+            document_id: string;
+            /** Document Number */
+            document_number: string;
+            /**
+             * Line Id
+             * Format: uuid
+             */
+            line_id: string;
+            /**
+             * Posted At
+             * Format: date-time
+             */
+            posted_at: string;
+            /** Selected Unit Price */
+            selected_unit_price: string | null;
+            /**
+             * Unit Id
+             * Format: uuid
+             */
+            unit_id: string;
+            /** Unit Label */
+            unit_label: string;
+            /** Unit Price */
+            unit_price: string;
+            /** Unit To Base Factor */
+            unit_to_base_factor: string;
+        };
+        /** ImportErrorRead */
+        ImportErrorRead: {
+            /** Code */
+            code: string;
+            /** Column */
+            column: string;
+            /** Message */
+            message: string;
+        };
         /** InventoryBalanceRead */
         InventoryBalanceRead: {
             /** Available Qty */
@@ -3155,6 +3588,40 @@ export interface components {
              */
             warehouse_id: string;
         };
+        /** OperatingOverview */
+        OperatingOverview: {
+            /**
+             * As Of
+             * Format: date-time
+             */
+            as_of: string;
+            /** Business Timezone */
+            business_timezone: string;
+            /**
+             * Business Today
+             * Format: date
+             */
+            business_today: string;
+            cash_ap?: components["schemas"]["PeriodCash"] | null;
+            cash_ar?: components["schemas"]["PeriodCash"] | null;
+            current_ap?: components["schemas"]["CurrentFunds"] | null;
+            current_ar?: components["schemas"]["CurrentFunds"] | null;
+            /**
+             * Date From
+             * Format: date
+             */
+            date_from: string;
+            /**
+             * Date To
+             * Format: date
+             */
+            date_to: string;
+            inventory?: components["schemas"]["CurrentInventory"] | null;
+            replenishment?: components["schemas"]["CurrentReplenishment"] | null;
+            /** Restatement Notice */
+            restatement_notice: string;
+            sales?: components["schemas"]["PeriodSales"] | null;
+        };
         /** Page[BrandRead] */
         Page_BrandRead_: {
             /** Items */
@@ -3264,6 +3731,123 @@ export interface components {
             page_size: number;
             /** Total */
             total: number;
+        };
+        /** PeriodCash */
+        PeriodCash: {
+            /** Daily */
+            daily: components["schemas"]["CashDay"][];
+            /**
+             * Integration Status
+             * @enum {string}
+             */
+            integration_status: "ACTIVE" | "INCOMPLETE" | "NOT_ENABLED";
+            /** Net Cash Amount */
+            net_cash_amount?: string | null;
+            /** Refund Amount */
+            refund_amount?: string | null;
+            /** Settlement Amount */
+            settlement_amount?: string | null;
+            /** Unmapped Document Count */
+            unmapped_document_count: number;
+        };
+        /** PeriodSales */
+        PeriodSales: {
+            /** Cost Status */
+            cost_status?: ("AVAILABLE" | "MISSING_FACTS") | null;
+            /** Daily */
+            daily: components["schemas"]["SalesDay"][];
+            /** Gross Margin */
+            gross_margin?: string | null;
+            /** Net Cost */
+            net_cost?: string | null;
+            /** Net Sales Amount */
+            net_sales_amount?: string | null;
+            /** Return Amount */
+            return_amount?: string | null;
+            /** Return Cost */
+            return_cost?: string | null;
+            /** Return Count */
+            return_count: number;
+            /** Shipment Amount */
+            shipment_amount?: string | null;
+            /** Shipment Cost */
+            shipment_cost?: string | null;
+            /** Shipment Count */
+            shipment_count: number;
+        };
+        /** PreviewLine */
+        PreviewLine: {
+            /** Amount */
+            amount: string | null;
+            /** Base Qty */
+            base_qty: string | null;
+            basis: components["schemas"]["Suggestion"];
+            /** Blocking Reasons */
+            blocking_reasons: string[];
+            /** Conversion Version */
+            conversion_version: number | null;
+            historical_price: components["schemas"]["HistoricalPrice"] | null;
+            /**
+             * Price Source
+             * @enum {string}
+             */
+            price_source: "MANUAL" | "HISTORY";
+            /**
+             * Product Id
+             * Format: uuid
+             */
+            product_id: string;
+            /** Product Label */
+            product_label: string;
+            /** Qty */
+            qty: string | null;
+            /** Quantity Reason */
+            quantity_reason: string | null;
+            /**
+             * Quantity Source
+             * @enum {string}
+             */
+            quantity_source: "SUGGESTION" | "MANUAL";
+            /**
+             * Unit Id
+             * Format: uuid
+             */
+            unit_id: string;
+            /** Unit Name */
+            unit_name: string;
+            /** Unit Price */
+            unit_price: string | null;
+            /** Unit To Base Factor */
+            unit_to_base_factor: string | null;
+            /** Warnings */
+            warnings: string[];
+        };
+        /** PreviewLineInput */
+        PreviewLineInput: {
+            /** Basis Hash */
+            basis_hash: string;
+            /**
+             * Price Source
+             * @default MANUAL
+             * @enum {string}
+             */
+            price_source: "MANUAL" | "HISTORY";
+            /**
+             * Product Id
+             * Format: uuid
+             */
+            product_id: string;
+            /** Qty */
+            qty?: (number | string) | null;
+            /** Quantity Reason */
+            quantity_reason?: string | null;
+            /**
+             * Unit Id
+             * Format: uuid
+             */
+            unit_id: string;
+            /** Unit Price */
+            unit_price?: (number | string) | null;
         };
         /** PriceQuote */
         PriceQuote: {
@@ -3757,6 +4341,25 @@ export interface components {
             /** Reason */
             reason: string;
         };
+        /** PurchaseCreationInput */
+        PurchaseCreationInput: {
+            /** Confirmation Hash */
+            confirmation_hash: string;
+            /** Lines */
+            lines: components["schemas"]["PreviewLineInput"][];
+            /** Reason */
+            reason: string;
+            /**
+             * Supplier Id
+             * Format: uuid
+             */
+            supplier_id: string;
+            /**
+             * Warehouse Id
+             * Format: uuid
+             */
+            warehouse_id: string;
+        };
         /** PurchaseDocumentInput */
         PurchaseDocumentInput: {
             /** Lines */
@@ -4065,6 +4668,71 @@ export interface components {
             /** Total */
             total: number;
         };
+        /** PurchasePreview */
+        PurchasePreview: {
+            /** Algorithm Version */
+            algorithm_version: string;
+            /**
+             * As Of
+             * Format: date-time
+             */
+            as_of: string;
+            /** Blocking Reasons */
+            blocking_reasons: string[];
+            /** Business Timezone */
+            business_timezone: string;
+            /** Can Create */
+            can_create: boolean;
+            /** Confirmation Hash */
+            confirmation_hash: string;
+            /** Lines */
+            lines: components["schemas"]["PreviewLine"][];
+            /** Reason */
+            reason: string;
+            /**
+             * Supplier Id
+             * Format: uuid
+             */
+            supplier_id: string;
+            /** Supplier Name */
+            supplier_name: string;
+            /** Total Amount */
+            total_amount: string | null;
+            /**
+             * Warehouse Id
+             * Format: uuid
+             */
+            warehouse_id: string;
+            /** Warehouse Name */
+            warehouse_name: string;
+            /**
+             * Window End
+             * Format: date-time
+             */
+            window_end: string;
+            /**
+             * Window Start
+             * Format: date-time
+             */
+            window_start: string;
+        };
+        /** PurchasePreviewInput */
+        PurchasePreviewInput: {
+            /** Lines */
+            lines: components["schemas"]["PreviewLineInput"][];
+            /** Reason */
+            reason: string;
+            /**
+             * Supplier Id
+             * Format: uuid
+             */
+            supplier_id: string;
+            /**
+             * Warehouse Id
+             * Format: uuid
+             */
+            warehouse_id: string;
+        };
         /** PurchasePriceRead */
         PurchasePriceRead: {
             /** Amount */
@@ -4137,12 +4805,225 @@ export interface components {
             /** Expected Version */
             expected_version: number;
         };
+        /** ReplenishmentReceipt */
+        ReplenishmentReceipt: {
+            /**
+             * Creation Id
+             * Format: uuid
+             */
+            creation_id: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Request Id */
+            request_id: string;
+            /** Status */
+            status: string;
+            /** Version */
+            version: number;
+        };
+        /** ReportSource */
+        ReportSource: {
+            /** Actual Cost */
+            actual_cost?: string | null;
+            /** Amount */
+            amount?: string | null;
+            /** Available Qty */
+            available_qty?: string | null;
+            /** Balance */
+            balance?: string | null;
+            /** Cost Status */
+            cost_status?: ("AVAILABLE" | "MISSING_FACTS") | null;
+            /** Date */
+            date?: string | null;
+            /** Document Id */
+            document_id?: string | null;
+            /** Gross Margin */
+            gross_margin?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Kind */
+            kind: string;
+            /** Label */
+            label: string;
+            /** Min Stock Qty */
+            min_stock_qty?: string | null;
+            /** Number */
+            number: string;
+            /** Order Id */
+            order_id?: string | null;
+            /** Party Name */
+            party_name?: string | null;
+            /** Product Id */
+            product_id?: string | null;
+            /** Qty */
+            qty?: string | null;
+            /** Refund Amount */
+            refund_amount?: string | null;
+            /** Reserved Qty */
+            reserved_qty?: string | null;
+            /** Settlement Amount */
+            settlement_amount?: string | null;
+            /** Signed Amount */
+            signed_amount?: string | null;
+            /** Signed Cost */
+            signed_cost?: string | null;
+            /** Suggested Base Qty */
+            suggested_base_qty?: string | null;
+            /** Unit Name */
+            unit_name?: string | null;
+            /** Valuation */
+            valuation?: string | null;
+            /** Warehouse Name */
+            warehouse_name?: string | null;
+        };
+        /** ReportSources */
+        ReportSources: {
+            /**
+             * As Of
+             * Format: date-time
+             */
+            as_of: string;
+            /** Business Timezone */
+            business_timezone: string;
+            /**
+             * Business Today
+             * Format: date
+             */
+            business_today: string;
+            /**
+             * Date From
+             * Format: date
+             */
+            date_from: string;
+            /**
+             * Date To
+             * Format: date
+             */
+            date_to: string;
+            /** Integration Status */
+            integration_status?: ("ACTIVE" | "INCOMPLETE" | "NOT_ENABLED") | null;
+            /** Items */
+            items: components["schemas"]["ReportSource"][];
+            /**
+             * Metric
+             * @enum {string}
+             */
+            metric: "sales" | "cash_ar" | "cash_ap" | "current_ar" | "current_ap" | "inventory" | "low_stock" | "replenishment";
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Restatement Notice */
+            restatement_notice: string;
+            /** Total */
+            total: number;
+            /** Unmapped Document Count */
+            unmapped_document_count?: number | null;
+        };
+        /** RetryInput */
+        RetryInput: {
+            /** Expected Version */
+            expected_version: number;
+            /** Row Ids */
+            row_ids: string[];
+        };
+        /** RowRead */
+        RowRead: {
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "CREATE" | "UPDATE";
+            /** Attempts */
+            attempts: number;
+            /** Cleaned Values */
+            cleaned_values: {
+                [key: string]: string | boolean | null;
+            } | null;
+            /** Completed At */
+            completed_at: string | null;
+            /** Error Code */
+            error_code: string | null;
+            /** Errors */
+            errors: components["schemas"]["ImportErrorRead"][] | null;
+            /** Expected Target Id */
+            expected_target_id: string | null;
+            /** Expected Version */
+            expected_version: number | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Raw Values */
+            raw_values: {
+                [key: string]: string | boolean | null;
+            } | null;
+            /** Retryable */
+            retryable: boolean;
+            /** Row No */
+            row_no: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "READY" | "INVALID" | "PENDING" | "SUCCEEDED" | "FAILED";
+            /** Target Id */
+            target_id: string | null;
+            /** Target Version */
+            target_version: number | null;
+        };
+        /** RowsPage */
+        RowsPage: {
+            /** Items */
+            items: components["schemas"]["RowRead"][];
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Total */
+            total: number;
+        };
         /** SalesAction */
         SalesAction: {
             /** Expected Version */
             expected_version: number;
             /** Reason */
             reason: string;
+        };
+        /** SalesDay */
+        SalesDay: {
+            /** Cost Status */
+            cost_status?: ("AVAILABLE" | "MISSING_FACTS") | null;
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** Gross Margin */
+            gross_margin?: string | null;
+            /** Net Cost */
+            net_cost?: string | null;
+            /** Net Sales Amount */
+            net_sales_amount?: string | null;
+            /** Return Amount */
+            return_amount?: string | null;
+            /** Return Cost */
+            return_cost?: string | null;
+            /** Return Count */
+            return_count: number;
+            /** Shipment Amount */
+            shipment_amount?: string | null;
+            /** Shipment Cost */
+            shipment_cost?: string | null;
+            /** Shipment Count */
+            shipment_count: number;
         };
         /** SalesDocumentLineRead */
         SalesDocumentLineRead: {
@@ -4668,6 +5549,107 @@ export interface components {
              */
             warehouse_id: string;
         };
+        /** Suggestion */
+        Suggestion: {
+            /** Available Qty */
+            available_qty: string;
+            /**
+             * Base Unit Id
+             * Format: uuid
+             */
+            base_unit_id: string;
+            /** Base Unit Name */
+            base_unit_name: string;
+            /** Basis Hash */
+            basis_hash: string;
+            /** Candidate */
+            candidate: boolean;
+            /**
+             * Category Id
+             * Format: uuid
+             */
+            category_id: string;
+            /** Daily Sales Qty */
+            daily_sales_qty: string;
+            /** Days Of Stock */
+            days_of_stock: string | null;
+            /**
+             * Default Purchase Unit Id
+             * Format: uuid
+             */
+            default_purchase_unit_id: string;
+            /** Gap */
+            gap: string;
+            /** Inventory Position */
+            inventory_position: string;
+            /** Lead Days */
+            lead_days: number | null;
+            /** Minimum Reorder Qty */
+            minimum_reorder_qty: string;
+            /** Name */
+            name: string;
+            /** Net Sales Qty */
+            net_sales_qty: string;
+            /** Open Purchase Qty */
+            open_purchase_qty: string;
+            /** Preferred Supplier Id */
+            preferred_supplier_id: string | null;
+            /** Preferred Supplier Name */
+            preferred_supplier_name: string | null;
+            /**
+             * Product Id
+             * Format: uuid
+             */
+            product_id: string;
+            /** Product Version */
+            product_version: number;
+            /** Reasons */
+            reasons: string[];
+            /** Reorder Point */
+            reorder_point: string;
+            /** Returned Qty */
+            returned_qty: string;
+            /** Safety Stock Qty */
+            safety_stock_qty: string;
+            /** Shipped Qty */
+            shipped_qty: string;
+            /** Sku */
+            sku: string;
+            /** Suggested Base Qty */
+            suggested_base_qty: string;
+            /** Target Stock */
+            target_stock: string;
+        };
+        /** SuggestionsPage */
+        SuggestionsPage: {
+            /** Algorithm Version */
+            algorithm_version: string;
+            /**
+             * As Of
+             * Format: date-time
+             */
+            as_of: string;
+            /** Business Timezone */
+            business_timezone: string;
+            /** Items */
+            items: components["schemas"]["Suggestion"][];
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Total */
+            total: number;
+            /**
+             * Window End
+             * Format: date-time
+             */
+            window_end: string;
+            /**
+             * Window Start
+             * Format: date-time
+             */
+            window_start: string;
+        };
         /** SupplierCreate */
         SupplierCreate: {
             /**
@@ -4974,7 +5956,7 @@ export interface components {
         Version: {
             /**
              * Milestone
-             * @default Funds
+             * @default Operations
              */
             milestone: string;
             /**
@@ -4984,7 +5966,7 @@ export interface components {
             name: string;
             /**
              * Version
-             * @default 0.9.0
+             * @default 0.10.0
              */
             version: string;
         };
@@ -5009,6 +5991,29 @@ export interface components {
              * @default
              */
             notes: string;
+        };
+        /** WarehouseOption */
+        WarehouseOption: {
+            /** Code */
+            code: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+        };
+        /** WarehouseOptions */
+        WarehouseOptions: {
+            /** Items */
+            items: components["schemas"]["WarehouseOption"][];
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Total */
+            total: number;
         };
         /** WarehouseRead */
         WarehouseRead: {
@@ -5871,6 +6876,789 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BrandRead"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    list_batches_api_v1_catalog_imports_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                forge_session?: string;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BatchesPage"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    upload_preview_api_v1_catalog_imports_previews_post: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: {
+                forge_session?: string;
+            };
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: Blob;
+                    /** @enum {string} */
+                    mode?: "CREATE_ONLY" | "UPDATE_EXISTING";
+                    /** @enum {string} */
+                    resource: "categories" | "brands" | "units" | "customers" | "suppliers" | "warehouses" | "products" | "product-units" | "product-prices" | "supplier-products";
+                    worksheet?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BatchReceipt"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    download_template_api_v1_catalog_imports_templates__resource__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                resource: "categories" | "brands" | "units" | "customers" | "suppliers" | "warehouses" | "products" | "product-units" | "product-prices" | "supplier-products";
+            };
+            cookie?: {
+                forge_session?: string;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": Blob;
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    get_batch_api_v1_catalog_imports__id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: {
+                forge_session?: string;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BatchRead"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    confirm_import_api_v1_catalog_imports__id__confirm_post: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: {
+                forge_session?: string;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BatchReceipt"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    export_results_api_v1_catalog_imports__id__result_xlsx_get: {
+        parameters: {
+            query?: {
+                failed_only?: boolean;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: {
+                forge_session?: string;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": Blob;
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    retry_import_api_v1_catalog_imports__id__retry_post: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: {
+                forge_session?: string;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RetryInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BatchReceipt"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    get_rows_api_v1_catalog_imports__id__rows_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+                status?: ("READY" | "INVALID" | "PENDING" | "SUCCEEDED" | "FAILED") | null;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: {
+                forge_session?: string;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RowsPage"];
                 };
             };
             /** @description Unauthorized */
@@ -13426,6 +15214,589 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PurchaseReceipt"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    create_purchase_order_api_v1_replenishment_purchase_orders_post: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: {
+                forge_session?: string;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PurchaseCreationInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReplenishmentReceipt"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    purchase_preview_api_v1_replenishment_purchase_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                forge_session?: string;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PurchasePreviewInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchasePreview"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    list_suggestions_api_v1_replenishment_suggestions_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+                category_id?: string | null;
+                supplier_id?: string | null;
+                q?: string;
+                candidate_only?: boolean;
+                suggested_only?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                forge_session?: string;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuggestionsPage"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    warehouse_options_api_v1_replenishment_warehouses_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                forge_session?: string;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WarehouseOptions"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    operating_overview_api_v1_reporting_overview_get: {
+        parameters: {
+            query?: {
+                date_from?: string | null;
+                date_to?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                forge_session?: string;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperatingOverview"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    operating_sources_api_v1_reporting_sources_get: {
+        parameters: {
+            query: {
+                metric: "sales" | "cash_ar" | "cash_ap" | "current_ar" | "current_ap" | "inventory" | "low_stock" | "replenishment";
+                date_from?: string | null;
+                date_to?: string | null;
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                forge_session?: string;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportSources"];
                 };
             };
             /** @description Unauthorized */
