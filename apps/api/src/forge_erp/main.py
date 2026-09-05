@@ -1,4 +1,3 @@
-import logging
 import re
 import time
 from contextlib import asynccontextmanager
@@ -19,18 +18,10 @@ from starlette.exceptions import HTTPException
 from forge_erp.core.config import settings
 from forge_erp.core.db import engine, verify_database_role
 from forge_erp.core.errors import Problem, ProblemDetails
+from forge_erp.core.observability import configure_logging
 from forge_erp.modules.identity.api.router import router
 
-logging.basicConfig(level=logging.INFO, format="%(message)s")
-structlog.configure(
-    processors=[
-        structlog.contextvars.merge_contextvars,
-        structlog.processors.add_log_level,
-        structlog.processors.TimeStamper(fmt="iso"),
-        structlog.processors.JSONRenderer(),
-    ],
-    logger_factory=structlog.stdlib.LoggerFactory(),
-)
+configure_logging()
 log = structlog.get_logger()
 
 

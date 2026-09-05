@@ -21,6 +21,7 @@ forge-erp/
 │   │   │       │   ├── db.py
 │   │   │       │   ├── errors.py
 │   │   │       │   ├── idempotency.py
+│   │   │       │   ├── observability.py
 │   │   │       │   ├── rate_limit.py
 │   │   │       │   └── security.py
 │   │   │       ├── modules/

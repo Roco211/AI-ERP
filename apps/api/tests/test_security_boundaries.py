@@ -1,7 +1,9 @@
 import json
+import logging
 from uuid import uuid4
 
 import pytest
+import structlog
 from hypothesis import given
 from hypothesis import strategies as st
 from sqlalchemy import text
@@ -11,8 +13,19 @@ from forge_erp.core import db as db_module
 from forge_erp.core.config import Settings, settings
 from forge_erp.core.db import sessions, set_tenant
 from forge_erp.core.errors import Problem
+from forge_erp.core.observability import configure_logging
 from forge_erp.core.rate_limit import check_login_rate
 from forge_erp.core.security import fingerprint
+
+
+def test_worker_and_api_share_json_logging(caplog):
+    configure_logging()
+    with caplog.at_level(logging.INFO):
+        structlog.get_logger("forge.test").info("worker_event", request_id="worker-test")
+    record = json.loads(caplog.records[-1].message)
+    assert record["event"] == "worker_event"
+    assert record["request_id"] == "worker-test"
+    assert record["level"] == "info" and record["timestamp"]
 
 
 @given(st.dictionaries(st.text(max_size=20), st.integers(), max_size=10))

@@ -35,11 +35,11 @@
 | OpenAPI → TS works | FastAPI export → openapi-typescript → openapi-fetch；修复错误媒体类型 schema 回归 |
 | structured logging works | HTTP JSON 日志包含 method/status/duration/request_id，不记录密码/Cookie/SQL 参数 |
 | request ID works | X-Request-ID 传递、生成和非法值替换；Problem Details 关联一致 |
-| backend tests pass | 20 passed；Ruff / format / Pyright 通过 |
+| backend tests pass | 21 passed；Ruff / format / Pyright 通过 |
 | integration tests pass | 真实 PostgreSQL 18 + Redis，不使用 SQLite 替代 |
 | tenancy tests pass | 跨租户读写、同邮箱隔离、权限变更、RLS policy、连接池上下文测试通过 |
 | frontend checks/build pass | ESLint、TypeScript、Vitest 1 passed、Next 生产构建通过；Playwright 2 passed |
-| CI green | Workflow 已编写；正在连接用户指定 Roco211/AI-ERP，尚不计为通过 |
+| CI green | [首轮 CI 全部通过](https://github.com/Roco211/AI-ERP/actions/runs/33940610920)；[main 最新运行](https://github.com/Roco211/AI-ERP/actions/workflows/ci.yml) |
 
 ## 小步施工与测试记录
 
@@ -68,16 +68,22 @@
 
 ## Unresolved issues / release gate
 
-GitHub Actions 真实绿色结果尚待验证。工作在当前本地 Work 任务中完成；已创建独立仓库目录，但工具未提供单独注册桌面项目条目的接口。当前任务模型/推理模式无法通过工具核实或更改，未声称选择了 GPT6-ASTRA HIGH。
+GitHub 首轮 CI 已绿色通过，源码位于 https://github.com/Roco211/AI-ERP 。未发现未修复的 Bootstrap 功能缺陷。生产部署前仍需复核上列认证桥接、限流、事件消费与运维配置；这些不是新增业务功能。当前任务模型/推理模式无法通过工具核实或更改，未声称选择了 GPT6-ASTRA HIGH。项目已在当前 Work 任务中创建为独立本地 Git 仓库；未额外注册桌面侧栏项目条目。
 
-完成所有门槛后建议 `git tag bootstrap-v0.4`。本次不会提前进入 Catalog，也不会在 CI 未通过时宣告 Bootstrap 完整验收通过。
+最终提交 CI 全部通过后建议 `git tag bootstrap-v0.4`。本次只建议标签，不自动打标签，也不继续 Catalog。
 
 ## 本地最终验证（2026-09-05）
 
-- 后端：20 passed；Ruff、Ruff format、Pyright 0 errors。
+- 后端：21 passed；Ruff、Ruff format、Pyright 0 errors。
 - 前端：ESLint、TypeScript、Vitest 1 passed；Next.js 16.3.4 生产构建成功。
 - Playwright：2 passed（登录/同源 API/HttpOnly Cookie/导航/个人信息/退出/移动端无溢出）。
 - uv sync --locked、pnpm install --frozen-lockfile：通过。
 - OpenAPI 重新生成后的 git diff：无漂移。
 - PostgreSQL 18.6 / vector 0.8.6 / pg_trgm 1.6；Alembic 0001_bootstrap。
 - 开发 seed 连续执行两次成功。
+
+6. Worker 实测补充：发现独立 worker 未加载 API 的 JSON 日志配置，提取共享 observability 模块，并新增 JSON 日志回归测试。后端 21 passed；重新启动 Celery 后实际消费 2 条身份事件，输出 JSON，task succeeded。
+
+## Git 与 CI
+
+远程为用户提供的公开空仓库 Roco211/AI-ERP；首次提交 c68a197 已推送 main，uv.lock 与 pnpm-lock.yaml 均已提交。首轮 GitHub Actions 33940610920 全部绿色，包括 Ubuntu 干净环境下安装、迁移、seed、lint/typecheck/tests、契约漂移、生产 build 与 Playwright。后续修复提交的 CI 以 main 最新运行为准，交付前另行核实。Git 提交作者明确标记为 Codex。
