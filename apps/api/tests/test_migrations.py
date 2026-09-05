@@ -13,8 +13,8 @@ from sqlalchemy.engine import make_url
 from forge_erp.core.config import settings
 
 
-@pytest.mark.parametrize("from_bootstrap", [False, True])
-def test_clean_and_bootstrap_migrations(from_bootstrap):
+@pytest.mark.parametrize("baseline", [None, "0001_bootstrap", "0004_product_embeddings"])
+def test_clean_and_bootstrap_migrations(baseline):
     cfg = settings()
     name = "forge_migration_test_" + uuid4().hex
     root = Path(__file__).resolve().parents[3]
@@ -29,7 +29,7 @@ def test_clean_and_bootstrap_migrations(from_bootstrap):
             db.execute(text("CREATE EXTENSION vector"))
             db.execute(text("CREATE EXTENSION pg_trgm"))
         env = dict(os.environ, MIGRATION_DATABASE_URL=url.render_as_string(hide_password=False))
-        for revision in ["0001_bootstrap", "head"] if from_bootstrap else ["head"]:
+        for revision in [baseline, "head"] if baseline else ["head"]:
             run = subprocess.run(
                 [
                     sys.executable,
@@ -50,7 +50,7 @@ def test_clean_and_bootstrap_migrations(from_bootstrap):
         with target.connect() as db:
             assert (
                 db.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
-                == "0004_product_embeddings"
+                == "0005_inventory"
             )
             assert db.execute(text("SELECT count(*) FROM forge.products")).scalar_one() == 0
             assert db.execute(
