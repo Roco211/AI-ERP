@@ -12,6 +12,13 @@ from forge_erp.modules.catalog.infrastructure import embeddings
 log = structlog.get_logger()
 
 
+def description(row: dict) -> str:
+    # Identifier fragments distort semantic similarity; exact search handles them.
+    parts = [row.get(key, "") or "" for key in ("name", "short_name", "model", "specification")]
+    parts += [f"{key}: {value}" for key, value in sorted(row.get("attributes", {}).items())]
+    return " ".join(part for part in parts if part)
+
+
 async def index_product(db: AsyncSession, organization_id: UUID, product_id: UUID) -> bool:
     """Tenant-scoped projection refresh; no catalog facts are modified."""
     if not settings().embedding_enabled:
@@ -20,7 +27,8 @@ async def index_product(db: AsyncSession, organization_id: UUID, product_id: UUI
         (
             await db.execute(
                 text(
-                    "SELECT version,search_text,active FROM forge.products "
+                    "SELECT version,name,short_name,model,specification,attributes,active "
+                    "FROM forge.products "
                     "WHERE organization_id=:org AND id=:id"
                 ),
                 {"org": organization_id, "id": product_id},
@@ -48,7 +56,7 @@ async def index_product(db: AsyncSession, organization_id: UUID, product_id: UUI
     ).first()
     if current:
         return False
-    vector = await embeddings.embed(row["search_text"], indexing=True)
+    vector = await embeddings.embed(description(dict(row)), indexing=True)
     # A concurrent edit must not publish a vector for an obsolete product version.
     result = await db.execute(
         text("""INSERT INTO forge.product_embeddings

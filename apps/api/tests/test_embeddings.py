@@ -203,3 +203,18 @@ async def test_model_identity_and_inactive_vectors_are_excluded(identities, monk
             text("UPDATE forge.products SET active=false WHERE id=:id"), {"id": product}
         )
         assert (await search_products(db, ctx, "拧螺母的工具", active=None))["total"] == 0
+
+
+def test_semantic_description_excludes_identifier_and_price_noise():
+    from forge_erp.modules.catalog.application.semantic import description
+
+    row = {
+        "sku": "PTFE-TAPE",
+        "barcode": "69000123",
+        "name": "生料带",
+        "specification": "水管密封",
+        "attributes": {"颜色": "白色"},
+        "standard_price": "1.00",
+    }
+    assert description(row) == "生料带 水管密封 颜色: 白色"
+    assert "catalog-v2" in embeddings.model_identity()

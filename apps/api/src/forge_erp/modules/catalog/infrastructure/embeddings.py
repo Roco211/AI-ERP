@@ -8,6 +8,7 @@ import httpx
 from forge_erp.core.config import settings
 
 DIMENSIONS = 1024
+DOCUMENT_FORMAT = "catalog-v2"
 
 
 class EmbeddingUnavailable(Exception):
@@ -27,7 +28,7 @@ def vector_literal(value: object) -> str:
 
 def model_identity() -> str:
     cfg = settings()
-    return f"{cfg.embedding_model}@{cfg.embedding_model_digest}"
+    return f"{cfg.embedding_model}@{cfg.embedding_model_digest}:{DOCUMENT_FORMAT}"
 
 
 async def embed(value: str, *, indexing: bool = False) -> str:
