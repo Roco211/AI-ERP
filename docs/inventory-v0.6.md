@@ -245,3 +245,16 @@ uv run --project apps/api alembic -c apps/api/alembic.ini current
 Hypothesis、库存迁移/重建与故障注入测试由施工增量加入正常测试入口；新增 seed-inventory / reconcile 命令的实际名称、参数及风险边界完成后再写入运行说明，当前不提供会误导用户的未实现运行命令。
 
 验收报告必须提供：implementation summary、最终仓库树、运行命令、迁移状态、逐项测试证据与 CI 链接、未解决问题、需要评审的架构决定。只有[验收清单](inventory-v0.6-acceptance.md)全部满足，才建议标记 `inventory-v0.6` 并规划采购阶段；不能因为文档完成或历史 CI 通过就宣布库存完成。
+
+
+## 12. 实施落点（2026-09-05）
+
+I0–I5 实现位于 `inventory/v0.6`，依赖 Catalog `b049055`；Catalog PR #1 仍独立评审。API 模块为 `apps/api/src/forge_erp/modules/inventory/{domain,application,api}`，页面为 `apps/web/features/inventory/`。继续使用同源 API、Cookie Runtime Context、既有 RBAC/Audit/Outbox/Idempotency，不新增基础设施。
+
+迁移按 0005 → 0006 → 0007 追加，实际 head `0007_inventory_projection`。余额 `version` 是盘点并发修订号，维修重建同样递增；`movement_sequence` 才是连续事实序号。修复不制造库存流水，也不让修复前的盘点基准继续有效。历史冲销检查各键最后的 `movement_sequence`。
+
+流水翻页使用 PostgreSQL 事务可见性快照和签名游标；在第一页尚未提交的事务，不会在后续页悄悄插入。游标绑定租户与筛选，接口仍使用既有连接池，不为翻页长期保持数据库事务。
+
+表单沿用 React Hook Form + Zod，表格沿用 TanStack Table，数据请求由 TanStack Query 管理，筛选保存到 URL。所有正式数量/成本由服务器 Decimal 计算；浏览器只展示字符串。可选开发库存 seed 与明确范围的对账命令见 README。
+
+完成度以逐项验收与实际 CI 为准，本文不是独立的通过证明。

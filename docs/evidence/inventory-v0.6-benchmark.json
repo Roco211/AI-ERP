@@ -1,0 +1,133 @@
+{
+  "scope": "Synthetic isolated tenant; local warm application/database queries, not end-to-end or production capacity",
+  "products": 500,
+  "balances": 500,
+  "movements": 500,
+  "platform": "Linux-6.18.33.2-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+  "posting": [
+    {
+      "lines": 200,
+      "post_ms": 1269.82
+    },
+    {
+      "lines": 200,
+      "post_ms": 1211.72
+    },
+    {
+      "lines": 100,
+      "post_ms": 612.7
+    }
+  ],
+  "queries": {
+    "balances": {
+      "runs_ms": [
+        27.72,
+        27.03,
+        26.48,
+        31.93,
+        33.78
+      ],
+      "rows_returned": 25
+    },
+    "low_stock": {
+      "runs_ms": [
+        375.44,
+        351.87,
+        323.16,
+        356.48,
+        344.77
+      ],
+      "rows_returned": 25
+    },
+    "movements": {
+      "runs_ms": [
+        3.81,
+        3.19,
+        3.31,
+        3.19,
+        3.11
+      ],
+      "rows_returned": 25
+    }
+  },
+  "single_balance_plan": [
+    {
+      "Plan": {
+        "Node Type": "Result",
+        "Parallel Aware": false,
+        "Async Capable": false,
+        "Startup Cost": 0.27,
+        "Total Cost": 6.04,
+        "Plan Rows": 1,
+        "Plan Width": 96,
+        "Actual Startup Time": 0.01,
+        "Actual Total Time": 0.012,
+        "Actual Rows": 1.0,
+        "Actual Loops": 1,
+        "Disabled": false,
+        "One-Time Filter": "((NULLIF(current_setting('app.organization_id'::text, true), ''::text))::uuid = '01a070cb-291d-782e-b1a0-8e45d69596f3'::uuid)",
+        "Shared Hit Blocks": 5,
+        "Shared Read Blocks": 0,
+        "Shared Dirtied Blocks": 0,
+        "Shared Written Blocks": 0,
+        "Local Hit Blocks": 0,
+        "Local Read Blocks": 0,
+        "Local Dirtied Blocks": 0,
+        "Local Written Blocks": 0,
+        "Temp Read Blocks": 0,
+        "Temp Written Blocks": 0,
+        "Plans": [
+          {
+            "Node Type": "Index Scan",
+            "Parent Relationship": "Outer",
+            "Parallel Aware": false,
+            "Async Capable": false,
+            "Scan Direction": "Forward",
+            "Index Name": "inventory_balance_product",
+            "Relation Name": "inventory_balances",
+            "Alias": "inventory_balances",
+            "Startup Cost": 0.27,
+            "Total Cost": 6.04,
+            "Plan Rows": 1,
+            "Plan Width": 96,
+            "Actual Startup Time": 0.007,
+            "Actual Total Time": 0.009,
+            "Actual Rows": 1.0,
+            "Actual Loops": 1,
+            "Disabled": false,
+            "Index Cond": "((organization_id = '01a070cb-291d-782e-b1a0-8e45d69596f3'::uuid) AND (product_id = '01a070cb-2954-7990-b8bd-bf4f8dc36670'::uuid))",
+            "Rows Removed by Index Recheck": 0,
+            "Filter": "(warehouse_id = '01a070cb-2951-7bcc-83ba-4ca9dca37c60'::uuid)",
+            "Rows Removed by Filter": 0,
+            "Index Searches": 1,
+            "Shared Hit Blocks": 5,
+            "Shared Read Blocks": 0,
+            "Shared Dirtied Blocks": 0,
+            "Shared Written Blocks": 0,
+            "Local Hit Blocks": 0,
+            "Local Read Blocks": 0,
+            "Local Dirtied Blocks": 0,
+            "Local Written Blocks": 0,
+            "Temp Read Blocks": 0,
+            "Temp Written Blocks": 0
+          }
+        ]
+      },
+      "Planning": {
+        "Shared Hit Blocks": 0,
+        "Shared Read Blocks": 0,
+        "Shared Dirtied Blocks": 0,
+        "Shared Written Blocks": 0,
+        "Local Hit Blocks": 0,
+        "Local Read Blocks": 0,
+        "Local Dirtied Blocks": 0,
+        "Local Written Blocks": 0,
+        "Temp Read Blocks": 0,
+        "Temp Written Blocks": 0
+      },
+      "Planning Time": 0.046,
+      "Triggers": [],
+      "Execution Time": 0.021
+    }
+  ]
+}
