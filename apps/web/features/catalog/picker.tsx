@@ -9,9 +9,19 @@ import type { components } from "@/generated/api/schema";
 
 type Product = components["schemas"]["ProductRead"];
 type Snapshot = components["schemas"]["ConversionSnapshot"];
-export function ProductPicker({ permissions }: { permissions: string[] }) {
+export function ProductPicker({
+  permissions,
+  onSelect,
+}: {
+  permissions: string[];
+  onSelect?: (selection: {
+    product: Product;
+    snapshot: Snapshot;
+    unitLabel: string;
+  }) => void;
+}) {
   const [q, setQ] = useState("");
-  const [index, setIndex] = useState(0);
+  const [index, setIndex] = useState(-1);
   const [selected, setSelected] = useState<Product | null>(null);
   const [unit, setUnit] = useState("");
   const [qty, setQty] = useState("1");
@@ -73,13 +83,19 @@ export function ProductPicker({ permissions }: { permissions: string[] }) {
     setError("");
     setSnapshot(null);
     try {
-      setSnapshot(
-        unwrap<Snapshot>(
-          await api.GET("/api/v1/catalog/conversion", {
-            params: { query: { product_id: selected.id, unit_id: unit, qty } },
-          }),
-        ),
+      const captured = unwrap<Snapshot>(
+        await api.GET("/api/v1/catalog/conversion", {
+          params: { query: { product_id: selected.id, unit_id: unit, qty } },
+        }),
       );
+      setSnapshot(captured);
+      onSelect?.({
+        product: selected,
+        snapshot: captured,
+        unitLabel: String(
+          names.data?.items.find((x) => x.id === unit)?.name ?? "所选单位",
+        ),
+      });
     } catch (e) {
       setError(e instanceof Error ? e.message : "换算失败");
     } finally {
@@ -109,9 +125,13 @@ export function ProductPicker({ permissions }: { permissions: string[] }) {
         value={q}
         onChange={(e) => {
           setQ(e.target.value);
-          setIndex(0);
+          setIndex(-1);
+          setSelected(null);
+          setSnapshot(null);
         }}
         onKeyDown={(e) => {
+          if (isFetching && e.key !== "Escape") return;
+          const current = rows[index < 0 ? 0 : index];
           if (e.key === "ArrowDown") {
             e.preventDefault();
             setIndex((i) => Math.min(i + 1, rows.length - 1));
@@ -120,9 +140,9 @@ export function ProductPicker({ permissions }: { permissions: string[] }) {
             e.preventDefault();
             setIndex((i) => Math.max(0, i - 1));
           }
-          if (e.key === "Enter" && rows[index]) {
+          if (e.key === "Enter" && current) {
             e.preventDefault();
-            select(rows[index]);
+            select(current);
           }
           if (e.key === "Escape") {
             setSelected(null);
@@ -138,7 +158,9 @@ export function ProductPicker({ permissions }: { permissions: string[] }) {
           value={attributeKey}
           onChange={(e) => {
             setAttributeKey(e.target.value);
-            setIndex(0);
+            setIndex(-1);
+            setSelected(null);
+            setSnapshot(null);
           }}
         />
         <Input
@@ -147,7 +169,9 @@ export function ProductPicker({ permissions }: { permissions: string[] }) {
           value={attributeValue}
           onChange={(e) => {
             setAttributeValue(e.target.value);
-            setIndex(0);
+            setIndex(-1);
+            setSelected(null);
+            setSnapshot(null);
           }}
         />
       </div>
@@ -172,6 +196,7 @@ export function ProductPicker({ permissions }: { permissions: string[] }) {
               aria-selected={index === i}
             >
               <button
+                disabled={isFetching}
                 onClick={() => {
                   setIndex(i);
                   select(p);
@@ -224,6 +249,7 @@ export function ProductPicker({ permissions }: { permissions: string[] }) {
                     setSnapshot(null);
                   }}
                   onKeyDown={(e) => {
+                    if (isFetching && e.key !== "Escape") return;
                     if (e.key === "Enter") void confirm();
                   }}
                 />
