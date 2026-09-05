@@ -9,7 +9,7 @@
     "lint": "pnpm --filter @forge/web lint",
     "test": "pnpm --filter @forge/web test",
     "test:e2e": "pnpm --filter @forge/web test:e2e",
-    "api:generate": "openapi-typescript docs/api/openapi.json -o apps/web/generated/api/schema.d.ts"
+    "api:generate": "node scripts/generate_api.mjs"
   },
   "devDependencies": {"openapi-typescript": "^7.13.0"}
 }

@@ -1,5 +1,9 @@
 # Forge ERP — Funds v0.9 and Operations v0.10 implementation
 
+## Operations implementation baseline
+
+Funds final commit `7fded4f730d87a8bedaf60491bbaf52f7d358564` passed push CI 33983285324 and PR CI 33983287501: 473 backend tests, 74 frontend tests and 14 browser scenarios. Its 27-item acceptance is complete; exact evidence is in `../Forge-ERP-Funds-v0.9-verification.json`. Operations implementation now proceeds on `operations/v0.10` from that accepted commit, with database baseline `0012_funds`. Read `docs/operations-v0.10.md`, its 42-item checklist and ADR0016. Implement O1–O5 within the existing authorization; do not stop at funds or automatically merge/tag/release.
+
 ## Current authorization (2026-09-06)
 
 The user explicitly requested “OK，请进行阶段v0.9和V0.10” after reviewing the development plan. This authorizes specification and incremental implementation of lightweight funds (receivables, receipts, payables, payments, allocations, return credits/refunds, reversals, opening balances), followed by formal Excel import, deterministic replenishment and a traceable operating overview. Finish and verify v0.9 before implementing v0.10 business features. No further permission is required for this authorized implementation. Earlier stage-specific prohibitions below are historical boundaries, superseded only for this scope. AI business tools, general accounting and new infrastructure remain excluded.
