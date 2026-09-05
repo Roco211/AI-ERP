@@ -23,6 +23,12 @@ KNOWN_EVENTS |= {"inventory.movement.recorded", "inventory.projection.rebuilt"}
 KNOWN_EVENTS |= {
     f"inventory.document.{action}" for action in ("create", "update", "post", "reverse", "refresh")
 }
+KNOWN_EVENTS |= {
+    f"purchase.order.{action}" for action in ("create", "update", "confirm", "cancel", "close")
+}
+KNOWN_EVENTS |= {
+    f"purchase.document.{action}" for action in ("create", "update", "post", "reverse")
+}
 log = structlog.get_logger()
 
 
