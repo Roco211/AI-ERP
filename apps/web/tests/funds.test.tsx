@@ -335,6 +335,125 @@ test("source detail and cash allocation navigate using stable source IDs", async
   ).toHaveTextContent("FR-A");
 });
 
+test.each([
+  ["AR", "SETTLEMENT", "funds.receive"],
+  ["AP", "SETTLEMENT", "funds.pay"],
+  ["AR", "REFUND", "funds.customer_refund"],
+  ["AP", "REFUND", "funds.supplier_refund"],
+] as const)(
+  "%s %s cash reversal requires its original operation permission, including after opening the dialog",
+  async (side, kind, requiredPermission) => {
+    window.history.replaceState({}, "", `/funds?side=${side}`);
+    mocks({ cashRows: true });
+    const prior = getMock.getMockImplementation()!;
+    getMock.mockImplementation((path, options) =>
+      path === "/api/v1/funds/cash/{id}"
+        ? Promise.resolve(ok({ ...cash("cash-1", side), kind }))
+        : prior(path, options),
+    );
+    const withoutOriginal = operator.filter((p) => p !== requiredPermission);
+    const view = show(withoutOriginal);
+    fireEvent.click(
+      await screen.findByRole("tab", {
+        name: side === "AR" ? "收款与退款" : "付款与退款",
+      }),
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "查看收付款" }));
+    const region = await screen.findByRole("region", { name: "收付款详情" });
+    expect(
+      within(region).queryByRole("button", { name: "冲销收付款" }),
+    ).not.toBeInTheDocument();
+    view.setPermissions(operator);
+    fireEvent.click(within(region).getByRole("button", { name: "冲销收付款" }));
+    const dialog = screen.getByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText("资金操作说明"), {
+      target: { value: "核对原收付款后冲销" },
+    });
+    view.setPermissions(withoutOriginal);
+    expect(
+      within(dialog).getByRole("button", { name: "确认冲销" }),
+    ).toBeDisabled();
+    fireEvent.submit(
+      within(dialog).getByLabelText("资金操作说明").closest("form")!,
+    );
+    await within(dialog).findByText("当前没有执行这项资金操作的权限。");
+    expect(postMock).not.toHaveBeenCalled();
+    view.setPermissions(operator);
+    fireEvent.click(within(dialog).getByRole("button", { name: "确认冲销" }));
+    await waitFor(() =>
+      expect(postMock).toHaveBeenCalledWith(
+        "/api/v1/funds/cash/{id}/reverse",
+        expect.objectContaining({
+          body: { reason: "核对原收付款后冲销" },
+          params: expect.objectContaining({ path: { id: "cash-1" } }),
+        }),
+      ),
+    );
+  },
+);
+
+test.each([
+  ["OPENING", "funds.opening"],
+  ["ADJUSTMENT", "funds.adjust"],
+] as const)(
+  "%s source reversal requires its own write permission and does not invent a commercial document",
+  async (kind, requiredPermission) => {
+    mocks();
+    const prior = getMock.getMockImplementation()!;
+    getMock.mockImplementation((path, options) =>
+      path === "/api/v1/funds/sources/{id}"
+        ? Promise.resolve(
+            ok({
+              ...source("A"),
+              kind,
+              source_document_id: null,
+              source_document_number: null,
+              commercial_amount: "0",
+            }),
+          )
+        : prior(path, options),
+    );
+    const withoutOriginal = operator.filter((p) => p !== requiredPermission);
+    const view = show(withoutOriginal);
+    await screen.findByText("FR-A");
+    fireEvent.click(screen.getAllByRole("button", { name: "查看来源" })[0]);
+    const region = await screen.findByRole("region", { name: "资金来源详情" });
+    expect(within(region).queryByText("原单商业金额")).not.toBeInTheDocument();
+    expect(
+      within(region).getByText("来源金额").parentElement,
+    ).toHaveTextContent("700.1234");
+    expect(
+      within(region).queryByRole("button", { name: "冲销来源" }),
+    ).not.toBeInTheDocument();
+    view.setPermissions(operator);
+    fireEvent.click(within(region).getByRole("button", { name: "冲销来源" }));
+    const dialog = screen.getByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText("资金操作说明"), {
+      target: { value: "核对原来源后冲销" },
+    });
+    view.setPermissions(withoutOriginal);
+    expect(
+      within(dialog).getByRole("button", { name: "确认冲销" }),
+    ).toBeDisabled();
+    fireEvent.submit(
+      within(dialog).getByLabelText("资金操作说明").closest("form")!,
+    );
+    await within(dialog).findByText("当前没有执行这项资金操作的权限。");
+    expect(postMock).not.toHaveBeenCalled();
+    view.setPermissions(operator);
+    fireEvent.click(within(dialog).getByRole("button", { name: "确认冲销" }));
+    await waitFor(() =>
+      expect(postMock).toHaveBeenCalledWith(
+        "/api/v1/funds/sources/{id}/reverse",
+        expect.objectContaining({
+          body: { reason: "核对原来源后冲销" },
+          params: expect.objectContaining({ path: { id: "A" } }),
+        }),
+      ),
+    );
+  },
+);
+
 test("multiple allocations require server preview, and editing invalidates it", async () => {
   mocks();
   show();
@@ -791,6 +910,10 @@ test("source detail labels historical settlement independently from actual cash"
   await screen.findByText("FR-A");
   fireEvent.click(screen.getAllByRole("button", { name: "查看来源" })[0]);
   const region = await screen.findByRole("region", { name: "资金来源详情" });
+  expect(
+    within(region).getByText("原单商业金额").parentElement,
+  ).toHaveTextContent("100.1234");
+  expect(within(region).queryByText("有效商业金额")).not.toBeInTheDocument();
   expect(
     within(region).getByText("期初已结金额").parentElement,
   ).toHaveTextContent("60.1234");

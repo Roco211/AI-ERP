@@ -89,7 +89,9 @@ with create_engine(cfg.migration_database_url).begin() as db:
         # Test-only tenant cleanup needs administrator bypass for immutable facts.
         # forge_app keeps every production-style guard and tenant policy intact.
         db.execute(text("SET LOCAL session_replication_role = replica"))
+        # Match the worker's lock order: events before catalog/vector records.
         for table in (
+            "outbox_events",
             "sales_document_lines",
             "sales_documents",
             "sales_order_lines",
@@ -116,7 +118,6 @@ with create_engine(cfg.migration_database_url).begin() as db:
             "brands",
             "units",
             "idempotency_keys",
-            "outbox_events",
             "audit_events",
             "sessions",
             "role_permissions",

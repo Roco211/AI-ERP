@@ -107,3 +107,9 @@ After S4 delivery (2cd3d93, 316 backend / 37 frontend / 10 browser tests and bot
 ## Sales S5 completion record
 
 S1–S5 implementation is complete: 357 backend tests, 44 frontend tests and 11 production-browser scenarios passed locally. Code acceptance commit `9d7961e` passed both push CI 33977824715 and PR CI 33977827345. The final documentation commit must also pass both CI runs; its exact SHA and results are recorded in `../Forge-ERP-Sales-v0.8-verification.json` after verification. See `docs/sales-v0.8-delivery.md`, the 46-item acceptance checklist and repository tree for the final state. Application metadata is 0.8.0 / Sales; migration head remains 0011_sales_returns. PR #4 remains a draft, with no sales tag, merge or release performed. Do not infer authorization for funds or AI business modules from this completed increment.
+
+## Funds v0.9 completion gate
+
+F0–F5 implementation and local acceptance are complete. The baseline `f8a110b` passed both CI runs 33982396517/33982398145 with 471 backend tests. Final local verification is 74 frontend tests and 14 production-browser scenarios; two real zero-price source cases additionally passed. Independent review fixed frontend reversal permissions and the test-fixture/Outbox cleanup lock order without changing business rules. The local database is 0012_funds; application metadata is 0.9.0 / Funds.
+
+See docs/funds-v0.9-delivery.md, its 27-item acceptance and tree. The final commit includes these last review fixes and documentation and MUST pass its own push/PR CI, recorded in ../Forge-ERP-Funds-v0.9-verification.json. Only after those results are verified may the already-authorized v0.10 implementation begin. Use operations/v0.10 from that accepted result; read docs/operations-v0.10.md and ADR0016, preserve historical facts and published tags, and do not implement AI business tools or automatically merge/release.

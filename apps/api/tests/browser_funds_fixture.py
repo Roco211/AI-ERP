@@ -76,7 +76,9 @@ with create_engine(cfg.migration_database_url).begin() as db:
             raise RuntimeError("Not a funds browser fixture organization")
         # Test-only cleanup of this isolated tenant; application roles keep all guards.
         db.execute(text("SET LOCAL session_replication_role = replica"))
+        # Match the worker's lock order: events before catalog/vector records.
         for table in (
+            "outbox_events",
             "funds_operations",
             "funds_cash_reversals",
             "funds_cash_allocations",
@@ -110,7 +112,6 @@ with create_engine(cfg.migration_database_url).begin() as db:
             "brands",
             "units",
             "idempotency_keys",
-            "outbox_events",
             "audit_events",
             "sessions",
             "role_permissions",

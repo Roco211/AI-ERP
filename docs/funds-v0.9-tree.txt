@@ -121,6 +121,7 @@ apps/api/tests/test_funds.py
 apps/api/tests/test_funds_integration.py
 apps/api/tests/test_funds_read_consistency.py
 apps/api/tests/test_funds_safety.py
+apps/api/tests/test_funds_zero_sources.py
 apps/api/tests/test_inventory_documents.py
 apps/api/tests/test_inventory_engine.py
 apps/api/tests/test_inventory_safety.py

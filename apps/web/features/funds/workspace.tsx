@@ -43,7 +43,15 @@ type Editor =
   | { kind: "ACTIVATE" | "OPENING" | "ADJUSTMENT" }
   | { kind: "CASH"; cashKind: CashKind }
   | { kind: "BIND"; document: Legacy }
-  | { kind: "REVERSE"; selection: Selection; number: string };
+  | {
+      kind: "REVERSE";
+      selection: Selection;
+      number: string;
+      originalPermission:
+        | ReturnType<typeof actionPermission>
+        | "funds.opening"
+        | "funds.adjust";
+    };
 type Fields = {
   party_id: string;
   party_label: string;
@@ -356,6 +364,8 @@ export function FundsWorkspace({ permissions }: { permissions: string[] }) {
           ? partyList
           : legacy;
   const canCash = (kind: CashKind) => read && has(actionPermission(side, kind));
+  const canReverse = (originalPermission: string) =>
+    read && has("funds.reverse") && has(originalPermission);
   const editorAllowed =
     read &&
     (editor?.kind === "CASH"
@@ -365,7 +375,7 @@ export function FundsWorkspace({ permissions }: { permissions: string[] }) {
         : editor?.kind === "ADJUSTMENT"
           ? has("funds.adjust")
           : editor?.kind === "REVERSE"
-            ? has("funds.reverse")
+            ? canReverse(editor.originalPermission)
             : has("funds.activate"));
   const canSubmit =
     editor?.kind === "ACTIVATE" ? has("funds.activate") : editorAllowed;
@@ -1190,7 +1200,9 @@ export function FundsWorkspace({ permissions }: { permissions: string[] }) {
                   <dl className="grid min-w-0 grid-cols-2 gap-3 text-sm sm:grid-cols-4">
                     {[
                       ["来源金额", source.amount],
-                      ["有效商业金额", source.commercial_amount],
+                      ...(source.source_document_id
+                        ? [["原单商业金额", source.commercial_amount]]
+                        : []),
                       ["期初已结金额", source.historically_settled_amount],
                       ["本系统已结算", source.settled_amount],
                       ["本系统已退款", source.refunded_amount],
@@ -1230,7 +1242,11 @@ export function FundsWorkspace({ permissions }: { permissions: string[] }) {
                           登记{cashName(side, "REFUND")}
                         </Button>
                       )}
-                    {has("funds.reverse") &&
+                    {canReverse(
+                      source.kind === "ADJUSTMENT"
+                        ? "funds.adjust"
+                        : "funds.opening",
+                    ) &&
                       ["OPENING", "ADJUSTMENT"].includes(source.kind) &&
                       source.status !== "REVERSED" && (
                         <Button
@@ -1241,6 +1257,10 @@ export function FundsWorkspace({ permissions }: { permissions: string[] }) {
                               kind: "REVERSE",
                               selection: { kind: "source", id: source.id },
                               number: source.number,
+                              originalPermission:
+                                source.kind === "ADJUSTMENT"
+                                  ? "funds.adjust"
+                                  : "funds.opening",
                             })
                           }
                         >
@@ -1349,21 +1369,28 @@ export function FundsWorkspace({ permissions }: { permissions: string[] }) {
                       冲销说明：{cashRecord.reversal_reason}
                     </p>
                   )}
-                  {has("funds.reverse") && cashRecord.status === "POSTED" && (
-                    <Button
-                      variant="outline"
-                      disabled={locked}
-                      onClick={() =>
-                        openEditor({
-                          kind: "REVERSE",
-                          selection: { kind: "cash", id: cashRecord.id },
-                          number: cashRecord.number,
-                        })
-                      }
-                    >
-                      冲销收付款
-                    </Button>
-                  )}
+                  {canReverse(
+                    actionPermission(cashRecord.side, cashRecord.kind),
+                  ) &&
+                    cashRecord.status === "POSTED" && (
+                      <Button
+                        variant="outline"
+                        disabled={locked}
+                        onClick={() =>
+                          openEditor({
+                            kind: "REVERSE",
+                            selection: { kind: "cash", id: cashRecord.id },
+                            number: cashRecord.number,
+                            originalPermission: actionPermission(
+                              cashRecord.side,
+                              cashRecord.kind,
+                            ),
+                          })
+                        }
+                      >
+                        冲销收付款
+                      </Button>
+                    )}
                   <FundsTable
                     headers={["核销来源", "分配金额", "操作"]}
                     rows={cashRecord.allocations.map((item) => ({
