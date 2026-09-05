@@ -87,6 +87,20 @@ async def require_conversion(db: AsyncSession, ctx: RuntimeContext, product_id, 
 async def check_deactivation(
     db: AsyncSession, ctx: RuntimeContext, resource: str, previous: dict
 ) -> None:
+    if resource in ("products", "warehouses"):
+        column = "product_id" if resource == "products" else "warehouse_id"
+        used_stock = (
+            await db.execute(
+                text(
+                    f"SELECT id FROM forge.inventory_balances WHERE "
+                    f"organization_id=:org AND {column}=:id "
+                    "AND (on_hand_qty>0 OR reserved_qty>0) LIMIT 1"
+                ),
+                {"org": ctx.organization_id, "id": previous["id"]},
+            )
+        ).first()
+        if used_stock:
+            raise Problem(409, "STOCK_IN_USE", "商品或仓库仍有库存或占用，不能停用")
     if resource != "product-units":
         return
     params = {

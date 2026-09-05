@@ -38,7 +38,9 @@ async def test_health_ready_version_request_id(client):
         response = await client.get(path, headers={"X-Request-ID": "bootstrap-check"})
         assert response.status_code == 200
         assert response.headers["x-request-id"] == "bootstrap-check"
-    assert (await client.get("/api/v1/system/version")).json()["version"] == "0.5.0"
+    metadata = (await client.get("/api/v1/system/version")).json()
+    assert metadata["version"] == "0.6.0"
+    assert metadata["milestone"] == "Inventory"
 
 
 async def test_login_me_logout_and_replay(client, identities):
@@ -230,11 +232,14 @@ async def test_outbox_poll_is_repeatable(identities):
             "identity.session.created",
             uuid4(),
         )
-    await drain_outbox()
+    assert await drain_outbox(a["org"]) == 1
     async with sessions.begin() as db:
         await set_tenant(db, a["org"])
         row = (
             await db.execute(text("SELECT processed_at,attempts FROM forge.outbox_events"))
         ).one()
         assert row.processed_at and row.attempts == 1
-    assert await drain_outbox() == 0
+    assert await drain_outbox(a["org"]) == 0
+    async with sessions.begin() as db:
+        await set_tenant(db, a["org"])
+        assert (await db.execute(text("SELECT attempts FROM forge.outbox_events"))).scalar() == 1

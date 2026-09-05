@@ -51,7 +51,11 @@ test("catalog forms, Decimal price and keyboard product selection", async ({
   await expect(
     page.getByRole("cell", { name: `测试螺栓-${suffix}`, exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "编辑", exact: true }).click();
+  await page
+    .getByRole("row")
+    .filter({ hasText: `测试螺栓-${suffix}` })
+    .getByRole("button", { name: "编辑", exact: true })
+    .click();
   await page
     .getByLabel("商品名称", { exact: true })
     .fill(`已编辑螺栓-${suffix}`);
@@ -68,7 +72,10 @@ test("catalog forms, Decimal price and keyboard product selection", async ({
   await page.getByRole("button", { name: "保存", exact: true }).click();
   await expect(page.getByRole("dialog")).toBeHidden();
   await expect(
-    page.getByRole("cell", { name: "1.234567", exact: true }),
+    page
+      .getByRole("row")
+      .filter({ hasText: `已编辑螺栓-${suffix}` })
+      .getByRole("cell", { name: "1.234567", exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "快捷选品", exact: true }).click();
   const search = page.getByRole("combobox", { name: "搜索商品", exact: true });

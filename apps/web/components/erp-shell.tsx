@@ -24,6 +24,7 @@ import {
 import { Dialog } from "@base-ui/react/dialog";
 import { api, ApiError, getProfile } from "@/lib/api";
 import { Button } from "@/components/ui/button";
+import { InventoryWorkspace } from "@/features/inventory/workspace";
 import { CatalogWorkspace } from "@/features/catalog/workspace";
 import { CatalogManager } from "@/features/catalog/manager";
 import { configs } from "@/features/catalog/config";
@@ -155,7 +156,7 @@ export function ERPShell({
         <div className="mt-auto hidden border-t border-border px-3 pt-4 md:block">
           <p className="text-xs font-medium">一步一步，把生意做好。</p>
           <p className="mt-2 text-[10px] text-muted-foreground">
-            Forge ERP · v0.5
+            Forge ERP · v0.6
           </p>
         </div>
       </aside>
@@ -213,7 +214,9 @@ export function ERPShell({
           <p className="mt-3 text-sm text-muted-foreground">
             {section === "profile"
               ? "你的账户与所属企业。"
-              : "工作空间已就绪，业务功能将逐步开放。"}
+              : section === "inventory"
+                ? "按仓库查看库存，追溯每次变动。"
+                : "工作空间已就绪，业务功能将逐步开放。"}
           </p>
           {["products", "customers", "suppliers"].includes(section) ? (
             <CatalogWorkspace
@@ -221,6 +224,8 @@ export function ERPShell({
               section={section}
               permissions={me.permissions}
             />
+          ) : section === "inventory" ? (
+            <InventoryWorkspace permissions={me.permissions} />
           ) : catalogResource ? (
             <CatalogManager
               resource={catalogResource}
@@ -313,7 +318,9 @@ export function ERPShell({
                           </div>
                           <h3 className="text-sm font-semibold">{label}管理</h3>
                           <p className="mt-2 text-xs text-muted-foreground">
-                            功能正在准备中
+                            {path === "inventory"
+                              ? "查看库存、流水与库存单据"
+                              : "功能正在准备中"}
                           </p>
                         </Link>
                       ))}

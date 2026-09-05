@@ -57,8 +57,16 @@ def identities(password_hash):
             records.append({"org": org, "user": user, "role": role, "code": code})
     yield records
     with admin.begin() as db:
+        # Isolated TEST_* cleanup only; immutable facts remain protected for forge_app.
+        db.execute(text("SET LOCAL session_replication_role = replica"))
         for rec in records:
             for table in (
+                "inventory_movements",
+                "inventory_reversals",
+                "inventory_reservations",
+                "inventory_document_lines",
+                "inventory_documents",
+                "inventory_balances",
                 "product_embeddings",
                 "supplier_products",
                 "product_prices",

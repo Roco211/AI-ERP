@@ -19,6 +19,10 @@ KNOWN_EVENTS |= {
     for resource in RESOURCES
     for action in ("create", "update", "activate", "deactivate")
 }
+KNOWN_EVENTS |= {"inventory.movement.recorded", "inventory.projection.rebuilt"}
+KNOWN_EVENTS |= {
+    f"inventory.document.{action}" for action in ("create", "update", "post", "reverse", "refresh")
+}
 log = structlog.get_logger()
 
 

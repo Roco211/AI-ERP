@@ -50,3 +50,6 @@ semantic-eval:
 	$(UV) run --project apps/api python apps/api/scripts/eval_embeddings.py
 semantic-enable:
 	$(UV) run --project apps/api python apps/api/scripts/configure_embeddings.py
+
+seed-inventory:
+	$(UV) run --project apps/api python apps/api/scripts/seed_inventory.py

@@ -1,6 +1,10 @@
-# Forge ERP — Catalog v0.5
+# Forge ERP — Inventory v0.6
 
-The user authorized Catalog v0.5 after Bootstrap passed acceptance. Implement Category, Brand, Unit, Product, ProductUnit, ProductPrice, Customer, Supplier, SupplierProduct, Warehouse, Product Search and ProductPicker. Excel work is template/validation/workflow design only. The user authorized local embeddings; implement optional Ollama/BGE-M3 without cloud calls (ADR 0011). Do not implement Inventory, Sales, Purchasing, Receivables, Payables, or AI business tools. Frozen stack: Python 3.14, FastAPI, Pydantic v2, SQLAlchemy 2 async, Alembic, psycopg3, PostgreSQL 18 + pgvector + pg_trgm, Redis, Celery, uv; Next.js App Router, React, TypeScript, shadcn Base UI, Tailwind, TanStack Query, pnpm.
+The user authorized Catalog v0.5 after Bootstrap passed acceptance. Implement Category, Brand, Unit, Product, ProductUnit, ProductPrice, Customer, Supplier, SupplierProduct, Warehouse, Product Search and ProductPicker. Excel work is template/validation/workflow design only. The user authorized local embeddings; implement optional Ollama/BGE-M3 without cloud calls (ADR 0011). The user authorized Inventory v0.6 implementation after reviewing the specification. Implement only that inventory scope; do not implement Sales, Purchasing, Receivables, Payables, or AI business tools. Frozen stack: Python 3.14, FastAPI, Pydantic v2, SQLAlchemy 2 async, Alembic, psycopg3, PostgreSQL 18 + pgvector + pg_trgm, Redis, Celery, uv; Next.js App Router, React, TypeScript, shadcn Base UI, Tailwind, TanStack Query, pnpm.
+
+## Inventory v0.6 implementation authorization
+
+The user reviewed the specification and said “OK, 请继续” on 2026-09-05. Proceed with I0–I5 and the documented D1–D6 recommendations. Read `docs/inventory-v0.6.md`, `docs/inventory-v0.6-acceptance.md`, and ADR 0012. Catalog remains the dependency baseline; do not merge its PR implicitly. Work on inventory/v0.6 with small tested commits.
 
 # 45. AGENTS.md 核心规则
 

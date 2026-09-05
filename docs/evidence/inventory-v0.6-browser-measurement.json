@@ -1,0 +1,14 @@
+{
+  "scope": "Local production Next.js + live FastAPI + development DEMO data; whole page measured until inventory row visible, not production capacity",
+  "balanceRows": 14,
+  "apiRunsMs": [
+    34.2,
+    9.8,
+    9.69,
+    8.84,
+    11.29
+  ],
+  "wholePageMs": 103.59,
+  "viewport": "1440x1000",
+  "browser": "151.0.7922.34"
+}
