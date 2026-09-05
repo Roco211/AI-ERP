@@ -1,8 +1,8 @@
 # ADR 0017 — 单助手、受租户隔离的持久状态与草稿复核
 
-Status: Accepted implementation choices for authorized v0.11; real-provider acceptance pending
+Status: Implemented for authorized v0.11; real-provider samples verified, retained for architecture review
 
-基线 operations-v0.10。沿用 ADR0008 的 LangGraph/LangChain/LangSmith 方向及用户选择的 CommandCode 对话模型，embedding 仍为 ADR0011 的本地 BGE-M3。
+基线 operations-v0.10。沿用 ADR0008 的 LangGraph/LangChain/LangSmith 方向，对话模型按 ADR0018 由用户在网页配置供应商、地址和模型；embedding 仍为 ADR0011 的本地 BGE-M3。
 
 1. 实现 LangGraph checkpointer 协议的 PostgreSQL 适配器，由 Alembic 管理，JSON 存储并强制组织/所有者 RLS。官方 saver 默认表不具备本项目组织/owner 约束，因此不直接运行 setup()。持久 state 不保存授权上下文。
 2. 会话仅创建者可读。当前权限指纹变化时停止旧会话恢复及历史访问，以避免旧结果泄露。所有工具/批准重新认证，模型请求在 DB 事务之外。
