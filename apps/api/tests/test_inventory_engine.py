@@ -187,8 +187,11 @@ async def test_inventory_rls_and_immutability(stock, identities):
             assert (await db.execute(text(f"SELECT count(*) FROM forge.{table}"))).scalar_one() == 0
         assert (
             await db.execute(
-                text("UPDATE forge.inventory_balances SET on_hand_qty=0 WHERE id=:id"),
-                {"id": m["id"]},
+                text(
+                    "UPDATE forge.inventory_balances SET on_hand_qty=0 "
+                    "WHERE warehouse_id=:wh AND product_id=:product"
+                ),
+                {"wh": stock[1][0], "product": stock[1][1]},
             )
         ).rowcount == 0
     with pytest.raises(DBAPIError):

@@ -368,6 +368,39 @@ class InventoryEngine:
             for sequence, m in enumerate(movements, 1):
                 if sequence != m["sequence"] or cost != m["before_avg_cost"]:
                     raise Problem(409, "LEDGER_INCONSISTENT", "流水序列或成本快照不一致，不能重建")
+                prior = Balance(qty, reserved, value, cost)
+                try:
+                    if m["kind"] in ("RECEIVE", "TRANSFER_IN"):
+                        replayed = prior.receive(m["base_qty"], value=m["value_delta"])
+                    elif m["kind"] in ("ISSUE", "TRANSFER_OUT"):
+                        replayed = prior.issue(-m["base_qty"], consume=-m["reserved_qty_delta"])
+                    elif m["kind"] in ("RESERVE", "RELEASE"):
+                        replayed = prior.reserve(m["reserved_qty_delta"])
+                    else:
+                        original = next(
+                            (x for x in movements if x["id"] == m["original_movement_id"]), None
+                        )
+                        if not original or any(
+                            m[field] != -original[field]
+                            for field in ("base_qty", "reserved_qty_delta", "value_delta")
+                        ):
+                            raise InventoryError("LEDGER_INCONSISTENT", "冲销流水与原记录不一致")
+                        replayed = Balance(
+                            qty + m["base_qty"],
+                            reserved + m["reserved_qty_delta"],
+                            value + m["value_delta"],
+                            original["before_avg_cost"],
+                        )
+                    recorded = Balance(
+                        qty + m["base_qty"],
+                        reserved + m["reserved_qty_delta"],
+                        value + m["value_delta"],
+                        m["after_avg_cost"],
+                    )
+                    if replayed != recorded:
+                        raise InventoryError("LEDGER_INCONSISTENT", "流水成本计算与记录不一致")
+                except InventoryError as exc:
+                    raise Problem(409, "LEDGER_INCONSISTENT", "流水校验失败，不能重建投影") from exc
                 qty += m["base_qty"]
                 reserved += m["reserved_qty_delta"]
                 value += m["value_delta"]
