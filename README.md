@@ -1,6 +1,6 @@
 # Forge ERP · Purchasing v0.7
 
-五金商贸 ERP。基于已验收的 Bootstrap v0.4，Catalog 增加分类、品牌、单位、商品、价格、客户、供应商、供货关系、仓库资料和快捷选品。可选本地语义搜索使用 Ollama/BGE-M3（[安装说明](docs/local-embeddings.md)）；库存 v0.6 已加入期初、调整、调拨、盘点、库存流水与低库存查询。采购 v0.7 已加入订单、分批收货、退货、冲销与历史采购价。销售、资金和 AI 业务功能未开放。详见 [Catalog 使用与验收](docs/catalog-v0.5.md) 和 [Excel 导入基础设计](docs/import/catalog-import-design.md)。
+五金商贸 ERP。基于已验收的 Bootstrap v0.4，Catalog 增加分类、品牌、单位、商品、价格、客户、供应商、供货关系、仓库资料和快捷选品。可选本地语义搜索使用 Ollama/BGE-M3（[安装说明](docs/local-embeddings.md)）；库存 v0.6 已加入期初、调整、调拨、盘点、库存流水与低库存查询。采购 v0.7 已加入订单、分批收货、退货、冲销与历史采购价。销售 v0.8 的 S1–S4 已加入订单占用、分批出库、原单退货、严格冲销、毛利与[销售工作台](docs/sales-v0.8-s4-delivery.md)，入口 `/sales`；S5 最终阶段验收和销售版本发布仍待完成。资金和 AI 业务功能未开放。详见 [Catalog 使用与验收](docs/catalog-v0.5.md) 和 [Excel 导入基础设计](docs/import/catalog-import-design.md)。
 
 ## 本地启动
 

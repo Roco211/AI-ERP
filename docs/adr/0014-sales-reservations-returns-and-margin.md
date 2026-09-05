@@ -1,6 +1,6 @@
 # ADR 0014 — 销售占用、退货成本与毛利
 
-Status: Accepted for incremental implementation after user continuation。S1–S3后端已实施，工作台和完整验收在S4–S5落实；基线为已发布main64bec0a / purchasing-v0.7。依据权威迁移上下文4.3、5、7–10、12、41及ADR0009/0012/0013。详见[施工规范](../sales-v0.8.md)和[验收清单](../sales-v0.8-acceptance.md)。
+Status: Accepted for incremental implementation after user continuation。S1–S4后端与工作台已实施，完整阶段验收在S5落实；基线为已发布main64bec0a / purchasing-v0.7。依据权威迁移上下文4.3、5、7–10、12、41及ADR0009/0012/0013。详见[施工规范](../sales-v0.8.md)和[验收清单](../sales-v0.8-acceptance.md)。
 
 ## 原文已经固定
 
@@ -48,3 +48,11 @@ Status: Accepted for incremental implementation after user continuation。S1–S
 销售出库冲销恢复原占用，退货冲销只恢复可退额度；严格末笔、闭单规则不变。当前成本查询从不可变流水取得，订单净毛利只纳入有效 POSTED 事实；退货单毛利表示带符号的净影响，DRAFT/REVERSED 不计已实现毛利。成交历史保留全部退回但未冲销的出库。
 
 销售金额汇总只需销售与价格读取权限；成本和毛利另需成本读取权限。数量操作回执不包含商业值。S4 页面须延续这些边界，明确展示退货的销售冲减和成本回收。
+
+## S4 工作台落地
+
+工作台沿用现有同源 Cookie、生成 DTO 和应用层 Command。订单新增 `remaining_qty`、`executable_qty` 只读字段，由服务器按冻结销售单位计算；页面不换算业务数量，也不计算金额或毛利。库存现有、仓库占用、可用三值受 `inventory.read` 控制，来自同一余额行快照；其他订单随后可能改变它们，最终可执行性仍在过账事务检查。
+
+AUTO 草稿保存重新解析价格，页面展示服务端保存结果并提示与预览报价的差异。更换客户使所有行重新核价，包括先前 MANUAL 输入。历史来源新增可选 `source_document_id`，旧快照仍兼容；库存流水通过凭据类型和受销售读取权限控制的订单关联跳回原单。
+
+界面使用首次提交时捕获的请求体和幂等键。若提交结果不明，锁住表单和页面导航并复用原提交；后续权限拒绝不能证明先前未提交，因此不会丢弃原键。缓存数据的展示同样受当前价格/成本权限控制，服务端继续执行最终授权。

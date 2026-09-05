@@ -148,6 +148,9 @@ export function InventoryWorkspace({ permissions }: { permissions: string[] }) {
     ),
     [q, setQ] = useState(searchParams.get("q") ?? ""),
     [warehouse, setWarehouse] = useState(searchParams.get("warehouse") ?? "");
+  const [movementDocument, setMovementDocument] = useState(
+    searchParams.get("document") ?? "",
+  );
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     for (const [key, value] of Object.entries({
@@ -155,6 +158,7 @@ export function InventoryWorkspace({ permissions }: { permissions: string[] }) {
       page: page === 1 ? "" : String(page),
       q,
       warehouse,
+      document: movementDocument,
     })) {
       if (value) params.set(key, value);
       else params.delete(key);
@@ -163,7 +167,7 @@ export function InventoryWorkspace({ permissions }: { permissions: string[] }) {
       window.location.pathname + (params.size ? "?" + params.toString() : "");
     if (next !== window.location.pathname + window.location.search)
       window.history.replaceState(window.history.state, "", next);
-  }, [tab, page, q, warehouse]);
+  }, [tab, page, q, warehouse, movementDocument]);
   const [warehouseSearch, setWarehouseSearch] = useState("");
   const [cursors, setCursors] = useState<(string | undefined)[]>([undefined]);
   const [detail, setDetail] = useState<Document | null>(null),
@@ -252,13 +256,20 @@ export function InventoryWorkspace({ permissions }: { permissions: string[] }) {
     enabled: allowed && tab in labels,
   });
   const movement = useQuery({
-    queryKey: ["inventory", "movements", warehouse, cursors.at(-1)],
+    queryKey: [
+      "inventory",
+      "movements",
+      warehouse,
+      movementDocument,
+      cursors.at(-1),
+    ],
     queryFn: async () =>
       unwrap(
         await api.GET("/api/v1/inventory/movements", {
           params: {
             query: {
               warehouse_id: warehouse || undefined,
+              document_id: movementDocument || undefined,
               cursor: cursors.at(-1),
               page_size: 25,
             },
@@ -495,6 +506,20 @@ export function InventoryWorkspace({ permissions }: { permissions: string[] }) {
             </select>
           </>
         )}
+        {tab === "movements" && movementDocument && (
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <span>正在查看来源单据的库存流水</span>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setMovementDocument("");
+                setCursors([undefined]);
+              }}
+            >
+              查看全部流水
+            </Button>
+          </div>
+        )}
         {tab === "balances" && (
           <Input
             aria-label="搜索库存商品"
@@ -606,14 +631,31 @@ export function InventoryWorkspace({ permissions }: { permissions: string[] }) {
                 number(r.base_qty),
                 number(r.reserved_qty_delta),
                 ...(cost ? [number(r.value_delta)] : []),
-                <Button
-                  key="source"
-                  disabled={busy}
-                  variant="link"
-                  onClick={() => void openDetail(r.document_id)}
-                >
-                  {r.document_number}
-                </Button>,
+                permissions.includes("sales.read") &&
+                r.document_type.startsWith("SALES_") &&
+                (r.document_type !== "SALES_RESERVATION" ||
+                  r.sales_order_id) ? (
+                  <a
+                    key="source"
+                    className="text-sm text-primary"
+                    href={
+                      r.document_type === "SALES_RESERVATION"
+                        ? "/sales?order=" + r.sales_order_id
+                        : "/sales?document=" + r.document_id
+                    }
+                  >
+                    {r.document_number}
+                  </a>
+                ) : (
+                  <Button
+                    key="source"
+                    disabled={busy}
+                    variant="link"
+                    onClick={() => void openDetail(r.document_id)}
+                  >
+                    {r.document_number}
+                  </Button>
+                ),
               ],
             }))}
           />
@@ -746,6 +788,16 @@ export function InventoryWorkspace({ permissions }: { permissions: string[] }) {
               前往采购单据
             </a>
           )}
+          {detail.type.startsWith("SALES_") &&
+            detail.type !== "SALES_RESERVATION" &&
+            permissions.includes("sales.read") && (
+              <a
+                className="text-sm text-primary"
+                href={"/sales?document=" + detail.id}
+              >
+                前往销售单据
+              </a>
+            )}
           <Grid
             page={page}
             headers={[

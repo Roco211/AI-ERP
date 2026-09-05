@@ -94,34 +94,141 @@ test("an incomplete opening draft cannot be saved", async () => {
   );
 });
 
-
 test("late document responses cannot replace the latest selection", async () => {
   const docs = ["A", "B", "C"].map((id) => ({
-    id, number: id, type: "OPENING", status: "DRAFT", version: 1,
-    reason: "reason-" + id, warehouse_name: "主仓", lines: [],
+    id,
+    number: id,
+    type: "OPENING",
+    status: "DRAFT",
+    version: 1,
+    reason: "reason-" + id,
+    warehouse_name: "主仓",
+    lines: [],
     created_at: "2026-09-05T00:00:00Z",
   }));
   let finishB!: (value: unknown) => void;
-  const delayed = new Promise((resolve) => { finishB = resolve; });
-  const response = (data: unknown) => ({ data, error: undefined, response: new Response() });
+  const delayed = new Promise((resolve) => {
+    finishB = resolve;
+  });
+  const response = (data: unknown) => ({
+    data,
+    error: undefined,
+    response: new Response(),
+  });
   get.mockImplementation((path, options) => {
     if (path === "/api/v1/inventory/documents/{id}") {
-      const id = (options as { params: { path: { id: string } } }).params.path.id;
-      return (id === "B" ? delayed : Promise.resolve(response(docs.find(d => d.id === id)))) as never;
+      const id = (options as { params: { path: { id: string } } }).params.path
+        .id;
+      return (
+        id === "B"
+          ? delayed
+          : Promise.resolve(response(docs.find((d) => d.id === id)))
+      ) as never;
     }
-    return Promise.resolve(response({ items: path === "/api/v1/inventory/documents" ? docs : [], total: 3, page: 1, page_size: 25 })) as never;
+    return Promise.resolve(
+      response({
+        items: path === "/api/v1/inventory/documents" ? docs : [],
+        total: 3,
+        page: 1,
+        page_size: 25,
+      }),
+    ) as never;
   });
   renderInventory(["inventory.read"]);
   fireEvent.click(screen.getByRole("button", { name: "期初库存" }));
   await screen.findByText("reason-A");
-  const view = (reason: string) => within(screen.getByText(reason).closest("tr")!).getByRole("button", { name: "查看" });
+  const view = (reason: string) =>
+    within(screen.getByText(reason).closest("tr")!).getByRole("button", {
+      name: "查看",
+    });
   fireEvent.click(view("reason-A"));
-  expect(await screen.findByRole("region", { name: "库存单据详情" })).toHaveTextContent("reason-A");
+  expect(
+    await screen.findByRole("region", { name: "库存单据详情" }),
+  ).toHaveTextContent("reason-A");
   fireEvent.click(view("reason-B"));
-  expect(screen.queryByRole("region", { name: "库存单据详情" })).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("region", { name: "库存单据详情" }),
+  ).not.toBeInTheDocument();
   fireEvent.click(view("reason-C"));
-  await waitFor(() => expect(screen.getByRole("region", { name: "库存单据详情" })).toHaveTextContent("reason-C"));
-  await act(async () => { finishB(response(docs[1])); await delayed; });
-  expect(screen.getByRole("region", { name: "库存单据详情" })).toHaveTextContent("reason-C");
-  expect(screen.getByRole("region", { name: "库存单据详情" })).not.toHaveTextContent("reason-B");
+  await waitFor(() =>
+    expect(
+      screen.getByRole("region", { name: "库存单据详情" }),
+    ).toHaveTextContent("reason-C"),
+  );
+  await act(async () => {
+    finishB(response(docs[1]));
+    await delayed;
+  });
+  expect(
+    screen.getByRole("region", { name: "库存单据详情" }),
+  ).toHaveTextContent("reason-C");
+  expect(
+    screen.getByRole("region", { name: "库存单据详情" }),
+  ).not.toHaveTextContent("reason-B");
 });
+
+test.each([
+  ["SALES_RESERVATION", "/sales?order=order-id"],
+  ["SALES_SHIPMENT", "/sales?document=doc-id"],
+  ["SALES_RETURN", "/sales?document=doc-id"],
+])(
+  "filters source movements and traces %s to its sales document",
+  async (documentType, href) => {
+    window.history.replaceState(
+      {},
+      "",
+      "/inventory?tab=movements&document=doc-id",
+    );
+    get.mockResolvedValue({
+      data: {
+        next_cursor: null,
+        items: [
+          {
+            id: "movement",
+            document_id: "doc-id",
+            document_number: "SO-SOURCE",
+            document_type: documentType,
+            sales_order_id: "order-id",
+            created_at: "2026-09-05T00:00:00Z",
+            product_label: "螺栓",
+            warehouse_name: "主仓",
+            kind: "RESERVE",
+            base_qty: "0",
+            reserved_qty_delta: "1",
+          },
+        ],
+      },
+      response: new Response(),
+    } as never);
+    renderInventory(["inventory.read", "sales.read"]);
+    expect(
+      await screen.findByRole("link", { name: "SO-SOURCE" }),
+    ).toHaveAttribute("href", href);
+    expect(get).toHaveBeenCalledWith(
+      "/api/v1/inventory/movements",
+      expect.objectContaining({
+        params: {
+          query: expect.objectContaining({
+            document_id: "doc-id",
+            page_size: 25,
+          }),
+        },
+      }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "查看全部流水" }));
+    await waitFor(() =>
+      expect(get).toHaveBeenLastCalledWith(
+        "/api/v1/inventory/movements",
+        expect.objectContaining({
+          params: {
+            query: expect.objectContaining({
+              document_id: undefined,
+              cursor: undefined,
+            }),
+          },
+        }),
+      ),
+    );
+    expect(window.location.search).not.toContain("document=");
+  },
+);

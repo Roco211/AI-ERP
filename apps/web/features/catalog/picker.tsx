@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Input } from "@/components/ui/input";
@@ -31,6 +31,18 @@ export function ProductPicker({
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
+  const selectionVersion = useRef(0);
+  const inFlight = useRef(false);
+  useEffect(
+    () => () => {
+      selectionVersion.current++;
+    },
+    [],
+  );
+  function resetSelectionSnapshot() {
+    selectionVersion.current++;
+    setSnapshot(null);
+  }
   const {
     data,
     isFetching,
@@ -74,11 +86,13 @@ export function ProductPicker({
   function select(product: Product) {
     setSelected(product);
     setUnit(product.default_sales_unit_id ?? product.base_unit_id);
-    setSnapshot(null);
+    resetSelectionSnapshot();
     setError("");
   }
   async function confirm() {
-    if (!selected) return;
+    if (!selected || inFlight.current) return;
+    inFlight.current = true;
+    const version = selectionVersion.current;
     setBusy(true);
     setError("");
     setSnapshot(null);
@@ -88,6 +102,7 @@ export function ProductPicker({
           params: { query: { product_id: selected.id, unit_id: unit, qty } },
         }),
       );
+      if (version !== selectionVersion.current) return;
       setSnapshot(captured);
       onSelect?.({
         product: selected,
@@ -97,8 +112,10 @@ export function ProductPicker({
         ),
       });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "换算失败");
+      if (version === selectionVersion.current)
+        setError(e instanceof Error ? e.message : "换算失败");
     } finally {
+      inFlight.current = false;
       setBusy(false);
     }
   }
@@ -127,7 +144,7 @@ export function ProductPicker({
           setQ(e.target.value);
           setIndex(-1);
           setSelected(null);
-          setSnapshot(null);
+          resetSelectionSnapshot();
         }}
         onKeyDown={(e) => {
           if (isFetching && e.key !== "Escape") return;
@@ -146,7 +163,7 @@ export function ProductPicker({
           }
           if (e.key === "Escape") {
             setSelected(null);
-            setSnapshot(null);
+            resetSelectionSnapshot();
             searchRef.current?.focus();
           }
         }}
@@ -160,7 +177,7 @@ export function ProductPicker({
             setAttributeKey(e.target.value);
             setIndex(-1);
             setSelected(null);
-            setSnapshot(null);
+            resetSelectionSnapshot();
           }}
         />
         <Input
@@ -171,7 +188,7 @@ export function ProductPicker({
             setAttributeValue(e.target.value);
             setIndex(-1);
             setSelected(null);
-            setSnapshot(null);
+            resetSelectionSnapshot();
           }}
         />
       </div>
@@ -223,7 +240,7 @@ export function ProductPicker({
                   value={unit}
                   onChange={(e) => {
                     setUnit(e.target.value);
-                    setSnapshot(null);
+                    resetSelectionSnapshot();
                   }}
                 >
                   {units.data?.items.map((u: ViewRow) => (
@@ -246,11 +263,14 @@ export function ProductPicker({
                   inputMode="decimal"
                   onChange={(e) => {
                     setQty(e.target.value);
-                    setSnapshot(null);
+                    resetSelectionSnapshot();
                   }}
                   onKeyDown={(e) => {
                     if (isFetching && e.key !== "Escape") return;
-                    if (e.key === "Enter") void confirm();
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      void confirm();
+                    }
                   }}
                 />
               </label>

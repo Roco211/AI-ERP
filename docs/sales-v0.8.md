@@ -1,6 +1,6 @@
 # 销售 v0.8 施工规范
 
-状态：S0 已完成，S1 订单/占用、S2 分批出库及 S3 退货/冲销/毛利后端已实现；S4–S5 待施工。基线为已发布 `purchasing-v0.7` / main `64bec0aecdbaef6c694a2fdb47b8fc93c34b57a7`，数据库 `0008_purchasing`。本次发布后的新工作不修改旧标签。实施建议见[ADR0014](adr/0014-sales-reservations-returns-and-margin.md)，验收见[清单](sales-v0.8-acceptance.md)。
+状态：S0–S4 已完成，订单/占用、出库、退货/冲销/毛利与销售工作台已实现；S5 最终阶段验收待处理。基线为已发布 `purchasing-v0.7` / main `64bec0aecdbaef6c694a2fdb47b8fc93c34b57a7`，数据库 `0008_purchasing`。本次发布后的新工作不修改旧标签。实施建议见[ADR0014](adr/0014-sales-reservations-returns-and-margin.md)，验收见[清单](sales-v0.8-acceptance.md)。
 
 依据：[权威迁移上下文](architecture/migration-context.md)第4.3、4.5、5、7、8、9、10、12、41、45节；已实施ADR0009、0012、0013。下文明确区分原文硬约束与原文未细化的本阶段建议，不重新设计ERP。
 
@@ -181,3 +181,10 @@ REST前缀 `/api/v1/sales`：orders列表/详情/保存草稿/confirm/cancel/clo
 - 毛利按有效事实计算；退货行显示带符号的毛利影响。价格汇总与成本汇总独立授权；没有成本读取权限不返回毛利。
 - 历史价仅取有效出库，全退保留原成交；当前资料变更不改历史快照。沿用 S2 列表共享锁和重新筛选，允许并发分页变短。
 - S4 工作台、S5 最终验收仍待施工；本增量不合并、不发布，不进入资金或 AI 业务工具。
+
+
+## S4 实施记录
+
+已开放 `/sales` 工作台及订单、出库、退货、成交历史四个页签。沿用 RHF/Zod、ProductPicker、TanStack Query/Table 和生成 DTO；冻结单位数量与全部金额由服务器提供。新增只读库存与来源关联，不改写入规则或数据库迁移。
+
+客户变化必须重新核价；独立价格/成本权限控制缓存展示与操作。未知结果提交保持原键原 body，后续权限拒绝不丢弃原提交；库存流水按原凭据筛选并跳回销售单据。真实浏览器覆盖部分出库、原单退货、合法冲销、独立角色与窄屏。详见[本轮交付记录](sales-v0.8-s4-delivery.md)。S5 与版本发布仍待完成。
