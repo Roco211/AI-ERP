@@ -196,7 +196,7 @@ async def order_list(db, ctx, page, size, customer=None, status=None, q=""):
         params["status"] = status
     if q:
         where += " AND (number ILIKE :q OR customer_name ILIKE :q)"
-        params["q"] = "%" + q.replace("%", r"\%").replace("_", r"\_") + "%"
+        params["q"] = "%" + q.replace("\\", "\\\\").replace("%", r"\%").replace("_", r"\_") + "%"
     ids = (
         (
             await db.execute(

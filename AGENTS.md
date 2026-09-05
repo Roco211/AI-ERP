@@ -91,3 +91,7 @@ After S2 delivery (292b46e, 219 backend tests and current-commit CI green), the 
 ## Sales S4 authorization
 
 After S3 delivery (cc023a5, 305 backend tests, current CI green), the user said “继续”. Implement S4 sales workspace: orders, shipments, returns/reversal, authorized margin/history, quote provenance, keyboard selection, server amounts, independent permissions and safe retries. Extend read DTOs where needed to avoid browser business arithmetic, without changing domain commands or adding migrations. Add real browser and frontend regressions. Keep S5 optional seed/final-stage acceptance and publishing pending; do not merge or release PR #4.
+
+## Sales S5 authorization
+
+After S4 delivery (2cd3d93, 316 backend / 37 frontend / 10 browser tests and both current CI runs successful), the user said “请继续”. Complete S5 under the existing specification: finish shipment idempotency coverage, implement an optional development-only Command-based sales seed that preserves existing facts, run frozen installation and full regression/CI, and finalize the 46-item acceptance and delivery evidence. Keep existing architecture and business semantics; resolve real defects with regression tests. No Receivables/Payables/AI work, no new infrastructure, and no implicit merge, tag creation or release. Only recommend sales-v0.8 once full acceptance is verified.
