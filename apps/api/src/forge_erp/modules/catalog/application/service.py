@@ -164,6 +164,7 @@ async def write_command(
     expected_version: int | None = None,
     active: bool | None = None,
 ) -> dict:
+    values = values.copy()
     spec = RESOURCES[resource]
     ctx.require(spec.permission + ".write")
     operation = (

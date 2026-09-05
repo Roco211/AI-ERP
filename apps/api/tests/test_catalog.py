@@ -420,3 +420,18 @@ async def test_all_catalog_rls_and_foreign_keys(catalog_client, identities):
                 ),
                 {"org": other["org"], "product": p["id"]},
             )
+
+
+async def test_application_command_preserves_input_and_replays(identities):
+    a = identities[0]
+    ctx = RuntimeContext(a["org"], a["user"], frozenset({"catalog.write"}), "retry-input")
+    body = {"code": "RETRY", "name": "重复提交"}
+    key = uuid4().hex
+    async with sessions.begin() as db:
+        await set_tenant(db, a["org"])
+        first = await write_command(db, ctx, "brands", body, key)
+    assert body == {"code": "RETRY", "name": "重复提交"}
+    async with sessions.begin() as db:
+        await set_tenant(db, a["org"])
+        second = await write_command(db, ctx, "brands", body, key)
+    assert first == second
