@@ -195,7 +195,11 @@ test("isolated sales keyboard order, partial shipment lost response, return, rev
   test.setTimeout(180000);
   await login(page, salesIdentity);
   const data = await setup(page);
-  await page.goto("/sales");
+  await page
+    .getByRole("navigation", { name: "主导航" })
+    .getByRole("link", { name: "销售", exact: true })
+    .click();
+  await page.waitForURL("**/sales*");
   await page.getByRole("button", { name: "新建销售订单" }).click();
   await page
     .getByRole("combobox", { name: "销售客户", exact: true })
@@ -285,6 +289,15 @@ test("isolated sales keyboard order, partial shipment lost response, return, rev
   await expect(
     page.getByRole("dialog").getByRole("button", { name: "取消", exact: true }),
   ).toBeDisabled();
+  const pendingUrl = page.url();
+  const historyLength = await page.evaluate(() => window.history.length);
+  await page.goBack();
+  await expect(page).toHaveURL(pendingUrl);
+  await expect(page.getByRole("dialog").getByRole("alert")).toContainText(
+    "提交结果待确认",
+  );
+  expect(await page.evaluate(() => window.history.length)).toBe(historyLength);
+  expect(attempts).toHaveLength(1);
   await page.getByRole("button", { name: "重试原提交" }).click();
   await expect(page.getByRole("dialog")).toBeHidden();
   await expect(doc.getByText(/已过账 ·/)).toBeVisible();
@@ -302,6 +315,14 @@ test("isolated sales keyboard order, partial shipment lost response, return, rev
     net_cost: "660.0000",
     gross_margin: "240.0000",
   });
+
+  // The blocked Back did not replace, append, or discard any history entry.
+  await page.goBack();
+  await expect(page).toHaveURL(/\/dashboard$/);
+  await page.goForward();
+  await expect(page).toHaveURL(pendingUrl);
+  await expect(doc.getByText(/已过账 ·/)).toBeVisible();
+  expect(await page.evaluate(() => window.history.length)).toBe(historyLength);
 
   await doc.getByRole("button", { name: "创建退货单" }).click();
   await page.getByLabel("销售数量", { exact: true }).fill("1");
@@ -495,4 +516,94 @@ test("real quantity warehouse performs shipment and return without receiving pri
     ),
   ).toBe(true);
   await logout(page);
+});
+
+test("same-document Forward preserves an uncertain shipment and retries the original request", async ({
+  page,
+  salesIdentity,
+}) => {
+  test.setTimeout(120000);
+  await login(page, salesIdentity);
+  const data = await setup(page);
+  const order = await seedOrder(page, data, true);
+  const detail = await readOrder(page, order.id);
+  const shipment = await create(page, "sales/shipments", {
+    source_id: order.id,
+    reason: "前进导航保护验收",
+    lines: [{ source_line_id: detail.lines[0].id, qty: "6" }],
+  });
+  const dashboardUrl = page.url();
+  await page
+    .getByRole("navigation", { name: "主导航" })
+    .getByRole("link", { name: "销售", exact: true })
+    .click();
+  await page.getByRole("button", { name: "销售出库", exact: true }).click();
+  await page.getByRole("button", { name: "查看", exact: true }).click();
+  await expect(
+    page.getByRole("region", { name: "销售库存单据详情" }),
+  ).toBeVisible();
+  await page
+    .getByRole("navigation", { name: "主导航" })
+    .getByRole("link", { name: "库存", exact: true })
+    .click();
+  await page.waitForURL("**/inventory*");
+  const inventoryUrl = page.url();
+  await page.goBack();
+  const doc = page.getByRole("region", { name: "销售库存单据详情" });
+  await expect(doc).toBeVisible();
+  const requests: { key: string | undefined; body: string | null }[] = [];
+  page.on("request", (request) => {
+    if (
+      request.method() === "POST" &&
+      request.url().endsWith("/sales/documents/" + shipment.id + "/post")
+    )
+      requests.push({
+        key: request.headers()["idempotency-key"],
+        body: request.postData(),
+      });
+  });
+  await page.route(
+    "**/api/v1/sales/documents/" + shipment.id + "/post",
+    async (route) => {
+      const committed = await route.fetch();
+      expect(committed.ok()).toBeTruthy();
+      await route.abort("failed");
+    },
+    { times: 1 },
+  );
+  await doc.getByRole("button", { name: "过账", exact: true }).click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "确认执行" })
+    .click();
+  await expect(page.getByRole("dialog").getByRole("alert")).toContainText(
+    "提交结果待确认",
+  );
+  const pendingUrl = page.url();
+  const historyLength = await page.evaluate(() => window.history.length);
+  await page.goForward();
+  await expect(page).toHaveURL(pendingUrl);
+  await expect(page.getByRole("dialog").getByRole("alert")).toContainText(
+    "提交结果待确认",
+  );
+  expect(await page.evaluate(() => window.history.length)).toBe(historyLength);
+  expect(requests).toHaveLength(1);
+  await page.getByRole("button", { name: "重试原提交" }).click();
+  await expect(page.getByRole("dialog")).toBeHidden();
+  expect(requests).toHaveLength(2);
+  expect(requests[1]).toEqual(requests[0]);
+  const movements = await page.request.get("/api/v1/inventory/movements", {
+    params: { document_id: shipment.id },
+  });
+  expect((await movements.json()).items).toHaveLength(1);
+  // Forward was blocked without appending a duplicate sales entry or truncating
+  // the original forward entry; the exact original order works after receipt.
+  await page.goBack();
+  await expect(page).toHaveURL(dashboardUrl);
+  await page.goForward();
+  await expect(page).toHaveURL(pendingUrl);
+  await expect(doc.getByText(/已过账 ·/)).toBeVisible();
+  await page.goForward();
+  await expect(page).toHaveURL(inventoryUrl);
+  expect(await page.evaluate(() => window.history.length)).toBe(historyLength);
 });

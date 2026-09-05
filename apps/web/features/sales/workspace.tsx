@@ -25,6 +25,7 @@ import {
   type OrderInput,
 } from "./client";
 import { Grid, names, number, positive, PriceProvenance } from "./presentation";
+import { usePendingNavigationGuard } from "./navigation";
 
 type Tab = "orders" | "SHIPMENT" | "RETURN" | "prices";
 type Selection = { id: string; document: boolean };
@@ -163,24 +164,7 @@ export function SalesWorkspace({ permissions }: { permissions: string[] }) {
       url.pathname + url.search,
     );
   }, [tab, q, customerFilter, historyProduct, selected]);
-  useEffect(() => {
-    if (!locked) return;
-    const navigation = (event: MouseEvent) => {
-      if (event.target instanceof Element && event.target.closest("a[href]")) {
-        event.preventDefault();
-        event.stopPropagation();
-      }
-    };
-    const leave = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-    };
-    document.addEventListener("click", navigation, true);
-    window.addEventListener("beforeunload", leave);
-    return () => {
-      document.removeEventListener("click", navigation, true);
-      window.removeEventListener("beforeunload", leave);
-    };
-  }, [locked]);
+  usePendingNavigationGuard(locked);
   useEffect(() => {
     const requests = quoteRequests.current;
     return () => {
@@ -193,15 +177,13 @@ export function SalesWorkspace({ permissions }: { permissions: string[] }) {
     quoteRequests.current.clear();
     form.setValue(
       "lines",
-      form
-        .getValues("lines")
-        .map((line) => ({
-          ...line,
-          quoteLoading: false,
-          reviewed: false,
-          quote: undefined,
-          unit_price: "",
-        })),
+      form.getValues("lines").map((line) => ({
+        ...line,
+        quoteLoading: false,
+        reviewed: false,
+        quote: undefined,
+        unit_price: "",
+      })),
     );
   }, [canQuote, form]);
   const customers = useQuery({
