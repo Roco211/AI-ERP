@@ -55,7 +55,7 @@ pnpm test:e2e
 
 - 冻结安装：uv sync --locked、pnpm install --frozen-lockfile通过。
 - Ruff、format、Pyright通过，Pyright零错误/警告。
-- 后端完整套件128 passed，0 skipped，含真实PostgreSQL/RLS/并发/迁移及已有Catalog、Inventory回归。
+- 后端完整套件132 passed，0 skipped，含真实PostgreSQL/RLS/并发/迁移及已有Catalog、Inventory回归。
 - 前端lint/typecheck通过，Vitest12 passed，生产构建通过。
 - Playwright Chromium 7 passed，覆盖登录、Catalog、Inventory、采购流程和真实只读账户。
 - OpenAPI→TS已重新生成；漂移检查纳入GitHub Actions。
@@ -78,3 +78,7 @@ pnpm test:e2e
 ADR0013固定P1–P6。需要业务确认的边界：一仓采购与禁止超收；确认后不可修订；收货可显式覆盖采购价；退货不重开待收；退货参考金额按原收货价、库存按当前均价；严格末笔整单冲销；资金后续单独接入。多仓、超收容差、折扣/税费/运费分摊、原批次成本及付款核销均需独立规范。
 
 验收与评审完成后建议标签 `purchasing-v0.7`。本轮未自动创建标签或合并依赖PR。
+
+## 交付复核修正
+
+CI在0349bf5发现共用事务依赖默认在HTTP响应之后提交，导致立即读取偶发404/旧状态。已将Catalog/Inventory（采购复用该入口）事务改为成功响应前提交；提交异常返回500 Problem Details。`test_api_commit_boundary.py` 直接观察ASGI响应与独立数据库连接，四项在旧实现全部复现，修复后通过；最终后端132项。此前失败run33966901630保留用于追溯；修复提交的最终CI另在输出报告记录。

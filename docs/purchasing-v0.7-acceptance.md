@@ -40,7 +40,7 @@
 
 基线 `1105bfa`；独立分支 `purchasing/v0.7`。规范提交 `4201613`，后端提交 `efe714b`，工作台与回归提交 `92d5743`。依赖 Inventory PR #2，未自动合并或打标签。
 
-测试简称：P = `apps/api/tests/test_purchasing.py`，S = `apps/api/tests/test_purchasing_safety.py`，M = `apps/api/tests/test_migrations.py`。全部本地后端 **128 passed / 0 skipped**；Vitest **12 passed**；生产构建和真实浏览器 **7 passed**。Ruff/format/Pyright、frontend lint/typecheck 通过；lint 有3条 TanStack Table 的 React Compiler 提示，无错误。
+测试简称：P = `apps/api/tests/test_purchasing.py`，S = `apps/api/tests/test_purchasing_safety.py`，M = `apps/api/tests/test_migrations.py`。全部本地后端 **132 passed / 0 skipped**；Vitest **12 passed**；生产构建和真实浏览器 **7 passed**。Ruff/format/Pyright、frontend lint/typecheck 通过；lint 有3条 TanStack Table 的 React Compiler 提示，无错误。
 
 | 验收项 | 实现与实际验证 |
 |---|---|
@@ -64,8 +64,10 @@
 | F01–F02 | Playwright purchasing：开单、键盘选品、60+40分批、断网重试、退10、冲销、来源跳转；复用已验证多单位ProductPicker/RHF/Zod/TanStack；浏览器不算金额 |
 | F03 | Vitest purchasing：缺权不请求、无价格、空表单、乱序详情、重复点击/网络原键原body重试、版本冲突；真实浏览器丢弃已成功过账的响应后重试 |
 | G01 | M六种基线：空库、0001、0004、0005、0006、0007带数据→0008；旧商品价格/单位/库存数量/价值/单据保留 |
-| G02–G03 | `make install`、Ruff/format/Pyright、128后端、12Vitest、lint/typecheck/build、7Playwright；OpenAPI从服务端重新生成，CI检查漂移 |
+| G02–G03 | `make install`、Ruff/format/Pyright、132后端、12Vitest、lint/typecheck/build、7Playwright；OpenAPI从服务端重新生成，CI检查漂移 |
 | G04 | [源码CI #33966679507](https://github.com/Roco211/AI-ERP/actions/runs/33966679507)，源码92d5743，全部步骤成功；[采购分支CI](https://github.com/Roco211/AI-ERP/actions/workflows/ci.yml?query=branch%3Apurchasing%2Fv0.7) |
 | G05 | `make seed-purchasing` 两次：首建订单100/收60，第二次保留；全部走业务Command；交付报告、目录树、命令、限制与决策已整理 |
 
 本轮测试中修正了测试夹具的只读密码/清理ID、跨来源实际404预期、第二商品必填规格属性和浏览器选择器；随后相关测试全部重跑。采购库存详情成本查询限定实际RECEIVE/ISSUE流水，避免其他类型流水干扰成本展示。未删除或修改既有库存事实。
+
+补充验收：交付文档提交0349bf5的push检查暴露了响应早于数据库提交的时序缺陷（库存立即过账404、采购确认后刷新旧状态）。修复所有业务事务依赖的结束时机，并新增 `test_api_commit_boundary.py` 四项ASGI测试，故意延迟提交验证真实响应发送边界：旧行为4 failed，修复后4 passed。最终完整后端132项。该问题有明确回归修复，没有用重跑掩盖失败。最终源码CI及交付SHA见输出报告补记。

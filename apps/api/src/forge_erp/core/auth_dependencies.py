@@ -13,6 +13,7 @@ async def authenticated_transaction(
     request: Request,
     forge_session: Annotated[str, Cookie()] = "",
 ) -> AsyncIterator[tuple[AsyncSession, RuntimeContext]]:
+    # Bind with Depends(..., scope="function"): commit must finish before HTTP success.
     async with sessions.begin() as db:
         ctx = await resolve_context(db, forge_session, request.state.request_id)
         yield db, ctx

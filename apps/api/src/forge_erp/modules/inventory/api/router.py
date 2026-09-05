@@ -11,7 +11,9 @@ from forge_erp.modules.inventory.application import queries
 from forge_erp.modules.inventory.domain import schemas as s
 
 router = APIRouter(prefix="/api/v1/inventory", tags=["inventory"])
-Transaction = Annotated[tuple[AsyncSession, RuntimeContext], Depends(authenticated_transaction)]
+Transaction = Annotated[
+    tuple[AsyncSession, RuntimeContext], Depends(authenticated_transaction, scope="function")
+]
 Key = Annotated[str, Header(alias="Idempotency-Key", min_length=8, max_length=128)]
 Page = Annotated[int, Query(ge=1)]
 Size = Annotated[int, Query(ge=1, le=100)]
