@@ -53,6 +53,9 @@ export function OrderFundsSummary({
           )}
           <dl className="grid min-w-0 grid-cols-2 gap-3 sm:grid-cols-3">
             {[
+              ["期初已结金额", value.historically_settled_amount],
+              ["本系统已结算", value.settled_amount],
+              ["本系统已退款", value.refunded_amount],
               [
                 side === "AR" ? "尚待收款" : "尚待付款",
                 value.settlement_amount,
@@ -69,6 +72,9 @@ export function OrderFundsSummary({
               </div>
             ))}
           </dl>
+          <p className="text-muted-foreground">
+            期初已结金额来自历史余额核对，不计为本系统实际收付款。
+          </p>
         </>
       )}
       <Link

@@ -1191,8 +1191,9 @@ export function FundsWorkspace({ permissions }: { permissions: string[] }) {
                     {[
                       ["来源金额", source.amount],
                       ["有效商业金额", source.commercial_amount],
-                      ["已结算", source.settled_amount],
-                      ["已退款", source.refunded_amount],
+                      ["期初已结金额", source.historically_settled_amount],
+                      ["本系统已结算", source.settled_amount],
+                      ["本系统已退款", source.refunded_amount],
                       ["待结算", source.settlement_amount],
                       ["待退款", source.refund_amount],
                       ["往来净额", source.balance],
@@ -1205,6 +1206,9 @@ export function FundsWorkspace({ permissions }: { permissions: string[] }) {
                       </div>
                     ))}
                   </dl>
+                  <p className="text-sm text-muted-foreground">
+                    期初已结金额来自历史余额核对，不计为本系统实际收付款。
+                  </p>
                   <p className="break-words text-sm">{source.reason}</p>
                   {commercialLink(source)}
                   <div className="flex flex-wrap gap-2">

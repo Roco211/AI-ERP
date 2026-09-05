@@ -68,6 +68,7 @@ const source = (id = "A", side: Side = "AR") => ({
   created_at: "2026-09-06T00:00:00Z",
   amount: "700.1234",
   commercial_amount: "700.1234",
+  historically_settled_amount: "0.0000",
   settled_amount: "200.1000",
   refunded_amount: "0.0000",
   balance: "500.0234",
@@ -680,6 +681,7 @@ test("order summary hides balances without the matching funds read permission", 
     unmapped_document_count: 0,
     settlement_status: "PARTIAL" as const,
     source_amount: "900.0000",
+    historically_settled_amount: "0.0000",
     settled_amount: "600.0000",
     refunded_amount: "0.0000",
     balance: "300.0000",
@@ -714,12 +716,99 @@ test("order summary hides balances without the matching funds read permission", 
   ).toHaveAttribute("href", `/funds?side=AP&party=${PARTY}`);
 });
 
+test.each(["AR", "AP"] as const)(
+  "%s order summary separates historical settlements from actual cash and hides both after permission loss",
+  (side) => {
+    const value = {
+      integration_status: "ACTIVE" as const,
+      unmapped_document_count: 0,
+      settlement_status: "PARTIAL" as const,
+      source_amount: "40.0000",
+      historically_settled_amount: "60.1234",
+      settled_amount: "0.0000",
+      refunded_amount: "0.0000",
+      balance: "40.0000",
+      settlement_amount: "40.0000",
+      refund_amount: "0.0000",
+    };
+    const readPermission = side === "AR" ? "funds.ar.read" : "funds.ap.read";
+    const commercialPermission =
+      side === "AR" ? "product.price.read" : "product.cost.read";
+    const view = render(
+      <OrderFundsSummary
+        value={value}
+        side={side}
+        partyId={PARTY}
+        permissions={[readPermission, commercialPermission]}
+        locked={false}
+      />,
+    );
+    const region = screen.getByRole("region", { name: "订单资金结算概览" });
+    expect(region).toHaveTextContent("部分结算");
+    expect(
+      within(region).getByText("期初已结金额").parentElement,
+    ).toHaveTextContent("60.1234");
+    expect(
+      within(region).getByText("本系统已结算").parentElement,
+    ).toHaveTextContent("0.0000");
+    expect(region).toHaveTextContent("不计为本系统实际收付款");
+    view.rerender(
+      <OrderFundsSummary
+        value={value}
+        side={side}
+        partyId={PARTY}
+        permissions={[readPermission]}
+        locked={false}
+      />,
+    );
+    expect(screen.queryByText("60.1234")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("region", { name: "订单资金结算概览" }),
+    ).not.toBeInTheDocument();
+  },
+);
+
+test("source detail labels historical settlement independently from actual cash", async () => {
+  mocks();
+  const prior = getMock.getMockImplementation()!;
+  getMock.mockImplementation((path, options) =>
+    path === "/api/v1/funds/sources/{id}"
+      ? Promise.resolve(
+          ok({
+            ...source("A"),
+            kind: "LEGACY",
+            amount: "40.0000",
+            commercial_amount: "100.1234",
+            historically_settled_amount: "60.1234",
+            settled_amount: "0.0000",
+            balance: "40.0000",
+            settlement_amount: "40.0000",
+          }),
+        )
+      : prior(path, options),
+  );
+  const view = show(read);
+  await screen.findByText("FR-A");
+  fireEvent.click(screen.getAllByRole("button", { name: "查看来源" })[0]);
+  const region = await screen.findByRole("region", { name: "资金来源详情" });
+  expect(
+    within(region).getByText("期初已结金额").parentElement,
+  ).toHaveTextContent("60.1234");
+  expect(
+    within(region).getByText("本系统已结算").parentElement,
+  ).toHaveTextContent("0.0000");
+  expect(region).toHaveTextContent("不计为本系统实际收付款");
+  view.setPermissions([]);
+  expect(screen.queryByText("60.1234")).not.toBeInTheDocument();
+});
+
 test("incomplete legacy order summary never presents a zero included balance as fully paid", () => {
   const value = {
     integration_status: "INCOMPLETE" as const,
     unmapped_document_count: 2,
     settlement_status: null,
     source_amount: "0.0000",
+    historically_settled_amount: "0.0000",
     settled_amount: "0.0000",
     refunded_amount: "0.0000",
     balance: "0.0000",
