@@ -31,6 +31,8 @@ import { FundsWorkspace } from "@/features/funds/workspace";
 import { ReplenishmentWorkspace } from "@/features/replenishment/workspace";
 import { ImportsWorkspace } from "@/features/imports/workspace";
 import { DashboardWorkspace } from "@/features/dashboard/workspace";
+import { AssistantWorkspace } from "@/features/ai/workspace";
+import { ProviderSettings } from "@/features/ai/provider-settings";
 import { PurchasingWorkspace } from "@/features/purchasing/workspace";
 import { InventoryWorkspace } from "@/features/inventory/workspace";
 import { CatalogWorkspace } from "@/features/catalog/workspace";
@@ -119,7 +121,11 @@ export function ERPShell({
         <Button onClick={() => refetch()}>重试</Button>
       </main>
     );
-  const current = navigation.find((item) => item.path === section);
+  const current = section === "llm"
+    ? { label: "模型服务", path: "settings", icon: Settings }
+    : navigation.find((item) => item.path === section);
+  const isCurrent = (slug: string) => path === `/${slug}` ||
+    (slug === "settings" && path.startsWith("/settings/"));
   return (
     <div className="min-h-screen md:grid md:grid-cols-[220px_1fr]">
       <aside className="flex flex-col border-r border-border bg-[#eef1ec] p-4 md:sticky md:top-0 md:h-screen">
@@ -136,7 +142,7 @@ export function ERPShell({
           <p className="truncate text-sm font-semibold">
             {me.organization_name}
           </p>
-          <p className="mt-1 text-[11px] text-muted-foreground">
+          <p className="mt-1 wrap-anywhere text-[11px] text-muted-foreground">
             企业空间 · {me.organization_code}
           </p>
         </div>
@@ -151,16 +157,11 @@ export function ERPShell({
             <Link
               key={slug}
               href={`/${slug}`}
-              aria-current={path === `/${slug}` ? "page" : undefined}
-              className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${path === `/${slug}` ? "bg-[#dce7dc] font-semibold text-[#224b34]" : "text-[#697269] hover:bg-white/60"}`}
+              aria-current={isCurrent(slug) ? "page" : undefined}
+              className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${isCurrent(slug) ? "bg-[#dce7dc] font-semibold text-[#224b34]" : "text-[#697269] hover:bg-white/60"}`}
             >
               <Icon className="size-4" />
               {label}
-              {slug === "ai" && (
-                <span className="ml-auto hidden rounded border border-[#cbd7ca] px-1 text-[9px] lg:block">
-                  即将开放
-                </span>
-              )}
             </Link>
           ))}
         </nav>
@@ -225,6 +226,8 @@ export function ERPShell({
           <p className="mt-3 text-sm text-muted-foreground">
             {section === "profile"
               ? "你的账户与所属企业。"
+              : section === "llm"
+                ? "为企业选择对话模型，直接在此保存设置并测试连接。"
               : section === "dashboard"
                 ? "按实际业务来源核对期间经营与当前余额。"
                 : section === "imports"
@@ -239,9 +242,15 @@ export function ERPShell({
                           ? "按仓库查看库存，追溯每次变动。"
                           : section === "funds"
                             ? "按客户与供应商核对往来，记录收付款并追溯每笔来源。"
-                            : "工作空间已就绪，业务功能将逐步开放。"}
+                            : section === "ai"
+                              ? "查询有来源，开单先复核。"
+                              : "工作空间已就绪，业务功能将逐步开放。"}
           </p>
-          {section === "replenishment" ? (
+          {section === "ai" ? (
+            <AssistantWorkspace permissions={me.permissions} identityKey={`${me.organization_id}:${me.user_id}`} />
+          ) : section === "llm" ? (
+            <ProviderSettings permissions={me.permissions} identityKey={`${me.organization_id}:${me.user_id}`} />
+          ) : section === "replenishment" ? (
             <ReplenishmentWorkspace permissions={me.permissions} />
           ) : section === "imports" ? (
             <ImportsWorkspace permissions={me.permissions} />
@@ -276,6 +285,12 @@ export function ERPShell({
             />
           ) : section === "settings" ? (
             <section className="mt-8 grid gap-4 sm:grid-cols-3">
+              {me.permissions.includes("ai.provider.manage") && (
+                <Link href="/settings/llm" className="rounded-xl border border-border bg-white p-6">
+                  <h2 className="text-sm font-semibold">模型服务</h2>
+                  <p className="mt-2 text-xs text-muted-foreground">选择对话模型服务，保存密钥并测试连接。</p>
+                </Link>
+              )}
               {Object.entries(configs)
                 .filter(([key]) =>
                   ["categories", "brands", "units", "warehouses"].includes(key),

@@ -1,8 +1,8 @@
-# Forge ERP · Operations v0.10
+# Forge ERP · AI Assistant v0.11
 
-五金商贸 ERP。Bootstrap、Catalog、库存、采购和销售已验收发布。资金 v0.9 提供应收应付、收付款、退款及期初衔接；运营 v0.10 增加正式 Excel 导入、可解释补货建议和可追溯经营概览，保留现有单位换算、库存流水、状态及成本规则。可选本地语义搜索使用 Ollama/BGE-M3（[安装说明](docs/local-embeddings.md)）。AI 业务工具和完整会计仍在范围之外。
+五金商贸 ERP。Bootstrap 至运营 v0.10 已验收发布。AI v0.11 增加网页模型配置、库存和经营问答、每日简报，以及人工复核后创建销售/采购草稿。数量、金额、换算、价格、库存及权限仍由原业务引擎决定。可选本地语义搜索使用 Ollama/BGE-M3（[安装说明](docs/local-embeddings.md)），与对话模型独立配置。
 
-本次两个评审分支按资金→运营依赖顺序交付，不自动合并或发布。详见[资金交付](docs/funds-v0.9-delivery.md)、[运营规范](docs/operations-v0.10.md)、[运营验收](docs/operations-v0.10-acceptance.md)和[运营交付](docs/operations-v0.10-delivery.md)。
+本次在 `ai/v0.11` 交付评审，不自动合并或发布。详见 [AI 规范](docs/ai-v0.11.md)、[验收清单](docs/ai-v0.11-acceptance.md)、[交付记录](docs/ai-v0.11-delivery.md)和[网页模型设置](docs/ai-v0.11-model-setup.md)。
 
 ## 本地启动
 
@@ -62,7 +62,7 @@ Outbox consumer 使用 `FOR UPDATE SKIP LOCKED`，身份/库存事件记录处�
 
 OpenTelemetry 接入点已启用；可选 `SENTRY_DSN` 配置错误收集，不发送请求体。当前未配置外部追踪收集端或告警。FastAPI 的业务日志为 JSON；uvicorn access log 在标准启动命令中禁用，避免 URL 参数进入日志。
 
-停止服务使用 `make down`，保留数据库卷。不要以删除卷作为常规升级手段。`sales-v0.8` 已发布；资金和运营分别在 `funds/v0.9`、`operations/v0.10` 评审分支，不自动合并、打标签或发布。
+停止服务使用 `make down`，保留数据库卷。不要以删除卷作为常规升级手段。`funds-v0.9` 和 `operations-v0.10` 已发布；当前 `ai/v0.11` 不自动合并、打标签或发布。
 
 ## 库存使用与维护
 
@@ -75,7 +75,7 @@ OpenTelemetry 接入点已启用；可选 `SENTRY_DSN` 配置错误收集，不�
 - 查看数量使用 `inventory.read`；成本另需 `product.cost.read`；期初/调整/调拨/盘点/冲销/对账分别授权。现有角色不会自动被批量升级；开发 ADMIN 通过 `make seed` 补齐权限。
 - 浏览器提交结果不明时保留原请求和幂等键，选择“重试原提交”。不要在另一窗口重建同一业务来猜测结果。
 
-库存 v0.6 的迁移止于 `0007_inventory_projection`：0005 创建库存表、约束与权限，0006 固定流水翻页快照，0007 分离流水顺序与余额修订版本。当前运营分支的迁移 head 为 `0015_reporting`（资金为 `0012_funds`）。升级使用 `make migrate`，保留原 Catalog 资料和库存事实；不要删除数据库卷。
+库存 v0.6 的迁移止于 `0007_inventory_projection`：0005 创建库存表、约束与权限，0006 固定流水翻页快照，0007 分离流水顺序与余额修订版本。当前 AI 分支的迁移 head 为 `0018_ai_retention`（运营为 `0015_reporting`，资金为 `0012_funds`）。升级使用 `make migrate`，保留原 Catalog 资料和库存事实；不要删除数据库卷。
 
 对账工具要求现存、有 `inventory.reconcile` 和 `product.cost.read` 的操作者，以及明确的组织、仓库、商品范围。默认 dry-run，实际修复必须加 `--repair`；工具与正常过账使用相同库存键锁，修复只更新投影并留审计：
 
@@ -147,3 +147,11 @@ uv run --project apps/api python -m forge_erp.workers.catalog_import \
 ```
 
 先将变量替换为目标组织的 UUID。`--limit` 是每组织本轮最多尝试行数；省略 `--organization` 会自动发现并实际处理各组织已确认任务及到期正文，不是仅列举或仅清理。失败行仍由创建者在界面明确重试。Redis 恢复后常规定时轮询继续；也可直接运行上面命令，不依赖 embedding。
+
+## AI 助手 v0.11
+
+管理员在 `/settings/llm` 自由设置兼容 Chat Completions 的服务地址、模型和密钥，保存后测试连接。密钥仅在首次设置或更换时填写；保存后不回显。配置本机或内网服务时须明确启用该选项。具体接口兼容范围、凭据恢复和可选观测服务见[模型设置说明](docs/ai-v0.11-model-setup.md)。
+
+在 `/ai` 查询商品、库存与经营状况，或生成每日简报。自然语言开单请给出明确的商品、客户/供应商、仓库、单位、数量及手工单价；销售也可使用已有自动报价。助手先展示服务端预览，编辑后重新计算，点击复核创建仅保存草稿。确认、出入库、收付款仍在原业务工作台操作。
+
+对话按组织和当前用户隔离；权限或模型配置变化后应开始新对话。正文保留七天，提案三十分钟后过期；已创建单据与永久回执保留。模型故障不会阻断普通开单或本地商品搜索。
