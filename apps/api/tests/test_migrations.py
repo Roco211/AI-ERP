@@ -14,7 +14,14 @@ from forge_erp.core.config import settings
 
 
 @pytest.mark.parametrize(
-    "baseline", [None, "0001_bootstrap", "0004_product_embeddings", "0005_inventory"]
+    "baseline",
+    [
+        None,
+        "0001_bootstrap",
+        "0004_product_embeddings",
+        "0005_inventory",
+        "0006_inventory_snapshot",
+    ],
 )
 def test_clean_and_bootstrap_migrations(baseline):
     cfg = settings()
@@ -49,18 +56,27 @@ def test_clean_and_bootstrap_migrations(baseline):
                 timeout=60,
             )
             assert run.returncode == 0, "Migration failed in disposable database"
-            if revision == baseline and baseline in ("0004_product_embeddings", "0005_inventory"):
+            if revision == baseline and baseline in (
+                "0004_product_embeddings",
+                "0005_inventory",
+                "0006_inventory_snapshot",
+            ):
                 with target.begin() as db:
-                    seed_upgrade_fixture(db, with_stock=baseline == "0005_inventory")
+                    seed_upgrade_fixture(
+                        db, with_stock=baseline in ("0005_inventory", "0006_inventory_snapshot")
+                    )
         with target.connect() as db:
             assert (
                 db.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
-                == "0006_inventory_snapshot"
+                == "0007_inventory_projection"
             )
             assert db.execute(text("SELECT count(*) FROM forge.products")).scalar_one() == (
-                1 if baseline in ("0004_product_embeddings", "0005_inventory") else 0
+                1
+                if baseline
+                in ("0004_product_embeddings", "0005_inventory", "0006_inventory_snapshot")
+                else 0
             )
-            if baseline in ("0004_product_embeddings", "0005_inventory"):
+            if baseline in ("0004_product_embeddings", "0005_inventory", "0006_inventory_snapshot"):
                 assert db.execute(text("SELECT price FROM forge.product_prices")).scalar_one() == 2
                 assert (
                     db.execute(
@@ -68,7 +84,7 @@ def test_clean_and_bootstrap_migrations(baseline):
                     ).scalar_one()
                     == 1
                 )
-            if baseline == "0005_inventory":
+            if baseline in ("0005_inventory", "0006_inventory_snapshot"):
                 assert (
                     db.execute(
                         text("SELECT on_hand_qty FROM forge.inventory_balances")

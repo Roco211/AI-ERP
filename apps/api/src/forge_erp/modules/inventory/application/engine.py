@@ -204,6 +204,7 @@ class InventoryEngine:
     ) -> dict:
         row = self.rows[key]
         version = row["version"] + 1
+        sequence = row["movement_sequence"] + 1
         with localcontext() as context:
             context.prec = 50
             tail = (
@@ -215,7 +216,7 @@ class InventoryEngine:
             "org": self.ctx.organization_id,
             "wh": key[0],
             "product": key[1],
-            "sequence": version,
+            "sequence": sequence,
             "kind": kind,
             "qty": new.qty - old.qty,
             "reserved": new.reserved - old.reserved,
@@ -263,7 +264,7 @@ class InventoryEngine:
             text(
                 "UPDATE forge.inventory_balances SET on_hand_qty=:qty,"
                 "reserved_qty=:reserved,inventory_value=:value,"
-                "avg_unit_cost=:cost,version=:version "
+                "avg_unit_cost=:cost,version=:version,movement_sequence=:sequence "
                 "WHERE organization_id=:org AND id=:id"
             ),
             {
@@ -274,6 +275,7 @@ class InventoryEngine:
                 "value": new.value,
                 "cost": new.cost,
                 "version": version,
+                "sequence": sequence,
             },
         )
         if reservation_id:
@@ -298,6 +300,7 @@ class InventoryEngine:
             inventory_value=new.value,
             avg_unit_cost=new.cost,
             version=version,
+            movement_sequence=sequence,
         )
         await record_mutation(
             self.db,
@@ -305,15 +308,27 @@ class InventoryEngine:
             "inventory.movement.recorded",
             "inventory_movement",
             movement["id"],
-            None,
-            {"version": version, "document_id": str(source["document_id"])},
+            {
+                "on_hand_qty": old.qty,
+                "reserved_qty": old.reserved,
+                "inventory_value": old.value,
+                "avg_unit_cost": old.cost,
+            },
+            {
+                "version": version,
+                "document_id": str(source["document_id"]),
+                "on_hand_qty": new.qty,
+                "reserved_qty": new.reserved,
+                "inventory_value": new.value,
+                "avg_unit_cost": new.cost,
+            },
         )
         return movement
 
     async def reverse(self, movement: dict, reversal_id: UUID) -> dict:
         self.ctx.require("inventory.reverse")
         key = (movement["warehouse_id"], movement["product_id"])
-        if self.rows[key]["version"] != movement["sequence"]:
+        if self.rows[key]["movement_sequence"] != movement["sequence"]:
             raise Problem(
                 409, "REVERSAL_DEPENDENCY_CONFLICT", "该商品仓库已有后续变动，不能冲销此单"
             )
@@ -421,7 +436,7 @@ class InventoryEngine:
                 "reserved_qty": reserved,
                 "inventory_value": value,
                 "avg_unit_cost": cost,
-                "version": len(movements),
+                "movement_sequence": len(movements),
             }
             current = self.rows[key]
             differences = {
@@ -478,7 +493,8 @@ class InventoryEngine:
                         "UPDATE forge.inventory_balances SET on_hand_qty=:on_hand_qty,"
                         "reserved_qty=:reserved_qty,"
                         "inventory_value=:inventory_value,avg_unit_cost=:avg_unit_cost,"
-                        "version=:version WHERE organization_id=:org AND id=:id"
+                        "movement_sequence=:movement_sequence,version=version+1 WHERE "
+                        "organization_id=:org AND id=:id"
                     ),
                     expected | {"org": self.ctx.organization_id, "id": current["id"]},
                 )
@@ -489,7 +505,7 @@ class InventoryEngine:
                     "inventory_balance",
                     current["id"],
                     json.loads(json.dumps(differences)),
-                    {"version": expected["version"]},
+                    {"version": current["version"] + 1},
                 )
             results.append(
                 {

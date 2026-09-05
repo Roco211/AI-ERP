@@ -230,11 +230,14 @@ async def test_outbox_poll_is_repeatable(identities):
             "identity.session.created",
             uuid4(),
         )
-    await drain_outbox()
+    assert await drain_outbox(a["org"]) == 1
     async with sessions.begin() as db:
         await set_tenant(db, a["org"])
         row = (
             await db.execute(text("SELECT processed_at,attempts FROM forge.outbox_events"))
         ).one()
         assert row.processed_at and row.attempts == 1
-    assert await drain_outbox() == 0
+    assert await drain_outbox(a["org"]) == 0
+    async with sessions.begin() as db:
+        await set_tenant(db, a["org"])
+        assert (await db.execute(text("SELECT attempts FROM forge.outbox_events"))).scalar() == 1

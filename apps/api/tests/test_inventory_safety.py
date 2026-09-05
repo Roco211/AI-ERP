@@ -365,3 +365,140 @@ def test_only_inventory_engine_writes_balance_and_domain_has_no_http_dependency(
                     assert file == root / "modules/inventory/application/engine.py"
             if "inventory/domain" in str(file) and isinstance(node, ast.ImportFrom):
                 assert not (node.module or "").startswith(("fastapi", "starlette"))
+
+
+async def test_post_does_not_require_redis_and_transfer_target_failure_rolls_back(
+    catalog_client, stock, monkeypatch
+):
+    from redis.asyncio import Redis
+
+    c = catalog_client
+    opening, _ = await draft(c, stock)
+
+    async def unavailable(*args, **kwargs):
+        raise RuntimeError("Redis unavailable")
+
+    with monkeypatch.context() as patch:
+        patch.setattr(Redis, "execute_command", unavailable)
+        assert (await command(c, opening)).status_code == 200
+    transfer, _ = await draft(c, stock, "transfers", qty="10", cost=None)
+    change = InventoryEngine.change
+
+    async def reject_target(self, key, line_id, operation, kind, qty, **kwargs):
+        if kind == "TRANSFER_IN":
+            raise Problem(409, "INJECTED_TARGET_FAILURE", "target unavailable")
+        return await change(self, key, line_id, operation, kind, qty, **kwargs)
+
+    with monkeypatch.context() as patch:
+        patch.setattr(InventoryEngine, "change", reject_target)
+        assert (await command(c, transfer)).json()["code"] == "INJECTED_TARGET_FAILURE"
+    assert D((await balance(c, stock))["on_hand_qty"]) == 100
+    assert (await c.get("/api/v1/inventory/documents/" + transfer["id"])).json()[
+        "status"
+    ] == "DRAFT"
+    assert len((await c.get("/api/v1/inventory/movements")).json()["items"]) == 1
+
+
+async def test_rebuild_serializes_with_normal_write_and_requires_scope(stock):
+    ctx, key, line, _, _ = stock
+    await run_change(stock, "RECEIVE", "10", "5")
+    entered = asyncio.Event()
+
+    async def maintain():
+        entered.set()
+        return await reconcile_scope(ctx, key[0], [key[1]], True)
+
+    async with sessions.begin() as db:
+        await set_tenant(db, ctx.organization_id)
+        e = InventoryEngine(db, ctx)
+        await e.lock([key])
+        task = asyncio.create_task(maintain())
+        await entered.wait()
+        await e.change(key, line, uuid4(), "RECEIVE", D(5), cost=D(6))
+    result = await asyncio.wait_for(task, 5)
+    assert result[0]["sequence"] == 2 and result[0]["differences"] == {}
+    with pytest.raises(ValueError):
+        await reconcile_scope(ctx, key[0], [], True)
+
+
+async def test_audit_keeps_draft_before_after_but_outbox_has_no_costs(catalog_client, stock):
+    c = catalog_client
+    doc, body = await draft(c, stock)
+    modified = body | {"lines": [body["lines"][0] | {"qty": "80"}], "expected_version": 1}
+    result = await c.put(
+        "/api/v1/inventory/documents/" + doc["id"] + "/draft",
+        json=modified,
+        headers={"Idempotency-Key": uuid4().hex},
+    )
+    assert result.status_code == 200
+    assert (await command(c, result.json())).status_code == 200
+    async with sessions.begin() as db:
+        await set_tenant(db, stock[0].organization_id)
+        audit = (
+            await db.execute(
+                text(
+                    "SELECT before,after FROM forge.audit_events WHERE "
+                    "action='inventory.document.update'"
+                )
+            )
+        ).one()
+        assert D(audit.before["lines"][0]["qty"]) == 100
+        assert D(audit.after["lines"][0]["qty"]) == 80
+        movement = (
+            await db.execute(
+                text(
+                    "SELECT before,after FROM forge.audit_events WHERE "
+                    "action='inventory.movement.recorded'"
+                )
+            )
+        ).one()
+        assert D(movement.before["on_hand_qty"]) == 0
+        assert D(movement.after["on_hand_qty"]) == 80
+        for payload in (
+            await db.execute(
+                text("SELECT payload FROM forge.outbox_events WHERE event_type LIKE 'inventory.%'")
+            )
+        ).scalars():
+            assert set(payload) == {"resource_id", "version"}
+
+
+async def test_repair_invalidates_stocktake_without_gaps_in_ledger(catalog_client, stock):
+    c = catalog_client
+    ctx, key, *_ = stock
+    opening, _ = await draft(c, stock, qty="10", cost="5")
+    await command(c, opening)
+    with create_engine(settings().migration_database_url).begin() as db:
+        db.execute(
+            text(
+                "UPDATE forge.inventory_balances SET on_hand_qty=15,inventory_value=75 WHERE "
+                "organization_id=:org"
+            ),
+            {"org": ctx.organization_id},
+        )
+    count, _ = await draft(c, stock, "stocktakes", qty="12")
+    assert (await reconcile_scope(ctx, key[0], [key[1]], True))[0]["repaired"]
+    assert (await command(c, count)).json()["code"] == "STOCKTAKE_STALE"
+    incoming, _ = await draft(c, stock, "adjustments", qty="1", cost="6")
+    posted = await command(c, incoming)
+    assert posted.status_code == 200, posted.text
+    assert (await command(c, posted.json(), "reverse", reason="检查修复后冲销")).status_code == 200
+    async with sessions.begin() as db:
+        await set_tenant(db, ctx.organization_id)
+        row = (
+            await db.execute(
+                text(
+                    "SELECT version,movement_sequence,on_hand_qty FROM forge.inventory_balances "
+                    "WHERE warehouse_id=:wh"
+                ),
+                {"wh": key[0]},
+            )
+        ).one()
+        assert (row.version, row.movement_sequence, row.on_hand_qty) == (4, 3, 10)
+        assert list(
+            (
+                await db.execute(
+                    text("SELECT sequence FROM forge.inventory_movements ORDER BY sequence")
+                )
+            ).scalars()
+        ) == [1, 2, 3]
+    assert (await reconcile_scope(ctx, key[0], [key[1]]))[0]["differences"] == {}

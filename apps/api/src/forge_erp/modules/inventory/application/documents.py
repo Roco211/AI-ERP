@@ -172,10 +172,9 @@ async def save_draft(
         if body.target_warehouse_id:
             keys += [(body.target_warehouse_id, x.product_id) for x in body.lines]
         await e.lock(keys)
+        previous_lines = await lines(db, ctx, id) if id else []
         old_lines = (
-            await lines(db, ctx, id)
-            if id and previous and previous["warehouse_id"] == body.warehouse_id
-            else None
+            previous_lines if previous and previous["warehouse_id"] == body.warehouse_id else None
         )
         captured = await snapshots(db, ctx, body, kind, e, old_lines)
         doc_id = id or uuid4()
@@ -249,8 +248,8 @@ async def save_draft(
             "inventory.document." + action,
             "inventory_document",
             doc_id,
-            {"version": previous["version"]} if previous else None,
-            {"version": doc["version"], "type": kind, "line_count": len(captured)},
+            {"document": previous, "lines": previous_lines} if previous else None,
+            {"version": doc["version"], "document": doc, "lines": await lines(db, ctx, doc_id)},
         )
         return receipt(ctx, doc)
 
@@ -313,7 +312,10 @@ async def transition(
             ]
             # v0.6 documents create at most one movement per inventory key.
             for m in movements:
-                if e.rows[(m["warehouse_id"], m["product_id"])]["version"] != m["sequence"]:
+                if (
+                    e.rows[(m["warehouse_id"], m["product_id"])]["movement_sequence"]
+                    != m["sequence"]
+                ):
                     raise Problem(
                         409, "REVERSAL_DEPENDENCY_CONFLICT", "该单据已有后续库存变动，不能冲销"
                     )

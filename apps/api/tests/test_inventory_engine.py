@@ -219,3 +219,44 @@ async def test_engine_rollback_on_audit_failure(stock, monkeypatch):
         await set_tenant(db, stock[0].organization_id)
         for table in ("inventory_balances", "inventory_movements"):
             assert (await db.execute(text(f"SELECT count(*) FROM forge.{table}"))).scalar_one() == 0
+
+
+@pytest.mark.parametrize("patch", ["on_hand_qty=-1", "reserved_qty=-1", "reserved_qty=11"])
+async def test_database_rejects_invalid_balance(stock, patch):
+    await run_change(stock, "RECEIVE", "10", "5")
+    with pytest.raises(DBAPIError):
+        async with sessions.begin() as db:
+            await set_tenant(db, stock[0].organization_id)
+            await db.execute(text("UPDATE forge.inventory_balances SET " + patch))
+    async with sessions.begin() as db:
+        await set_tenant(db, stock[0].organization_id)
+        e = InventoryEngine(db, stock[0])
+        await e.lock([stock[1]])
+        assert not (await e.reconcile())[0]["differences"]
+
+
+async def test_exact_reservation_scenario_and_stocktake_protection(catalog_client, stock):
+    from test_inventory_documents import command, draft
+
+    c = catalog_client
+    await run_change(stock, "RECEIVE", "100", "10")
+    count, _ = await draft(c, stock, "stocktakes", qty="100")
+    m, b = await run_change(stock, "RESERVE", "60")
+    assert (b.qty, b.reserved, b.available, b.value, b.cost) == (100, 60, 40, 1000, 10)
+    assert (await command(c, count)).json()["code"] == "STOCKTAKE_STALE"
+    rid = m["reservation_id"]
+    for kind, qty, reservation in [
+        ("RESERVE", "41", None),
+        ("ISSUE", "41", None),
+        ("RELEASE", "61", rid),
+        ("ISSUE", "61", rid),
+        ("RELEASE", "1", uuid4()),
+    ]:
+        with pytest.raises(Problem):
+            await run_change(stock, kind, qty, reservation=reservation)
+    _, b = await run_change(stock, "ISSUE", "20", reservation=rid)
+    assert (b.qty, b.reserved, b.available) == (80, 40, 40)
+    _, b = await run_change(stock, "RELEASE", "10", reservation=rid)
+    assert (b.qty, b.reserved, b.available) == (80, 30, 50)
+    below, _ = await draft(c, stock, "stocktakes", qty="29")
+    assert (await command(c, below)).json()["code"] == "INSUFFICIENT_STOCK"

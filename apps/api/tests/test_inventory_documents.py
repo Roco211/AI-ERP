@@ -156,6 +156,22 @@ async def test_document_security_and_immutable_content(catalog_client, stock, id
             async with sessions.begin() as db:
                 await set_tenant(db, stock[0].organization_id)
                 await db.execute(text(sql), {"id": id})
+    with pytest.raises(DBAPIError) as blocked:
+        async with sessions.begin() as db:
+            await set_tenant(db, stock[0].organization_id)
+            await db.execute(
+                text(
+                    "INSERT INTO forge.inventory_document_lines "
+                    "(organization_id,document_id,line_no,product_id,unit_id,product_label,"
+                    "unit_label,qty,unit_to_base_factor,base_qty,conversion_version,direction) "
+                    "SELECT organization_id,document_id,2,product_id,unit_id,product_label,"
+                    "unit_label,qty,unit_to_base_factor,base_qty,conversion_version,direction "
+                    "FROM forge.inventory_document_lines WHERE id=:id"
+                ),
+                {"id": line["id"]},
+            )
+    assert getattr(blocked.value.orig, "sqlstate", None) == "23514"
+    assert "Only draft lines can change" in str(blocked.value.orig)
     for resource, id in [("products", str(stock[1][1])), ("warehouses", str(stock[1][0]))]:
         r = await create(c, resource + "/" + id + "/deactivate", {"expected_version": 1})
         assert r.json()["code"] == "STOCK_IN_USE"
