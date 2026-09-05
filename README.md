@@ -40,6 +40,7 @@ uv run --project apps/api alembic -c apps/api/alembic.ini current
 
 ## 工程约定
 
+- 下一阶段规划：[库存 v0.6 施工规范](docs/inventory-v0.6.md)、[验收清单](docs/inventory-v0.6-acceptance.md)、[待评审 ADR 0012](docs/adr/0012-inventory-ledger-and-posting.md)。当前仅文档整理，库存功能尚未开放。
 - `AGENTS.md`：冻结栈、领域规则与施工边界。
 - `docs/adr/`：8 份初始决策及需复核的实现细节。
 - `docs/acceptance.md`：逐项验收与实际运行记录。
