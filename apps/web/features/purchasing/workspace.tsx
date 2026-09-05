@@ -169,7 +169,9 @@ export function PurchasingWorkspace({
   const [selected, setSelected] = useState<Selection | null>(
     params.get("document")
       ? { id: params.get("document")!, document: true }
-      : null,
+      : params.get("order")
+        ? { id: params.get("order")!, document: false }
+        : null,
   );
   const [editor, setEditor] = useState<Editor | null>(null),
     [picker, setPicker] = useState(false);
@@ -203,6 +205,9 @@ export function PurchasingWorkspace({
     else url.searchParams.delete("q");
     if (selected?.document) url.searchParams.set("document", selected.id);
     else url.searchParams.delete("document");
+    if (selected && !selected.document)
+      url.searchParams.set("order", selected.id);
+    else url.searchParams.delete("order");
     window.history.replaceState(
       window.history.state,
       "",

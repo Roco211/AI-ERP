@@ -20,12 +20,17 @@ import {
   LogOut,
   ArrowUpRight,
   Command,
+  FileSpreadsheet,
+  PackagePlus,
 } from "lucide-react";
 import { Dialog } from "@base-ui/react/dialog";
 import { api, ApiError, getProfile } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { SalesWorkspace } from "@/features/sales/workspace";
 import { FundsWorkspace } from "@/features/funds/workspace";
+import { ReplenishmentWorkspace } from "@/features/replenishment/workspace";
+import { ImportsWorkspace } from "@/features/imports/workspace";
+import { DashboardWorkspace } from "@/features/dashboard/workspace";
 import { PurchasingWorkspace } from "@/features/purchasing/workspace";
 import { InventoryWorkspace } from "@/features/inventory/workspace";
 import { CatalogWorkspace } from "@/features/catalog/workspace";
@@ -39,10 +44,12 @@ export const navigation = [
   { path: "sales", label: "销售", icon: ShoppingBag },
   { path: "purchase", label: "采购", icon: Truck },
   { path: "inventory", label: "库存", icon: Boxes },
+  { path: "replenishment", label: "补货", icon: PackagePlus },
   { path: "products", label: "商品", icon: Package },
   { path: "customers", label: "客户", icon: Users },
   { path: "suppliers", label: "供应商", icon: Building2 },
   { path: "funds", label: "资金", icon: Wallet },
+  { path: "imports", label: "资料导入", icon: FileSpreadsheet },
   { path: "reports", label: "报表", icon: BarChart3 },
   { path: "settings", label: "设置", icon: Settings },
 ];
@@ -218,17 +225,37 @@ export function ERPShell({
           <p className="mt-3 text-sm text-muted-foreground">
             {section === "profile"
               ? "你的账户与所属企业。"
-              : section === "sales"
-                ? "从客户开单到出库退货，查看成交价格与经营毛利。"
-                : section === "purchase"
-                  ? "从采购订单到分批收货，追溯价格与退货。"
-                  : section === "inventory"
-                    ? "按仓库查看库存，追溯每次变动。"
-                    : section === "funds"
-                      ? "按客户与供应商核对往来，记录收付款并追溯每笔来源。"
-                      : "工作空间已就绪，业务功能将逐步开放。"}
+              : section === "dashboard"
+                ? "按实际业务来源核对期间经营与当前余额。"
+                : section === "imports"
+                  ? "先预览并核对资料，再逐行导入；执行结果可随时查看。"
+                  : section === "replenishment"
+                    ? "查看全组织库存与补货依据，复核后生成采购草稿。"
+                    : section === "sales"
+                      ? "从客户开单到出库退货，查看成交价格与经营毛利。"
+                      : section === "purchase"
+                        ? "从采购订单到分批收货，追溯价格与退货。"
+                        : section === "inventory"
+                          ? "按仓库查看库存，追溯每次变动。"
+                          : section === "funds"
+                            ? "按客户与供应商核对往来，记录收付款并追溯每笔来源。"
+                            : "工作空间已就绪，业务功能将逐步开放。"}
           </p>
-          {["products", "customers", "suppliers"].includes(section) ? (
+          {section === "replenishment" ? (
+            <ReplenishmentWorkspace permissions={me.permissions} />
+          ) : section === "imports" ? (
+            <ImportsWorkspace permissions={me.permissions} />
+          ) : section === "dashboard" ? (
+            <>
+              <Link
+                href="/profile"
+                className="mt-4 inline-flex items-center gap-2 text-sm text-primary"
+              >
+                查看我的账户 <ArrowUpRight className="size-4" />
+              </Link>
+              <DashboardWorkspace permissions={me.permissions} />
+            </>
+          ) : ["products", "customers", "suppliers"].includes(section) ? (
             <CatalogWorkspace
               key={section}
               section={section}
