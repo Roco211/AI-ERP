@@ -284,18 +284,23 @@ export function InventoryWorkspace({ permissions }: { permissions: string[] }) {
         : tab === "low"
           ? low
           : documents;
+  const detailRequest = useRef(0);
   async function openDetail(id: string) {
+    const request = ++detailRequest.current;
+    setDetail(null);
     try {
-      setDetail(
-        unwrap(
-          await api.GET("/api/v1/inventory/documents/{id}", {
-            params: { path: { id } },
-          }),
-        ),
+      const loaded = unwrap(
+        await api.GET("/api/v1/inventory/documents/{id}", {
+          params: { path: { id } },
+        }),
       );
+      if (request !== detailRequest.current) return false;
+      setDetail(loaded);
       setError("");
+      return true;
     } catch (e) {
-      setError(String(e));
+      if (request === detailRequest.current) setError(String(e));
+      return false;
     }
   }
   async function write(
@@ -317,10 +322,10 @@ export function InventoryWorkspace({ permissions }: { permissions: string[] }) {
       const receipt = await operation(pending.current.key);
       pending.current = null;
       setUncertain(false);
-      done();
       await qc.invalidateQueries({ queryKey: ["inventory"] });
-      await openDetail(receipt.id);
-      setNotice("操作已完成，库存数据已刷新。");
+      const refreshed = await openDetail(receipt.id);
+      done();
+      setNotice(refreshed ? "操作已完成，库存数据已刷新。" : "操作已提交，详情加载失败，请刷新。");
     } catch (e) {
       // Known HTTP failures roll back; network ambiguity retains the original key and content.
       const message = e instanceof Error ? e.message : String(e);
@@ -596,6 +601,7 @@ export function InventoryWorkspace({ permissions }: { permissions: string[] }) {
                 ...(cost ? [number(r.value_delta)] : []),
                 <Button
                   key="source"
+                  disabled={busy}
                   variant="link"
                   onClick={() => void openDetail(r.document_id)}
                 >
@@ -649,6 +655,7 @@ export function InventoryWorkspace({ permissions }: { permissions: string[] }) {
               new Date(r.created_at).toLocaleString(),
               <Button
                 key="view"
+                disabled={busy}
                 variant="outline"
                 onClick={() => void openDetail(r.id)}
               >
@@ -712,7 +719,7 @@ export function InventoryWorkspace({ permissions }: { permissions: string[] }) {
                   : ""}
               </p>
             </div>
-            <Button variant="ghost" onClick={() => setDetail(null)}>
+            <Button variant="ghost" disabled={busy} onClick={() => { detailRequest.current++; setDetail(null); }}>
               关闭详情
             </Button>
           </div>
