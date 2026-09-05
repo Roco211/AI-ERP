@@ -53,3 +53,6 @@ semantic-enable:
 
 seed-inventory:
 	$(UV) run --project apps/api python apps/api/scripts/seed_inventory.py
+
+seed-purchasing:
+	$(UV) run --project apps/api python apps/api/scripts/seed_purchasing.py

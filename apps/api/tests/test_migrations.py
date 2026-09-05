@@ -21,6 +21,7 @@ from forge_erp.core.config import settings
         "0004_product_embeddings",
         "0005_inventory",
         "0006_inventory_snapshot",
+        "0007_inventory_projection",
     ],
 )
 def test_clean_and_bootstrap_migrations(baseline):
@@ -60,23 +61,40 @@ def test_clean_and_bootstrap_migrations(baseline):
                 "0004_product_embeddings",
                 "0005_inventory",
                 "0006_inventory_snapshot",
+                "0007_inventory_projection",
             ):
                 with target.begin() as db:
                     seed_upgrade_fixture(
-                        db, with_stock=baseline in ("0005_inventory", "0006_inventory_snapshot")
+                        db,
+                        with_stock=baseline
+                        in (
+                            "0005_inventory",
+                            "0006_inventory_snapshot",
+                            "0007_inventory_projection",
+                        ),
                     )
         with target.connect() as db:
             assert (
                 db.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
-                == "0007_inventory_projection"
+                == "0008_purchasing"
             )
             assert db.execute(text("SELECT count(*) FROM forge.products")).scalar_one() == (
                 1
                 if baseline
-                in ("0004_product_embeddings", "0005_inventory", "0006_inventory_snapshot")
+                in (
+                    "0004_product_embeddings",
+                    "0005_inventory",
+                    "0006_inventory_snapshot",
+                    "0007_inventory_projection",
+                )
                 else 0
             )
-            if baseline in ("0004_product_embeddings", "0005_inventory", "0006_inventory_snapshot"):
+            if baseline in (
+                "0004_product_embeddings",
+                "0005_inventory",
+                "0006_inventory_snapshot",
+                "0007_inventory_projection",
+            ):
                 assert db.execute(text("SELECT price FROM forge.product_prices")).scalar_one() == 2
                 assert (
                     db.execute(
@@ -84,7 +102,11 @@ def test_clean_and_bootstrap_migrations(baseline):
                     ).scalar_one()
                     == 1
                 )
-            if baseline in ("0005_inventory", "0006_inventory_snapshot"):
+            if baseline in (
+                "0005_inventory",
+                "0006_inventory_snapshot",
+                "0007_inventory_projection",
+            ):
                 assert (
                     db.execute(
                         text("SELECT on_hand_qty FROM forge.inventory_balances")
@@ -167,3 +189,19 @@ def seed_upgrade_fixture(db, with_stock):
         ]
     for statement in statements:
         db.execute(text(statement), p)
+    if (
+        with_stock
+        and db.execute(
+            text(
+                "SELECT 1 FROM information_schema.columns WHERE "
+                "table_schema='forge' AND table_name='inventory_balances' "
+                "AND column_name='movement_sequence'"
+            )
+        ).first()
+    ):
+        db.execute(
+            text(
+                "UPDATE forge.inventory_balances SET movement_sequence=1 WHERE organization_id=:org"
+            ),
+            p,
+        )

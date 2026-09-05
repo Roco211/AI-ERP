@@ -39,8 +39,8 @@ async def test_health_ready_version_request_id(client):
         assert response.status_code == 200
         assert response.headers["x-request-id"] == "bootstrap-check"
     metadata = (await client.get("/api/v1/system/version")).json()
-    assert metadata["version"] == "0.6.0"
-    assert metadata["milestone"] == "Inventory"
+    assert metadata["version"] == "0.7.0"
+    assert metadata["milestone"] == "Purchasing"
 
 
 async def test_login_me_logout_and_replay(client, identities):

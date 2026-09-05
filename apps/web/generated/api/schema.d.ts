@@ -3236,7 +3236,7 @@ export interface components {
         Version: {
             /**
              * Milestone
-             * @default Inventory
+             * @default Purchasing
              */
             milestone: string;
             /**
@@ -3246,7 +3246,7 @@ export interface components {
             name: string;
             /**
              * Version
-             * @default 0.6.0
+             * @default 0.7.0
              */
             version: string;
         };

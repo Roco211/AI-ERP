@@ -4505,7 +4505,7 @@
       "Version": {
         "properties": {
           "milestone": {
-            "default": "Inventory",
+            "default": "Purchasing",
             "title": "Milestone",
             "type": "string"
           },
@@ -4515,7 +4515,7 @@
             "type": "string"
           },
           "version": {
-            "default": "0.6.0",
+            "default": "0.7.0",
             "title": "Version",
             "type": "string"
           }
@@ -4684,7 +4684,7 @@
   },
   "info": {
     "title": "Forge ERP",
-    "version": "0.6.0"
+    "version": "0.7.0"
   },
   "openapi": "3.1.0",
   "paths": {

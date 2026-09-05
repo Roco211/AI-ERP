@@ -20,6 +20,7 @@ import {
   changeDocument,
   saveDraft,
   labels,
+  documentLabels,
   permissionsByKind,
   type Document,
   type Draft,
@@ -325,7 +326,11 @@ export function InventoryWorkspace({ permissions }: { permissions: string[] }) {
       await qc.invalidateQueries({ queryKey: ["inventory"] });
       const refreshed = await openDetail(receipt.id);
       done();
-      setNotice(refreshed ? "操作已完成，库存数据已刷新。" : "操作已提交，详情加载失败，请刷新。");
+      setNotice(
+        refreshed
+          ? "操作已完成，库存数据已刷新。"
+          : "操作已提交，详情加载失败，请刷新。",
+      );
     } catch (e) {
       // Known HTTP failures roll back; network ambiguity retains the original key and content.
       const message = e instanceof Error ? e.message : String(e);
@@ -428,8 +433,10 @@ export function InventoryWorkspace({ permissions }: { permissions: string[] }) {
       </p>
     );
   const warehouses = wh.data?.items ?? [];
-  const canWrite = (k: Kind) =>
-    cost && permissions.includes(permissionsByKind[k]);
+  const canWrite = (k: Document["type"]) =>
+    k in permissionsByKind &&
+    cost &&
+    permissions.includes(permissionsByKind[k as Kind]);
   const warehouseOptions = (
     <>
       <option value="">请选择仓库</option>
@@ -710,7 +717,7 @@ export function InventoryWorkspace({ permissions }: { permissions: string[] }) {
           <div className="flex flex-wrap justify-between gap-3">
             <div>
               <h2 className="font-semibold">
-                {labels[detail.type]} · {detail.number}
+                {documentLabels[detail.type]} · {detail.number}
               </h2>
               <p className="mt-1 text-sm text-muted-foreground">
                 {statuses[detail.status]} · {detail.warehouse_name}
@@ -719,11 +726,26 @@ export function InventoryWorkspace({ permissions }: { permissions: string[] }) {
                   : ""}
               </p>
             </div>
-            <Button variant="ghost" disabled={busy} onClick={() => { detailRequest.current++; setDetail(null); }}>
+            <Button
+              variant="ghost"
+              disabled={busy}
+              onClick={() => {
+                detailRequest.current++;
+                setDetail(null);
+              }}
+            >
               关闭详情
             </Button>
           </div>
           <p className="text-sm">原因：{detail.reason}</p>
+          {detail.type.startsWith("PURCHASE_") && (
+            <a
+              className="text-sm text-primary"
+              href={"/purchase?document=" + detail.id}
+            >
+              前往采购单据
+            </a>
+          )}
           <Grid
             page={page}
             headers={[
@@ -753,7 +775,7 @@ export function InventoryWorkspace({ permissions }: { permissions: string[] }) {
               <>
                 <Button
                   variant="outline"
-                  onClick={() => newDocument(detail.type, detail)}
+                  onClick={() => newDocument(detail.type as Kind, detail)}
                 >
                   编辑草稿
                 </Button>

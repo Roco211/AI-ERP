@@ -133,7 +133,7 @@ rd.status='POSTED'),0) AS returned_qty,
        WHERE rp.organization_id=p.organization_id AND rp.receipt_line_id=p.id AND
 rd.status='POSTED'),0) AS returned_amount,
       (SELECT m.value_delta FROM forge.inventory_movements m WHERE
-m.organization_id=l.organization_id AND m.line_id=l.id AND m.kind<>'REVERSE' LIMIT 1) AS
+m.organization_id=l.organization_id AND m.line_id=l.id AND m.kind IN ('RECEIVE','ISSUE') LIMIT 1) AS
 inventory_value_delta
       FROM forge.purchase_document_lines p JOIN forge.inventory_document_lines l
       ON (l.organization_id,l.id)=(p.organization_id,p.id)

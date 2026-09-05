@@ -5,7 +5,10 @@ export type Draft = Omit<
   components["schemas"]["InventoryDraftUpdate"],
   "expected_version"
 >;
-export type Kind = Document["type"];
+export type Kind = Exclude<
+  Document["type"],
+  "PURCHASE_RECEIPT" | "PURCHASE_RETURN"
+>;
 export const labels: Record<Kind, string> = {
   OPENING: "期初库存",
   ADJUSTMENT: "库存调整",
@@ -115,8 +118,7 @@ export function unwrap<T>(result: {
 }): T {
   if (!result.response.ok || result.data === undefined) {
     const error = result.error as
-      | components["schemas"]["ProblemDetails"]
-      | undefined;
+      components["schemas"]["ProblemDetails"] | undefined;
     throw new ApiError(
       result.response.status,
       error?.detail ?? "操作失败，请重试",
@@ -125,3 +127,9 @@ export function unwrap<T>(result: {
   }
   return result.data;
 }
+
+export const documentLabels: Record<Document["type"], string> = {
+  ...labels,
+  PURCHASE_RECEIPT: "采购收货",
+  PURCHASE_RETURN: "采购退货",
+};
