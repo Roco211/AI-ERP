@@ -40,7 +40,7 @@ export const navigation = [
   { path: "products", label: "商品", icon: Package },
   { path: "customers", label: "客户", icon: Users },
   { path: "suppliers", label: "供应商", icon: Building2 },
-  { path: "finance", label: "资金", icon: Wallet },
+  { path: "funds", label: "资金", icon: Wallet },
   { path: "reports", label: "报表", icon: BarChart3 },
   { path: "settings", label: "设置", icon: Settings },
 ];
