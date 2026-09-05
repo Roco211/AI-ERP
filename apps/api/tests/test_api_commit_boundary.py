@@ -19,7 +19,9 @@ from forge_erp.core.db import sessions, set_tenant
 from forge_erp.main import app
 
 
-@pytest.mark.parametrize("operation", ["catalog", "inventory", "purchasing", "sales"])
+@pytest.mark.parametrize(
+    "operation", ["catalog", "inventory", "purchasing", "sales", "sales_shipment"]
+)
 async def test_success_headers_require_committed_data(
     catalog_client, purchase, identities, operation
 ):
@@ -42,7 +44,7 @@ async def test_success_headers_require_committed_data(
         }
         query = "SELECT count(*) FROM forge.inventory_documents WHERE reason=:code"
         params = {"code": code}
-    elif operation == "sales":
+    elif operation in {"sales", "sales_shipment"}:
         customer = (await create(c, "customers", {"code": "COMMIT-C", "name": "Sales"})).json()
         sales_body = {
             "customer_id": customer["id"],
@@ -56,6 +58,26 @@ async def test_success_headers_require_committed_data(
         body = {"expected_version": row["version"]}
         query = "SELECT count(*) FROM forge.sales_orders WHERE id=:id AND status='CONFIRMED'"
         params = {"id": row["id"]}
+        if operation == "sales_shipment":
+            assert (await create(c, path.removeprefix("/api/v1/"), body)).status_code == 200
+            source = (await c.get("/api/v1/sales/orders/" + row["id"])).json()
+            shipment = await create(
+                c,
+                "sales/shipments",
+                {
+                    "source_id": row["id"],
+                    "reason": code,
+                    "lines": [{"source_line_id": source["lines"][0]["id"], "qty": "3"}],
+                },
+            )
+            assert shipment.status_code == 201, shipment.text
+            row = shipment.json()
+            path = "/api/v1/sales/documents/" + row["id"] + "/post"
+            body = {"expected_version": row["version"]}
+            query = (
+                "SELECT count(*) FROM forge.inventory_documents WHERE id=:id AND status='POSTED'"
+            )
+            params = {"id": row["id"]}
     else:
         order = await po(c, purchase)
         await action(c, order)

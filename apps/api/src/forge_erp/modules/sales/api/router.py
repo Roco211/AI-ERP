@@ -3,7 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, Query
 
 from forge_erp.modules.inventory.api.router import Key, Page, Size, Transaction
-from forge_erp.modules.sales.application import orders, pricing, queries
+from forge_erp.modules.sales.application import documents, orders, pricing, queries
 from forge_erp.modules.sales.domain import schemas as s
 
 router = APIRouter(prefix="/api/v1/sales", tags=["sales"])
@@ -54,3 +54,36 @@ async def close_sales_order(id: UUID, body: s.SalesAction, tx: Transaction, key:
 @router.get("/price-quote", response_model=s.PriceQuote, response_model_exclude_none=True)
 async def get_sales_quote(customer_id: UUID, product_id: UUID, unit_id: UUID, tx: Transaction):
     return await pricing.quote(*tx, customer_id, product_id, unit_id)
+
+
+@router.get("/documents", response_model=s.SalesDocumentsPage, response_model_exclude_none=True)
+async def list_sales_documents(
+    tx: Transaction,
+    page: Page = 1,
+    page_size: Size = 25,
+    order_id: UUID | None = None,
+    customer_id: UUID | None = None,
+    status: s.DocumentStatus | None = None,
+    q: str = Query("", max_length=200),
+):
+    return await queries.document_list(*tx, page, page_size, order_id, customer_id, status, q)
+
+
+@router.get("/documents/{id}", response_model=s.SalesDocumentRead, response_model_exclude_none=True)
+async def get_sales_document(id: UUID, tx: Transaction):
+    return await queries.document_detail(*tx, id)
+
+
+@router.post("/shipments", response_model=s.SalesDocumentReceipt, status_code=201)
+async def create_sales_shipment(body: s.SalesShipmentInput, tx: Transaction, key: Key):
+    return await documents.save(*tx, body, key)
+
+
+@router.put("/documents/{id}/draft", response_model=s.SalesDocumentReceipt)
+async def update_sales_shipment(id: UUID, body: s.SalesShipmentUpdate, tx: Transaction, key: Key):
+    return await documents.save(*tx, body, key, id, body.expected_version)
+
+
+@router.post("/documents/{id}/post", response_model=s.SalesDocumentReceipt)
+async def post_sales_shipment(id: UUID, body: s.SalesVersion, tx: Transaction, key: Key):
+    return await documents.post(*tx, id, body.expected_version, key)

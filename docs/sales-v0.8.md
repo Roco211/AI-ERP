@@ -1,6 +1,6 @@
 # 销售 v0.8 施工规范
 
-状态：S0 已完成，S1 订单、价格快照与占用后端已实现；S2–S5 待施工。基线为已发布 `purchasing-v0.7` / main `64bec0aecdbaef6c694a2fdb47b8fc93c34b57a7`，数据库 `0008_purchasing`。本次发布后的新工作不修改旧标签。实施建议见[ADR0014](adr/0014-sales-reservations-returns-and-margin.md)，验收见[清单](sales-v0.8-acceptance.md)。
+状态：S0 已完成，S1 订单/占用与S2分批出库后端已实现；S3–S5 待施工。基线为已发布 `purchasing-v0.7` / main `64bec0aecdbaef6c694a2fdb47b8fc93c34b57a7`，数据库 `0008_purchasing`。本次发布后的新工作不修改旧标签。实施建议见[ADR0014](adr/0014-sales-reservations-returns-and-margin.md)，验收见[清单](sales-v0.8-acceptance.md)。
 
 依据：[权威迁移上下文](architecture/migration-context.md)第4.3、4.5、5、7、8、9、10、12、41、45节；已实施ADR0009、0012、0013。下文明确区分原文硬约束与原文未细化的本阶段建议，不重新设计ERP。
 
@@ -99,7 +99,7 @@
 
 ## 7. 数据和引擎接入（建议S7）
 
-模块建议 `modules/sales/{domain,application,api}`，前端 `features/sales/`，接入现有 `/sales` 导航。S1 已从0008追加并验证0009_sales；后续引擎跨凭据消费字段在S2追加新迁移，不改已发布旧迁移。
+模块建议 `modules/sales/{domain,application,api}`，前端 `features/sales/`，接入现有 `/sales` 导航。S1追加0009_sales，S2追加0010_sales_shipments，均验证升级；旧迁移不改写。
 
 建议增加sales_orders、sales_order_lines、sales_documents、sales_document_lines；所有新业务表organization_id、FORCE RLS、租户复合外键、有限数字约束。销售订单与库存单据附属表保留强来源，不复制库存余额或另建一套流水。
 
@@ -159,3 +159,14 @@ REST前缀 `/api/v1/sales`：orders列表/详情/保存草稿/confirm/cancel/clo
 ## S1实施记录
 
 用户在S0草稿PR #4交付后回复“好的，请继续。”，已实施S1。详见[本增量交付记录](sales-v0.8-s1-delivery.md)。Catalog商品读取沿用现有catalog.read权限；报价另需customer.read、sales.read、product.price.read。没有新增product.read权限。S2的跨出库凭据占用消费、S3退货毛利及S4销售页面均未实现。
+
+
+## S2实施记录
+
+用户在S1交付后回复“请继续”。S2已提供出库草稿/修改/过账、列表/详情；库存行通过reservation_source_line_id关联独立占用来源。详见[本增量交付](sales-v0.8-s2-delivery.md)。
+
+- 草稿只保存冻结订单信息，不消耗占用；允许超过当前待发量的草稿，过账在订单锁下拒绝累计超发。
+- 读取成本来自不可变ISSUE流水的负value_delta，未另建可修改成本字段。实际成本仅在具备销售读取、价格读取和成本读取权限时返回，数量仓管只需sales.ship即可按冻结单据操作。
+- SQL租户外键和延迟来源校验适配“库存行→销售关联行”的插入顺序；库存引擎在ISSUE前立即检查同一来源、状态、权限、数量。兼容S1历史查询fixture的空链接，但空链接不能通过引擎过账；不宣称SQL可独立拒绝所有无来源草稿。
+- 详情以父订单共享锁保持头、数量与成本一致；列表按选中订单ID排序锁定，并重新应用筛选条件，避免并发关闭/过账后返回不符合状态的行。并发变化可能使当前页变短，分页不是全库时间快照。
+- S3退货/冲销/净毛利、S4销售工作台与S5最终验收仍待实现。本增量不发布版本、不改0.7.0版本标识。

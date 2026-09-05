@@ -79,3 +79,7 @@ Work in small increments and run relevant checks after each. Use a real PostgreS
 ## Sales v0.8 implementation authorization
 
 After delivery of the specification and draft PR #4, the user said “好的，请继续。” Proceed with S1 on sales/v0.8: forward migration, server pricing/snapshots, order save/confirm/cancel/close and InventoryEngine reservations. Follow docs/sales-v0.8.md and ADR0014. Test each increment; keep S2–S5 acceptance pending until implemented. This does not authorize merging or publishing this PR.
+
+## Sales S2 authorization
+
+After S1 delivery (135e87c, 164 backend tests, PR #4 CI green), the user said “请继续”. Implement S2: shipment drafts/POST, frozen order snapshots, controlled cross-document reservation consumption, actual issue costs, tenant/RBAC/concurrency/atomicity tests. Append migration0010; preserve0009 and older migrations. S3 returns/reversals/margin and S4 UI remain pending. Do not merge or publish PR #4.

@@ -1,6 +1,6 @@
 # ADR 0014 — 销售占用、退货成本与毛利
 
-Status: Accepted for incremental implementation after user continuation。S1后端已实施，后续规则在S2–S5按验收落实；基线为已发布main64bec0a / purchasing-v0.7。依据权威迁移上下文4.3、5、7–10、12、41及ADR0009/0012/0013。详见[施工规范](../sales-v0.8.md)和[验收清单](../sales-v0.8-acceptance.md)。
+Status: Accepted for incremental implementation after user continuation。S1–S2后端已实施，后续规则在S3–S5按验收落实；基线为已发布main64bec0a / purchasing-v0.7。依据权威迁移上下文4.3、5、7–10、12、41及ADR0009/0012/0013。详见[施工规范](../sales-v0.8.md)和[验收清单](../sales-v0.8-acceptance.md)。
 
 ## 原文已经固定
 
@@ -32,3 +32,10 @@ Status: Accepted for incremental implementation after user continuation。S1后�
 ## S1落地
 
 占用凭据使用sales_documents的内部RESERVATION种类和sales_document_lines映射，库存凭据行与订单行ID独立，不伪造实物出库来源。0009_sales建立四张租户表、不可变来源和权限；跨凭据消费字段延至S2的新迁移。报价商品读取权限沿用catalog.read。有效成交历史解析已用隔离查询fixture验证；尚未实现销售出库Command，不能据此认定出库业务通过验收。
+
+
+## S2落地
+
+0010_sales_shipments追加reservation_source_line_id和租户复合自引用外键；引擎sales.ship能力仅允许DRAFT销售出库的ISSUE，必须提供与冻结来源匹配的reservation，不能消费别单或绕过占用。同一INVOCER权限的只读SQL谓词服务于延迟约束和立即引擎校验，不授予新的业务写权限。
+
+出库实际成本从不可变流水读取；订单行与出库商业行保持不可变。当前不开放销售冲销，避免在S3前形成不完整逆向状态。详情共享锁和列表重新筛选属于读取一致性修复，不改变业务语义。

@@ -9,6 +9,7 @@ from forge_erp.modules.catalog.domain.schemas import Amount, Factor, InputModel
 
 Reason = Annotated[str, Field(min_length=1, max_length=2000)]
 OrderStatus = Literal["DRAFT", "CONFIRMED", "CLOSED", "CANCELLED"]
+DocumentStatus = Literal["DRAFT", "POSTED", "REVERSED"]
 
 
 class SalesOrderLineInput(InputModel):
@@ -115,6 +116,78 @@ class SalesOrderRead(BaseModel):
 
 class SalesOrdersPage(BaseModel):
     items: list[SalesOrderRead]
+    total: int
+    page: int
+    page_size: int
+
+
+class SalesShipmentLineInput(InputModel):
+    source_line_id: UUID
+    qty: Factor
+
+
+class SalesShipmentInput(InputModel):
+    source_id: UUID
+    reason: Reason
+    lines: Annotated[list[SalesShipmentLineInput], Field(min_length=1, max_length=200)]
+
+    @model_validator(mode="after")
+    def unique(self):
+        if len({x.source_line_id for x in self.lines}) != len(self.lines):
+            raise ValueError("Each source line must appear once")
+        return self
+
+
+class SalesShipmentUpdate(SalesShipmentInput):
+    expected_version: Annotated[int, Field(ge=1)]
+
+
+class SalesDocumentReceipt(BaseModel):
+    id: UUID
+    status: Literal["DRAFT", "POSTED", "REVERSED"]
+    version: int
+    request_id: str
+
+
+class SalesDocumentLineRead(BaseModel):
+    id: UUID
+    order_line_id: UUID
+    reservation_source_line_id: UUID | None = None
+    product_id: UUID
+    unit_id: UUID
+    product_label: str
+    unit_label: str
+    qty: Decimal
+    base_qty: Decimal
+    unit_to_base_factor: Decimal
+    conversion_version: int
+    unit_price: Decimal | None = None
+    amount: Decimal | None = None
+    actual_cost: Decimal | None = None
+
+
+class SalesDocumentRead(BaseModel):
+    id: UUID
+    number: str
+    kind: Literal["SHIPMENT"]
+    status: Literal["DRAFT", "POSTED", "REVERSED"]
+    version: int
+    order_id: UUID
+    order_number: str
+    customer_id: UUID
+    customer_name: str
+    warehouse_id: UUID
+    warehouse_name: str
+    reason: str
+    created_at: datetime
+    posted_at: datetime | None = None
+    amount: Decimal | None = None
+    actual_cost: Decimal | None = None
+    lines: list[SalesDocumentLineRead] = Field(default_factory=list)
+
+
+class SalesDocumentsPage(BaseModel):
+    items: list[SalesDocumentRead]
     total: int
     page: int
     page_size: int

@@ -22,6 +22,7 @@ class InventoryEngine:
             "sales.order.confirm",
             "sales.order.cancel",
             "sales.order.close",
+            "sales.ship",
             "purchase.receive",
             "purchase.return",
             "inventory.opening",
@@ -94,7 +95,8 @@ class InventoryEngine:
             (
                 await self.db.execute(
                     text(
-                        "SELECT l.*,d.warehouse_id,d.target_warehouse_id,d.type AS document_type "
+                        "SELECT l.*,d.warehouse_id,d.target_warehouse_id,d.type AS document_type, "
+                        "d.status AS document_status "
                         "FROM forge.inventory_document_lines l JOIN forge.inventory_documents d "
                         "ON (d.organization_id,d.id)=(l.organization_id,l.document_id) "
                         "WHERE l.organization_id=:org AND l.id=:id"
@@ -131,6 +133,30 @@ class InventoryEngine:
             expected_kind = "RESERVE" if self.permission == "sales.order.confirm" else "RELEASE"
             if source["document_type"] != "SALES_RESERVATION" or kind != expected_kind:
                 raise Problem(409, "INVALID_SOURCE", "销售订单只能建立或释放其库存占用")
+        elif self.permission == "sales.ship":
+            if (
+                source["document_type"] != "SALES_SHIPMENT"
+                or source["document_status"] != "DRAFT"
+                or kind != "ISSUE"
+                or reservation_id is None
+                or source["reservation_source_line_id"] is None
+                or qty != source["base_qty"]
+                or operation != source["document_id"]
+            ):
+                raise Problem(409, "INVALID_SOURCE", "销售出库必须消费原订单的有效库存占用")
+            valid = (
+                await self.db.execute(
+                    text(
+                        "SELECT forge.sales_shipment_source_valid(:org,:line) AND EXISTS "
+                        "(SELECT 1 FROM forge.sales_orders o JOIN forge.sales_document_lines sl "
+                        "ON (sl.organization_id,sl.order_id)=(o.organization_id,o.id) "
+                        "WHERE sl.organization_id=:org AND sl.id=:line AND o.status='CONFIRMED')"
+                    ),
+                    {"org": self.ctx.organization_id, "line": line_id},
+                )
+            ).scalar_one()
+            if not valid:
+                raise Problem(409, "INVALID_SOURCE", "销售出库与原订单占用来源不一致")
         elif source["document_type"].startswith("SALES_"):
             raise Problem(409, "SALES_COMMAND_REQUIRED", "销售库存必须通过销售命令操作")
         old = self.state(key)
@@ -151,7 +177,12 @@ class InventoryEngine:
             )
             if (
                 reservation is None
-                or reservation["line_id"] != line_id
+                or reservation["line_id"]
+                != (
+                    source["reservation_source_line_id"]
+                    if self.permission == "sales.ship"
+                    else line_id
+                )
                 or (reservation["warehouse_id"], reservation["product_id"]) != key
             ):
                 raise Problem(404, "NOT_FOUND", "占用来源不存在或不属于本次操作")
