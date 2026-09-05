@@ -543,7 +543,7 @@ export function PurchasingWorkspace({
   return (
     <div className="space-y-5">
       <p className="text-sm text-muted-foreground">
-        确认采购，再按实收数量入库。采购金额供业务核对，资金结算尚未启用。
+        确认采购，再按实收数量入库。采购金额与资金结算分别按来源核对。
       </p>
       <div className="flex flex-wrap gap-2">
         {tabs

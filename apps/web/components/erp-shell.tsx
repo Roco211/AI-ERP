@@ -31,6 +31,7 @@ import { InventoryWorkspace } from "@/features/inventory/workspace";
 import { CatalogWorkspace } from "@/features/catalog/workspace";
 import { CatalogManager } from "@/features/catalog/manager";
 import { configs } from "@/features/catalog/config";
+import { version } from "@/package.json";
 
 export const navigation = [
   { path: "dashboard", label: "工作台", icon: LayoutDashboard },
@@ -159,7 +160,7 @@ export function ERPShell({
         <div className="mt-auto hidden border-t border-border px-3 pt-4 md:block">
           <p className="text-xs font-medium">一步一步，把生意做好。</p>
           <p className="mt-2 text-[10px] text-muted-foreground">
-            Forge ERP · v0.8
+            Forge ERP · v{version}
           </p>
         </div>
       </aside>

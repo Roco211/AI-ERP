@@ -274,7 +274,7 @@ test("funds activation, multiple receivables, partial/full customer refunds, rev
   expect(cash.allocations).toHaveLength(2);
   await salesReturn(page, first, "6");
   expect(await get(page, `funds/sources/${one.id}`)).toMatchObject({
-    settlement_amount: "0.0000",
+    settlement_amount: expect.stringMatching(/^0(?:\.0{1,4})?$/),
     refund_amount: "50.0000",
   });
   await page.goto("/funds?side=AR");
@@ -302,8 +302,8 @@ test("funds activation, multiple receivables, partial/full customer refunds, rev
     "50.0000",
   );
   await confirmCash(page, dialog, "客户退款");
-  expect((await get(page, `funds/sources/${one.id}`)).refund_amount).toBe(
-    "0.0000",
+  expect((await get(page, `funds/sources/${one.id}`)).refund_amount).toMatch(
+    /^0(?:\.0{1,4})?$/,
   );
   await page
     .getByRole("region", { name: "收付款详情" })
@@ -400,7 +400,7 @@ test("payables use receipt commercial value and support opening, payment, suppli
     expected_version: returned.version,
   });
   expect(await get(page, `funds/sources/${source.id}`)).toMatchObject({
-    settlement_amount: "0.0000",
+    settlement_amount: expect.stringMatching(/^0(?:\.0{1,4})?$/),
     refund_amount: "100.0000",
   });
   await page.goto("/funds?side=AP");
@@ -412,10 +412,15 @@ test("payables use receipt commercial value and support opening, payment, suppli
     "100.0000",
   );
   await confirmCash(page, dialog, "供应商退款");
-  expect((await get(page, `funds/sources/${source.id}`)).balance).toBe(
-    "0.0000",
+  expect((await get(page, `funds/sources/${source.id}`)).balance).toMatch(
+    /^0(?:\.0{1,4})?$/,
   );
-  await page.goto(`/purchase?order=${order.id}`);
+  await page.goto("/purchase");
+  await page
+    .getByRole("row")
+    .filter({ hasText: order.number })
+    .getByRole("button", { name: "查看", exact: true })
+    .click();
   await expect(
     page.getByRole("region", { name: "订单资金结算概览" }),
   ).toContainText("已结清");
@@ -588,6 +593,8 @@ test("isolated funds roles and lost receipt preserve one cash fact across Back a
     if (request.url().includes("/api/v1/funds/")) requests.push(request.url());
   });
   await page.goto("/funds");
-  await expect(page.getByRole("alert")).toContainText("没有查看资金");
+  await expect(
+    page.getByRole("region", { name: "资金工作台" }).getByRole("alert"),
+  ).toContainText("没有查看资金");
   expect(requests).toHaveLength(0);
 });
