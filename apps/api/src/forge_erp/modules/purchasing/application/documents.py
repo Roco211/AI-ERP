@@ -6,6 +6,8 @@ from sqlalchemy import text
 from forge_erp.core.errors import Problem
 from forge_erp.modules.audit.service import record_mutation
 from forge_erp.modules.catalog.domain.values import ConversionSnapshot
+from forge_erp.modules.funds.application import integration as funds
+from forge_erp.modules.funds.application.shared import cutover
 from forge_erp.modules.inventory.application.engine import InventoryEngine
 from forge_erp.modules.purchasing.application import orders, queries
 from forge_erp.modules.purchasing.domain.values import line_amount, return_amount
@@ -227,6 +229,7 @@ async def transition(db, ctx, id, expected, key, action, reason=None):
         ctx.require("purchase.reverse")
 
     async def execute():
+        await cutover(db, ctx)
         order = await orders.load(db, ctx, initial["order_id"], True)
         await lock_documents(
             db,
@@ -340,6 +343,10 @@ async def transition(db, ctx, id, expected, key, action, reason=None):
                 ),
                 {"org": ctx.organization_id, "id": id},
             )
+        if action == "reverse":
+            await funds.reverse(db, ctx, "AP", id)
+        else:
+            await funds.post(db, ctx, "AP", id)
         result = await queries.raw_document(db, ctx, id)
         await record_mutation(
             db,

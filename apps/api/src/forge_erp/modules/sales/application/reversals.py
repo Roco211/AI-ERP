@@ -4,6 +4,8 @@ from sqlalchemy import text
 
 from forge_erp.core.errors import Problem
 from forge_erp.modules.audit.service import record_mutation
+from forge_erp.modules.funds.application import integration as funds
+from forge_erp.modules.funds.application.shared import cutover
 from forge_erp.modules.inventory.application.engine import InventoryEngine
 from forge_erp.modules.sales.application import documents, orders, queries
 
@@ -15,6 +17,7 @@ async def reverse(db, ctx, id, expected, key, reason):
     ctx.require(permission)
 
     async def execute():
+        await cutover(db, ctx)
         order = await orders.load(db, ctx, initial["order_id"], True)
         related = [id]
         if initial["original_document_id"]:
@@ -85,6 +88,7 @@ async def reverse(db, ctx, id, expected, key, reason):
           WHERE organization_id=:org AND id=:id"""),
             {"org": ctx.organization_id, "id": id, "rid": rid},
         )
+        await funds.reverse(db, ctx, "AR", id)
         result = await queries.raw_document(db, ctx, id)
         await record_mutation(
             db,

@@ -61,6 +61,13 @@ def identities(password_hash):
         db.execute(text("SET LOCAL session_replication_role = replica"))
         for rec in records:
             for table in (
+                "funds_operations",
+                "funds_cash_reversals",
+                "funds_cash_allocations",
+                "funds_cash_documents",
+                "funds_entries",
+                "funds_sources",
+                "funds_activation",
                 "sales_document_lines",
                 "sales_documents",
                 "sales_order_lines",

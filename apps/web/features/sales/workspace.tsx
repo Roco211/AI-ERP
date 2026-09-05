@@ -26,6 +26,7 @@ import {
 } from "./client";
 import { Grid, names, number, positive, PriceProvenance } from "./presentation";
 import { usePendingNavigationGuard } from "./navigation";
+import { OrderFundsSummary } from "@/features/funds/order-summary";
 
 type Tab = "orders" | "SHIPMENT" | "RETURN" | "prices";
 type Selection = { id: string; document: boolean };
@@ -1026,6 +1027,13 @@ export function SalesWorkspace({ permissions }: { permissions: string[] }) {
             </Button>
           </div>
           <p className="break-words text-sm">原因：{order.reason}</p>
+          <OrderFundsSummary
+            value={order.funds}
+            side="AR"
+            partyId={order.customer_id}
+            permissions={permissions}
+            locked={locked}
+          />
           {order.action_reason && (
             <p className="break-words text-sm">
               操作原因：{order.action_reason}

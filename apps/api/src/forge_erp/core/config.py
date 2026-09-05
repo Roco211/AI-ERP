@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     web_origin: str = "http://localhost:3100"
     session_ttl_seconds: int = 28800
     sentry_dsn: str = ""
+    business_timezone: str = "Asia/Shanghai"
 
     embedding_enabled: bool = False
     embedding_url: str = "http://127.0.0.1:11438"
@@ -27,6 +28,12 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def secure_production(self) -> Settings:
+        from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+        try:
+            ZoneInfo(self.business_timezone)
+        except (ZoneInfoNotFoundError, ValueError) as exc:
+            raise ValueError("Business timezone must be a valid IANA timezone") from exc
         if self.app_env == "production" and (
             not self.cookie_secure or not self.web_origin.startswith("https://")
         ):

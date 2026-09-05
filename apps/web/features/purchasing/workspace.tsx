@@ -1,4 +1,5 @@
 "use client";
+import { OrderFundsSummary } from "@/features/funds/order-summary";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -746,6 +747,13 @@ export function PurchasingWorkspace({
             </Button>
           </div>
           <p className="text-sm">原因：{order.reason}</p>
+          <OrderFundsSummary
+            value={order.funds}
+            side="AP"
+            partyId={order.supplier_id}
+            permissions={permissions}
+            locked={locked}
+          />
           <Grid
             headers={[
               "商品",

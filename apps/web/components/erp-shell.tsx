@@ -25,6 +25,7 @@ import { Dialog } from "@base-ui/react/dialog";
 import { api, ApiError, getProfile } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { SalesWorkspace } from "@/features/sales/workspace";
+import { FundsWorkspace } from "@/features/funds/workspace";
 import { PurchasingWorkspace } from "@/features/purchasing/workspace";
 import { InventoryWorkspace } from "@/features/inventory/workspace";
 import { CatalogWorkspace } from "@/features/catalog/workspace";
@@ -222,7 +223,9 @@ export function ERPShell({
                   ? "从采购订单到分批收货，追溯价格与退货。"
                   : section === "inventory"
                     ? "按仓库查看库存，追溯每次变动。"
-                    : "工作空间已就绪，业务功能将逐步开放。"}
+                    : section === "funds"
+                      ? "按客户与供应商核对往来，记录收付款并追溯每笔来源。"
+                      : "工作空间已就绪，业务功能将逐步开放。"}
           </p>
           {["products", "customers", "suppliers"].includes(section) ? (
             <CatalogWorkspace
@@ -232,6 +235,8 @@ export function ERPShell({
             />
           ) : section === "sales" ? (
             <SalesWorkspace permissions={me.permissions} />
+          ) : section === "funds" ? (
+            <FundsWorkspace permissions={me.permissions} />
           ) : section === "purchase" ? (
             <PurchasingWorkspace permissions={me.permissions} />
           ) : section === "inventory" ? (
