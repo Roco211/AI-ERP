@@ -21,10 +21,13 @@ from forge_erp.core.errors import Problem, ProblemDetails
 from forge_erp.core.observability import configure_logging
 from forge_erp.modules.catalog.api.router import router as catalog_router
 from forge_erp.modules.catalog.api.search_router import router as catalog_search_router
+from forge_erp.modules.catalog_import.api.router import router as catalog_import_router
 from forge_erp.modules.funds.api.router import router as funds_router
 from forge_erp.modules.identity.api.router import router
 from forge_erp.modules.inventory.api.router import router as inventory_router
 from forge_erp.modules.purchasing.api.router import router as purchasing_router
+from forge_erp.modules.replenishment.api.router import router as replenishment_router
+from forge_erp.modules.reporting.api.router import router as reporting_router
 from forge_erp.modules.sales.api.router import router as sales_router
 
 configure_logging()
@@ -53,13 +56,16 @@ ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
     }
     for code in (401, 403, 409, 422, 429, 500, 503)
 }
-app = FastAPI(title="Forge ERP", version="0.9.0", lifespan=lifespan, responses=ERROR_RESPONSES)
+app = FastAPI(title="Forge ERP", version="0.10.0", lifespan=lifespan, responses=ERROR_RESPONSES)
 app.include_router(router)
 app.include_router(catalog_router)
 app.include_router(inventory_router)
 app.include_router(purchasing_router)
 app.include_router(sales_router)
 app.include_router(funds_router)
+app.include_router(reporting_router)
+app.include_router(replenishment_router)
+app.include_router(catalog_import_router)
 
 
 def problem_response(request: Request, status: int, code: str, detail: str) -> JSONResponse:
@@ -128,8 +134,8 @@ class Health(BaseModel):
 
 class Version(BaseModel):
     name: str = "Forge ERP"
-    version: str = "0.9.0"
-    milestone: str = "Funds"
+    version: str = "0.10.0"
+    milestone: str = "Operations"
 
 
 @app.get("/healthz", response_model=Health, operation_id="healthz")
