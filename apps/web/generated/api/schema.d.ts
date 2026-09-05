@@ -2103,6 +2103,8 @@ export interface components {
             document_id: string;
             /** Document Number */
             document_number: string;
+            /** Document Type */
+            document_type: string;
             /**
              * Id
              * Format: uuid
@@ -2125,6 +2127,11 @@ export interface components {
             reversal_id?: string | null;
             /** Rounding Delta */
             rounding_delta?: string | null;
+            /**
+             * Sales Order Id
+             * @description Originating sales order; requires sales.read
+             */
+            sales_order_id?: string | null;
             /** Sequence */
             sequence: number;
             /** Unit Label */
@@ -2398,6 +2405,8 @@ export interface components {
              * @enum {string}
              */
             source: "customer" | "history" | "retail" | "wholesale" | "standard" | "manual" | "unset";
+            /** Source Document Id */
+            source_document_id?: string | null;
             /** Source Id */
             source_id?: string | null;
             /** Target Factor */
@@ -3426,6 +3435,11 @@ export interface components {
         SalesOrderLineRead: {
             /** Amount */
             amount?: string | null;
+            /**
+             * Available Qty
+             * @description Live warehouse available base units; requires inventory.read
+             */
+            available_qty?: string | null;
             /** Base Qty */
             base_qty: string;
             /** Conversion Version */
@@ -3433,10 +3447,20 @@ export interface components {
             /** Executable Base Qty */
             executable_base_qty: string;
             /**
+             * Executable Qty
+             * @description Executable quantity in the frozen order unit
+             */
+            executable_qty: string;
+            /**
              * Id
              * Format: uuid
              */
             id: string;
+            /**
+             * On Hand Qty
+             * @description Live warehouse stock in base units; requires inventory.read
+             */
+            on_hand_qty?: string | null;
             price_source?: components["schemas"]["PriceSource"] | null;
             /** Pricing Mode */
             pricing_mode?: ("AUTO" | "MANUAL") | null;
@@ -3451,6 +3475,11 @@ export interface components {
             qty: string;
             /** Remaining Base Qty */
             remaining_base_qty: string;
+            /**
+             * Remaining Qty
+             * @description Unshipped quantity in the frozen order unit
+             */
+            remaining_qty: string;
             /** Reserved Base Qty */
             reserved_base_qty: string;
             /** Returned Base Qty */
@@ -3468,6 +3497,11 @@ export interface components {
             unit_price?: string | null;
             /** Unit To Base Factor */
             unit_to_base_factor: string;
+            /**
+             * Warehouse Reserved Qty
+             * @description Live warehouse total reserved base units; requires inventory.read
+             */
+            warehouse_reserved_qty?: string | null;
         };
         /** SalesOrderRead */
         SalesOrderRead: {

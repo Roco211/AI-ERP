@@ -1239,6 +1239,10 @@
             "title": "Document Number",
             "type": "string"
           },
+          "document_type": {
+            "title": "Document Type",
+            "type": "string"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
@@ -1298,6 +1302,19 @@
             ],
             "title": "Rounding Delta"
           },
+          "sales_order_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Originating sales order; requires sales.read",
+            "title": "Sales Order Id"
+          },
           "sequence": {
             "title": "Sequence",
             "type": "integer"
@@ -1334,6 +1351,7 @@
           "product_id",
           "document_id",
           "document_number",
+          "document_type",
           "product_label",
           "unit_label",
           "warehouse_name",
@@ -2042,6 +2060,18 @@
             ],
             "title": "Source",
             "type": "string"
+          },
+          "source_document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Document Id"
           },
           "source_id": {
             "anyOf": [
@@ -4638,6 +4668,19 @@
             ],
             "title": "Amount"
           },
+          "available_qty": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Live warehouse available base units; requires inventory.read",
+            "title": "Available Qty"
+          },
           "base_qty": {
             "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Base Qty",
@@ -4652,10 +4695,29 @@
             "title": "Executable Base Qty",
             "type": "string"
           },
+          "executable_qty": {
+            "description": "Executable quantity in the frozen order unit",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Executable Qty",
+            "type": "string"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
             "type": "string"
+          },
+          "on_hand_qty": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Live warehouse stock in base units; requires inventory.read",
+            "title": "On Hand Qty"
           },
           "price_source": {
             "anyOf": [
@@ -4701,6 +4763,12 @@
             "title": "Remaining Base Qty",
             "type": "string"
           },
+          "remaining_qty": {
+            "description": "Unshipped quantity in the frozen order unit",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Remaining Qty",
+            "type": "string"
+          },
           "reserved_base_qty": {
             "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Reserved Base Qty",
@@ -4741,6 +4809,19 @@
             "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Unit To Base Factor",
             "type": "string"
+          },
+          "warehouse_reserved_qty": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Live warehouse total reserved base units; requires inventory.read",
+            "title": "Warehouse Reserved Qty"
           }
         },
         "required": [
@@ -4757,7 +4838,9 @@
           "remaining_base_qty",
           "returned_base_qty",
           "reserved_base_qty",
-          "executable_base_qty"
+          "executable_base_qty",
+          "remaining_qty",
+          "executable_qty"
         ],
         "title": "SalesOrderLineRead",
         "type": "object"

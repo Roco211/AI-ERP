@@ -34,7 +34,8 @@ async def resolve(db, ctx, customer, product, unit, factor, base_unit):
     history = (
         (
             await db.execute(
-                text("""SELECT dl.id,dl.unit_price,l.unit_id,l.unit_to_base_factor
+                text("""SELECT dl.id,d.id AS document_id,dl.unit_price,l.unit_id,
+      l.unit_to_base_factor
       FROM forge.sales_document_lines dl
       JOIN forge.sales_documents sd ON
 (sd.organization_id,sd.id)=(dl.organization_id,dl.document_id)
@@ -59,6 +60,7 @@ async def resolve(db, ctx, customer, product, unit, factor, base_unit):
             update={
                 "source": "history",
                 "source_id": history["id"],
+                "source_document_id": history["document_id"],
                 "original_price": history["unit_price"],
                 "original_unit_id": history["unit_id"],
                 "original_factor": history["unit_to_base_factor"],

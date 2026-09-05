@@ -3,6 +3,7 @@ from decimal import Decimal, localcontext
 from sqlalchemy import text
 
 from forge_erp.core.errors import Problem
+from forge_erp.modules.inventory.domain.values import exact
 from forge_erp.modules.sales.application import orders
 
 PRICE_FIELDS = {
@@ -128,6 +129,28 @@ async def order_detail(db, ctx, id, include_lines=True):
     lines = await orders.raw_lines(db, ctx, id)
     amounts = await orders.quantities(db, ctx, id)
     reserved = await orders.reservations.remaining(db, ctx, id)
+    stock = {}
+    if include_lines and "inventory.read" in ctx.permissions:
+        # Live stock is separate from this order's locked fulfillment state. Read all three
+        # quantities together, without taking inventory locks or exposing warehouse costs.
+        stock = {
+            item["product_id"]: dict(item)
+            for item in (
+                await db.execute(
+                    text(
+                        "SELECT product_id,on_hand_qty,reserved_qty AS warehouse_reserved_qty,"
+                        "on_hand_qty-reserved_qty AS available_qty FROM forge.inventory_balances "
+                        "WHERE organization_id=:org AND warehouse_id=:warehouse "
+                        "AND product_id=ANY(:products)"
+                    ),
+                    {
+                        "org": ctx.organization_id,
+                        "warehouse": row["warehouse_id"],
+                        "products": [line["product_id"] for line in lines],
+                    },
+                )
+            ).mappings()
+        }
     for line in lines:
         counts = amounts.get(line["id"], {"shipped": Decimal(0), "returned": Decimal(0)})
         line.update(
@@ -139,6 +162,16 @@ async def order_detail(db, ctx, id, include_lines=True):
         line["executable_base_qty"] = (
             line["reserved_base_qty"] if row["status"] == "CONFIRMED" else Decimal(0)
         )
+        with localcontext() as dec:
+            dec.prec = 50
+            line["remaining_qty"] = exact(line["remaining_base_qty"] / line["unit_to_base_factor"])
+            line["executable_qty"] = exact(
+                line["executable_base_qty"] / line["unit_to_base_factor"]
+            )
+        if include_lines and "inventory.read" in ctx.permissions:
+            balance = stock.get(line["product_id"], {})
+            for field in ("on_hand_qty", "warehouse_reserved_qty", "available_qty"):
+                line[field] = balance.get(field, Decimal("0.000000"))
     row["fulfillment_status"] = (
         "FULFILLED"
         if all(x["remaining_base_qty"] == 0 for x in lines)

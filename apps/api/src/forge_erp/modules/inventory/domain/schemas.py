@@ -150,6 +150,10 @@ class InventoryMovementRead(BaseModel):
     product_id: UUID
     document_id: UUID
     document_number: str
+    document_type: str
+    sales_order_id: UUID | None = Field(
+        default=None, description="Originating sales order; requires sales.read"
+    )
     product_label: str
     unit_label: str
     warehouse_name: str

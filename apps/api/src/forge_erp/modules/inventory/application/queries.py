@@ -29,6 +29,7 @@ def redact(row: dict, ctx: RuntimeContext) -> dict:
         for k, v in row.items()
         if k != "organization_id"
         and (k not in COST_FIELDS or "product.cost.read" in ctx.permissions)
+        and (k != "sales_order_id" or "sales.read" in ctx.permissions)
     }
 
 
@@ -191,11 +192,14 @@ async def movements(
             await db.execute(
                 text(
                     "SELECT m.*,l.product_label,l.unit_label,w.name AS warehouse_name,"
-                    "d.number AS document_number FROM forge.inventory_movements m "
+                    "d.number AS document_number,d.type AS document_type,"
+                    "sd.order_id AS sales_order_id FROM forge.inventory_movements m "
                     "JOIN forge.inventory_document_lines l ON "
                     "(l.organization_id,l.id)=(m.organization_id,m.line_id) "
                     "JOIN forge.inventory_documents d ON "
                     "(d.organization_id,d.id)=(m.organization_id,m.document_id) "
+                    "LEFT JOIN forge.sales_documents sd ON "
+                    "(sd.organization_id,sd.id)=(d.organization_id,d.id) "
                     "JOIN forge.warehouses w ON (w.organization_id,"
                     "w.id)=(m.organization_id,m.warehouse_id) "
                     "WHERE " + where + " ORDER BY m.created_at DESC,m.id DESC LIMIT :limit"

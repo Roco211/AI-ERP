@@ -87,3 +87,7 @@ After S1 delivery (135e87c, 164 backend tests, PR #4 CI green), the user said �
 ## Sales S3 authorization
 
 After S2 delivery (292b46e, 219 backend tests and current-commit CI green), the user said “OK，请继续”. Proceed with S3 under the existing specification: source-based sales returns, independent sales/cost tail allocation, strict last-document reversal, realized margin and customer sales history. Append migration0011; preserve prior migrations. Keep S4 sales UI and S5 full-stage acceptance pending. Continue draft PR #4 without merging, tagging or releasing.
+
+## Sales S4 authorization
+
+After S3 delivery (cc023a5, 305 backend tests, current CI green), the user said “继续”. Implement S4 sales workspace: orders, shipments, returns/reversal, authorized margin/history, quote provenance, keyboard selection, server amounts, independent permissions and safe retries. Extend read DTOs where needed to avoid browser business arithmetic, without changing domain commands or adding migrations. Add real browser and frontend regressions. Keep S5 optional seed/final-stage acceptance and publishing pending; do not merge or release PR #4.

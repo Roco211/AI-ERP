@@ -62,6 +62,7 @@ class SalesReceipt(BaseModel):
 class PriceSource(BaseModel):
     source: Literal["customer", "history", "retail", "wholesale", "standard", "manual", "unset"]
     source_id: UUID | None = None
+    source_document_id: UUID | None = None
     original_unit_id: UUID | None = None
     original_factor: Decimal | None = None
     original_price: Decimal | None = None
@@ -96,6 +97,18 @@ class SalesOrderLineRead(BaseModel):
     returned_base_qty: Decimal
     reserved_base_qty: Decimal
     executable_base_qty: Decimal
+    remaining_qty: Decimal = Field(description="Unshipped quantity in the frozen order unit")
+    executable_qty: Decimal = Field(description="Executable quantity in the frozen order unit")
+    on_hand_qty: Decimal | None = Field(
+        default=None, description="Live warehouse stock in base units; requires inventory.read"
+    )
+    warehouse_reserved_qty: Decimal | None = Field(
+        default=None,
+        description="Live warehouse total reserved base units; requires inventory.read",
+    )
+    available_qty: Decimal | None = Field(
+        default=None, description="Live warehouse available base units; requires inventory.read"
+    )
 
 
 class SalesOrderRead(BaseModel):
