@@ -95,3 +95,7 @@ After S3 delivery (cc023a5, 305 backend tests, current CI green), the user said 
 ## Sales S5 authorization
 
 After S4 delivery (2cd3d93, 316 backend / 37 frontend / 10 browser tests and both current CI runs successful), the user said “请继续”. Complete S5 under the existing specification: finish shipment idempotency coverage, implement an optional development-only Command-based sales seed that preserves existing facts, run frozen installation and full regression/CI, and finalize the 46-item acceptance and delivery evidence. Keep existing architecture and business semantics; resolve real defects with regression tests. No Receivables/Payables/AI work, no new infrastructure, and no implicit merge, tag creation or release. Only recommend sales-v0.8 once full acceptance is verified.
+
+## Sales S5 completion record
+
+S1–S5 implementation is complete: 357 backend tests, 44 frontend tests and 11 production-browser scenarios passed locally. Code acceptance commit `9d7961e` passed both push CI 33977824715 and PR CI 33977827345. The final documentation commit must also pass both CI runs; its exact SHA and results are recorded in `../Forge-ERP-Sales-v0.8-verification.json` after verification. See `docs/sales-v0.8-delivery.md`, the 46-item acceptance checklist and repository tree for the final state. Application metadata is 0.8.0 / Sales; migration head remains 0011_sales_returns. PR #4 remains a draft, with no sales tag, merge or release performed. Do not infer authorization for funds or AI business modules from this completed increment.

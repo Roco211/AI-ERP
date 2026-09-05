@@ -1,6 +1,6 @@
-# Forge ERP · Purchasing v0.7
+# Forge ERP · Sales v0.8
 
-五金商贸 ERP。基于已验收的 Bootstrap v0.4，Catalog 增加分类、品牌、单位、商品、价格、客户、供应商、供货关系、仓库资料和快捷选品。可选本地语义搜索使用 Ollama/BGE-M3（[安装说明](docs/local-embeddings.md)）；库存 v0.6 已加入期初、调整、调拨、盘点、库存流水与低库存查询。采购 v0.7 已加入订单、分批收货、退货、冲销与历史采购价。销售 v0.8 的 S1–S4 已加入订单占用、分批出库、原单退货、严格冲销、毛利与[销售工作台](docs/sales-v0.8-s4-delivery.md)，入口 `/sales`；S5 最终阶段验收和销售版本发布仍待完成。资金和 AI 业务功能未开放。详见 [Catalog 使用与验收](docs/catalog-v0.5.md) 和 [Excel 导入基础设计](docs/import/catalog-import-design.md)。
+五金商贸 ERP。基于已验收的 Bootstrap v0.4，Catalog 增加分类、品牌、单位、商品、价格、客户、供应商、供货关系、仓库资料和快捷选品。可选本地语义搜索使用 Ollama/BGE-M3（[安装说明](docs/local-embeddings.md)）；库存 v0.6 已加入期初、调整、调拨、盘点、库存流水与低库存查询。采购 v0.7 已加入订单、分批收货、退货、冲销与历史采购价。销售 v0.8 的 S1–S4 已加入订单占用、分批出库、原单退货、严格冲销、毛利与[销售工作台](docs/sales-v0.8-s4-delivery.md)，入口 `/sales`；S5 及可选开发演示已完成，46 项验收、本地最终全量回归与代码提交双 CI 通过；销售版本尚未合并发布。资金和 AI 业务功能未开放。详见 [Catalog 使用与验收](docs/catalog-v0.5.md) 和 [Excel 导入基础设计](docs/import/catalog-import-design.md)。
 
 ## 本地启动
 
@@ -14,6 +14,7 @@ make migrate
 make seed                # DEMO / ADMIN；账户来自 .env 的 SEED_ADMIN_*
 make seed-catalog        # 可选：五金示例商品及关联资料
 make seed-inventory      # 可选：独立 INV-DEMO 商品/仓库，通过期初单入账
+make seed-sales          # 可选：独立销售演示订单/出库/退货，重复保留既有事实
 make api                 # 终端 1
 make web                 # 终端 2
 make worker              # 终端 3，可选后台消费者
@@ -47,7 +48,7 @@ uv run --project apps/api alembic -c apps/api/alembic.ini current
 - `docs/acceptance.md`：逐项验收与实际运行记录。
 - `docs/architecture/migration-context.md`：完整迁移上下文；第 54–57 节由用户在当前任务补充，作为权威验收依据。
 
-API 启动会拒绝高权限数据库账户。迁移/seed 使用独立的 `MIGRATION_DATABASE_URL`；生产 API 不应获得该变量。生产配置强制 Secure Cookie 和 HTTPS Origin。登录要求 `Idempotency-Key` 与精确 `Origin`；退出操作本身幂等。Session token 仅经 HttpOnly Cookie 返回，数据库只保存 SHA-256 hash。
+API 启动会拒绝高权限数据库账户。迁移和基础身份 seed 使用独立的 `MIGRATION_DATABASE_URL`；销售演示仅用该连接读取现有操作者身份和权限，业务写入使用受 RLS 约束的 `forge_app`。生产 API 不应获得迁移变量。生产配置强制 Secure Cookie 和 HTTPS Origin。登录要求 `Idempotency-Key` 与精确 `Origin`；退出操作本身幂等。Session token 仅经 HttpOnly Cookie 返回，数据库只保存 SHA-256 hash。
 
 业务写操作进入 Application Command；HTTP Router 不实现领域规则。`RuntimeContext` 只从认证会话构建；事务内设置租户，应用查询显式限定租户，数据库再次执行 RLS。用户、组织失效和权限变更在下一请求生效。
 
@@ -59,7 +60,7 @@ Outbox consumer 使用 `FOR UPDATE SKIP LOCKED`，身份/库存事件记录处�
 
 OpenTelemetry 接入点已启用；可选 `SENTRY_DSN` 配置错误收集，不发送请求体。当前未配置外部追踪收集端或告警。FastAPI 的业务日志为 JSON；uvicorn access log 在标准启动命令中禁用，避免 URL 参数进入日志。
 
-停止服务使用 `make down`，保留数据库卷。不要以删除卷作为常规升级手段。全部验收通过且 GitHub CI 绿色后，建议创建 `purchasing-v0.7` 标签；本次交付使用独立评审分支，不自动合并依赖 PR。
+停止服务使用 `make down`，保留数据库卷。不要以删除卷作为常规升级手段。`purchasing-v0.7` 已发布；当前销售工作在独立 `sales/v0.8` 评审分支验收，不自动合并、创建销售标签或发布版本。
 
 ## 库存使用与维护
 
@@ -72,7 +73,7 @@ OpenTelemetry 接入点已启用；可选 `SENTRY_DSN` 配置错误收集，不�
 - 查看数量使用 `inventory.read`；成本另需 `product.cost.read`；期初/调整/调拨/盘点/冲销/对账分别授权。现有角色不会自动被批量升级；开发 ADMIN 通过 `make seed` 补齐权限。
 - 浏览器提交结果不明时保留原请求和幂等键，选择“重试原提交”。不要在另一窗口重建同一业务来猜测结果。
 
-迁移 head 为 `0007_inventory_projection`：0005 创建库存表、约束与权限，0006 固定流水翻页快照，0007 分离流水顺序与余额修订版本。升级使用 `make migrate`，保留原 Catalog 资料和库存事实；不要删除数据库卷。
+库存 v0.6 的迁移止于 `0007_inventory_projection`：0005 创建库存表、约束与权限，0006 固定流水翻页快照，0007 分离流水顺序与余额修订版本。当前销售分支的迁移 head 为 `0011_sales_returns`。升级使用 `make migrate`，保留原 Catalog 资料和库存事实；不要删除数据库卷。
 
 对账工具要求现存、有 `inventory.reconcile` 和 `product.cost.read` 的操作者，以及明确的组织、仓库、商品范围。默认 dry-run，实际修复必须加 `--repair`；工具与正常过账使用相同库存键锁，修复只更新投影并留审计：
 
@@ -95,3 +96,23 @@ uv run --project apps/api python apps/api/scripts/reconcile_inventory.py \
 - 一张订单一个供应商、一个仓库；禁止超收。单价按所选采购单位输入，数量与金额由服务端精确核算。
 - 退货参考金额与库存扣减成本分别记录，不代表应付、付款或退款。
 - 冲销沿用严格末笔整单规则；存在后续库存变动时不能直接冲销。
+
+
+## 销售 v0.8
+
+入口：`http://localhost:3100/sales`，沿用现有 DEMO 账户。详见[施工规范](docs/sales-v0.8.md)、[验收清单](docs/sales-v0.8-acceptance.md)、[ADR 0014](docs/adr/0014-sales-reservations-returns-and-margin.md)、[最终交付记录](docs/sales-v0.8-delivery.md)和[完整目录](docs/sales-v0.8-tree.txt)。
+
+```sh
+make migrate
+make seed                # 为现有 DEMO 管理员同步新增销售权限，保留已有密码
+make seed-sales          # 可选，仅 development；需要现有活跃 DEMO 管理员
+```
+
+演示使用独立的 `SALE-DEMO` / `SALE-DEMO-*` 编码商品和资料，订购 100、出库 60、退货 10；初始现有/占用/可用库存为 `150 / 40 / 110`，净销售 `750`、净成本 `550`、净毛利 `200`。已创建的演示可继续练习；重复运行保留当前单据和资料，不重置库存，也不接管已有同编码资料。不要把这些示例资料用于真实经营。
+
+- 确认订单全量占用库存；出库仅消费本单占用；退货不恢复待发或占用，补发应另开订单。
+- 每个出库行按冻结单价独立四舍五入至四位金额精度，分批出库的金额合计可能与订单金额有最末位差。库存全部出完时结清库存成本，原出库行全部退回时分别结清其销售金额与成本。
+- 查看销售价格与成本/毛利分别授权。数量仓管可按冻结来源处理出库、退货，服务端执行最终权限校验。
+- 提交结果不明时使用“重试原提交”。认证失效、显式退出、刷新、强制关闭或浏览器崩溃后，页面内待确认请求可能丢失；先核对服务端单据与库存事实，再决定是否新建或重复操作。遇到无法识别位置的旧浏览历史条目时，回退保护只保留待确认页面，不能恢复该条旧网址。
+
+完整后端 357 项、前端 44 项、真实浏览器 11 项测试均通过，冻结安装、静态检查、生产构建及 OpenAPI→TS 无漂移通过。46 项验收完成，代码提交 `9d7961e` 的 [push CI](https://github.com/Roco211/AI-ERP/actions/runs/33977824715) 与 [PR CI](https://github.com/Roco211/AI-ERP/actions/runs/33977827345) 均成功；最终文档提交 SHA 和再次运行的 CI 在交付前核验并记录于仓库外 `Forge-ERP-Sales-v0.8-verification.json`。建议评审合并后创建 `sales-v0.8` 标签，当前销售版本尚未合并或发布。资金、应收应付、收付款与 AI 业务工具尚未开放。
