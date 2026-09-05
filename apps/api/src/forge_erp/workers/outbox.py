@@ -29,6 +29,10 @@ KNOWN_EVENTS |= {
 KNOWN_EVENTS |= {
     f"purchase.document.{action}" for action in ("create", "update", "post", "reverse")
 }
+KNOWN_EVENTS |= {
+    f"sales.order.{action}" for action in ("create", "update", "confirm", "cancel", "close")
+}
+KNOWN_EVENTS |= {f"sales.document.{action}" for action in ("create", "update", "post", "reverse")}
 log = structlog.get_logger()
 
 

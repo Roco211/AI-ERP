@@ -19,6 +19,11 @@ class InventoryEngine:
     def __init__(self, db: AsyncSession, ctx: RuntimeContext, permission: str = "inventory.adjust"):
         if permission not in {
             "inventory.adjust",
+            "sales.order.confirm",
+            "sales.order.cancel",
+            "sales.order.close",
+            "sales.ship",
+            "sales.return",
             "purchase.receive",
             "purchase.return",
             "inventory.opening",
@@ -91,7 +96,8 @@ class InventoryEngine:
             (
                 await self.db.execute(
                     text(
-                        "SELECT l.*,d.warehouse_id,d.target_warehouse_id "
+                        "SELECT l.*,d.warehouse_id,d.target_warehouse_id,d.type AS document_type, "
+                        "d.status AS document_status "
                         "FROM forge.inventory_document_lines l JOIN forge.inventory_documents d "
                         "ON (d.organization_id,d.id)=(l.organization_id,l.document_id) "
                         "WHERE l.organization_id=:org AND l.id=:id"
@@ -124,6 +130,49 @@ class InventoryEngine:
     ) -> dict:
         self.ctx.require(self.permission)
         source = await self.source(line_id, key)
+        if self.permission.startswith("sales.order."):
+            expected_kind = "RESERVE" if self.permission == "sales.order.confirm" else "RELEASE"
+            if source["document_type"] != "SALES_RESERVATION" or kind != expected_kind:
+                raise Problem(409, "INVALID_SOURCE", "销售订单只能建立或释放其库存占用")
+        elif self.permission == "sales.ship":
+            if (
+                source["document_type"] != "SALES_SHIPMENT"
+                or source["document_status"] != "DRAFT"
+                or kind != "ISSUE"
+                or reservation_id is None
+                or source["reservation_source_line_id"] is None
+                or qty != source["base_qty"]
+                or operation != source["document_id"]
+            ):
+                raise Problem(409, "INVALID_SOURCE", "销售出库必须消费原订单的有效库存占用")
+            valid = (
+                await self.db.execute(
+                    text(
+                        "SELECT forge.sales_shipment_source_valid(:org,:line) AND EXISTS "
+                        "(SELECT 1 FROM forge.sales_orders o JOIN forge.sales_document_lines sl "
+                        "ON (sl.organization_id,sl.order_id)=(o.organization_id,o.id) "
+                        "WHERE sl.organization_id=:org AND sl.id=:line AND o.status='CONFIRMED')"
+                    ),
+                    {"org": self.ctx.organization_id, "line": line_id},
+                )
+            ).scalar_one()
+            if not valid:
+                raise Problem(409, "INVALID_SOURCE", "销售出库与原订单占用来源不一致")
+        elif self.permission == "sales.return":
+            if (
+                source["document_type"] != "SALES_RETURN"
+                or source["document_status"] != "DRAFT"
+                or kind != "RECEIVE"
+                or reservation_id is not None
+                or cost is not None
+                or value is None
+                or qty != source["base_qty"]
+                or operation != source["document_id"]
+            ):
+                raise Problem(409, "INVALID_SOURCE", "销售退货必须按原出库准确金额入库")
+            await self._validate_sales_return(source, value)
+        elif source["document_type"].startswith("SALES_"):
+            raise Problem(409, "SALES_COMMAND_REQUIRED", "销售库存必须通过销售命令操作")
         old = self.state(key)
         reservation = None
         if reservation_id:
@@ -142,7 +191,12 @@ class InventoryEngine:
             )
             if (
                 reservation is None
-                or reservation["line_id"] != line_id
+                or reservation["line_id"]
+                != (
+                    source["reservation_source_line_id"]
+                    if self.permission == "sales.ship"
+                    else line_id
+                )
                 or (reservation["warehouse_id"], reservation["product_id"]) != key
             ):
                 raise Problem(404, "NOT_FOUND", "占用来源不存在或不属于本次操作")
@@ -188,6 +242,83 @@ class InventoryEngine:
         return await self._append(
             key, source, operation, kind, old, new, reservation_id, rd, cd, ld
         )
+
+    async def _validate_sales_return(self, source: dict, value: Decimal) -> None:
+        from forge_erp.modules.sales.domain.values import return_values
+
+        params = {"org": self.ctx.organization_id, "line": source["id"]}
+        valid = (
+            await self.db.execute(
+                text("SELECT forge.sales_return_source_valid(:org,:line)"), params
+            )
+        ).scalar_one()
+        if not valid:
+            raise Problem(409, "INVALID_SOURCE", "销售退货与原出库来源不一致")
+        original = (
+            (
+                await self.db.execute(
+                    text(
+                        "SELECT l.qty,sl.unit_price,sl.amount,sl.return_cost,"
+                        "ol.qty AS original_qty,osl.amount AS original_amount,"
+                        "-m.value_delta AS original_cost,ol.id AS original_line_id "
+                        "FROM forge.inventory_document_lines l "
+                        "JOIN forge.sales_document_lines sl ON "
+                        "(sl.organization_id,sl.id)=(l.organization_id,l.id) "
+                        "JOIN forge.inventory_document_lines ol ON "
+                        "(ol.organization_id,ol.id)=(l.organization_id,l.original_line_id) "
+                        "JOIN forge.sales_document_lines osl ON "
+                        "(osl.organization_id,osl.id)=(ol.organization_id,ol.id) "
+                        "JOIN forge.inventory_movements m ON "
+                        "(m.organization_id,m.document_id,m.line_id,m.operation_id)="
+                        "(ol.organization_id,ol.document_id,ol.id,ol.document_id) "
+                        "AND m.kind='ISSUE' WHERE l.organization_id=:org AND l.id=:line"
+                    ),
+                    params,
+                )
+            )
+            .mappings()
+            .one()
+        )
+        returned = (
+            (
+                await self.db.execute(
+                    text(
+                        "SELECT coalesce(sum(l.qty),0) AS qty,"
+                        "coalesce(sum(sl.amount),0) AS amount,"
+                        "coalesce(sum(sl.return_cost),0) AS cost "
+                        "FROM forge.sales_document_lines sl "
+                        "JOIN forge.inventory_document_lines l ON "
+                        "(l.organization_id,l.id)=(sl.organization_id,sl.id) "
+                        "JOIN forge.inventory_documents d ON "
+                        "(d.organization_id,d.id)=(l.organization_id,l.document_id) "
+                        "JOIN forge.sales_documents sd ON "
+                        "(sd.organization_id,sd.id)=(d.organization_id,d.id) "
+                        "WHERE sl.organization_id=:org AND sl.shipment_line_id=:original "
+                        "AND d.status='POSTED' AND d.type='SALES_RETURN' AND sd.kind='RETURN'"
+                    ),
+                    params | {"original": original["original_line_id"]},
+                )
+            )
+            .mappings()
+            .one()
+        )
+        try:
+            amount, cost = return_values(
+                original["qty"],
+                original["unit_price"],
+                original["original_qty"],
+                original["original_amount"],
+                original["original_cost"],
+                returned["qty"],
+                returned["amount"],
+                returned["cost"],
+            )
+        except InventoryError as exc:
+            raise Problem(409, exc.code, exc.detail) from exc
+        if amount != original["amount"] or cost != original["return_cost"]:
+            raise Problem(409, "RETURN_QUOTE_CHANGED", "可退金额已变化，请重新保存草稿核对")
+        if value != original["return_cost"]:
+            raise Problem(409, "INVALID_SOURCE", "销售退货金额必须沿用准确成本快照")
 
     async def _append(
         self,
@@ -328,9 +459,39 @@ class InventoryEngine:
         return movement
 
     async def reverse(self, movement: dict, reversal_id: UUID) -> dict:
-        self.ctx.require(
-            "purchase.reverse" if self.permission.startswith("purchase.") else "inventory.reverse"
+        # The caller may supply a mapping, but only the immutable persisted fact
+        # determines quantities, costs, source, and sequence used for correction.
+        original = (
+            (
+                await self.db.execute(
+                    text(
+                        "SELECT * FROM forge.inventory_movements "
+                        "WHERE organization_id=:org AND id=:id"
+                    ),
+                    {"org": self.ctx.organization_id, "id": movement.get("id")},
+                )
+            )
+            .mappings()
+            .first()
         )
+        if original is None or any(
+            original.get(field) != value for field, value in movement.items()
+        ):
+            raise Problem(409, "INVALID_SOURCE", "冲销来源必须是原始库存事实")
+        movement = dict(original)
+        source = await self.source(
+            movement["line_id"], (movement["warehouse_id"], movement["product_id"])
+        )
+        if source["document_type"].startswith("SALES_"):
+            await self._validate_sales_reversal(source, movement, reversal_id)
+        else:
+            if self.permission.startswith("sales."):
+                raise Problem(409, "INVALID_SOURCE", "销售冲销只能引用销售库存事实")
+            self.ctx.require(
+                "purchase.reverse"
+                if self.permission.startswith("purchase.")
+                else "inventory.reverse"
+            )
         key = (movement["warehouse_id"], movement["product_id"])
         if self.rows[key]["movement_sequence"] != movement["sequence"]:
             raise Problem(
@@ -346,7 +507,6 @@ class InventoryEngine:
             )
         except InventoryError as exc:
             raise Problem(409, exc.code, exc.detail) from exc
-        source = await self.source(movement["line_id"], key)
         return await self._append(
             key,
             source,
@@ -361,6 +521,116 @@ class InventoryEngine:
             original=movement,
             reversal_id=reversal_id,
         )
+
+    async def _validate_sales_reversal(
+        self, source: dict, movement: dict, reversal_id: UUID
+    ) -> None:
+        expected = {
+            "SALES_SHIPMENT": ("sales.ship", "ISSUE"),
+            "SALES_RETURN": ("sales.return", "RECEIVE"),
+        }.get(source["document_type"])
+        if expected is None or self.permission != expected[0]:
+            raise Problem(409, "SALES_COMMAND_REQUIRED", "销售库存必须通过对应销售命令操作")
+        self.ctx.require(self.permission)
+        self.ctx.require("sales.reverse")
+        if (
+            source["document_status"] != "POSTED"
+            or movement["kind"] != expected[1]
+            or movement["operation_id"] != source["document_id"]
+            or movement["base_qty"] != source["base_qty"] * (-1 if expected[1] == "ISSUE" else 1)
+        ):
+            raise Problem(409, "INVALID_SOURCE", "仅可冲销已过账销售单据的原始库存事实")
+        valid_reversal = (
+            await self.db.execute(
+                text(
+                    "SELECT EXISTS(SELECT 1 FROM forge.inventory_reversals "
+                    "WHERE organization_id=:org AND id=:id AND document_id=:doc)"
+                ),
+                {"org": self.ctx.organization_id, "id": reversal_id, "doc": source["document_id"]},
+            )
+        ).scalar_one()
+        if not valid_reversal:
+            raise Problem(409, "INVALID_SOURCE", "冲销凭据与原销售单据不一致")
+        if self.permission == "sales.ship":
+            valid = (
+                await self.db.execute(
+                    text(
+                        "SELECT forge.sales_shipment_source_valid(:org,:line) AND EXISTS "
+                        "(SELECT 1 FROM forge.sales_orders o JOIN forge.sales_document_lines sl "
+                        "ON (sl.organization_id,sl.order_id)=(o.organization_id,o.id) "
+                        "WHERE sl.organization_id=:org AND sl.id=:line AND o.status='CONFIRMED')"
+                    ),
+                    {"org": self.ctx.organization_id, "line": source["id"]},
+                )
+            ).scalar_one()
+            effective_returns = (
+                await self.db.execute(
+                    text(
+                        "SELECT EXISTS(SELECT 1 FROM forge.sales_documents sd "
+                        "JOIN forge.inventory_documents d ON "
+                        "(d.organization_id,d.id)=(sd.organization_id,sd.id) "
+                        "WHERE sd.organization_id=:org AND sd.original_document_id=:doc "
+                        "AND sd.kind='RETURN' AND d.status='POSTED')"
+                    ),
+                    {"org": self.ctx.organization_id, "doc": source["document_id"]},
+                )
+            ).scalar_one()
+            if not valid or effective_returns:
+                raise Problem(409, "REVERSAL_DEPENDENCY_CONFLICT", "订单已关闭或出库已有有效退货")
+            reservation = (
+                (
+                    await self.db.execute(
+                        text(
+                            "SELECT line_id,warehouse_id,product_id "
+                            "FROM forge.inventory_reservations "
+                            "WHERE organization_id=:org AND id=:id FOR UPDATE"
+                        ),
+                        {"org": self.ctx.organization_id, "id": movement["reservation_id"]},
+                    )
+                )
+                .mappings()
+                .first()
+            )
+            if (
+                reservation is None
+                or reservation["line_id"] != source["reservation_source_line_id"]
+                or reservation["warehouse_id"] != movement["warehouse_id"]
+                or reservation["product_id"] != movement["product_id"]
+                or movement["reserved_qty_delta"] != movement["base_qty"]
+                or movement["reservation_consumed_delta"] != -movement["base_qty"]
+                or movement["reservation_reserved_delta"] != 0
+                or movement["reservation_released_delta"] != 0
+            ):
+                raise Problem(409, "INVALID_SOURCE", "原出库占用事实与来源不一致")
+        else:
+            valid = (
+                await self.db.execute(
+                    text(
+                        "SELECT forge.sales_return_source_valid(:org,:line) AND EXISTS "
+                        "(SELECT 1 FROM forge.sales_document_lines WHERE organization_id=:org "
+                        "AND id=:line AND return_cost=:value)"
+                    ),
+                    {
+                        "org": self.ctx.organization_id,
+                        "line": source["id"],
+                        "value": movement["value_delta"],
+                    },
+                )
+            ).scalar_one()
+            if (
+                not valid
+                or movement["reservation_id"] is not None
+                or any(
+                    movement[field] != 0
+                    for field in (
+                        "reserved_qty_delta",
+                        "reservation_reserved_delta",
+                        "reservation_consumed_delta",
+                        "reservation_released_delta",
+                    )
+                )
+            ):
+                raise Problem(409, "INVALID_SOURCE", "销售退货冲销不能改变订单占用")
 
     async def reconcile(self, *, repair: bool = False) -> list[dict]:
         self.ctx.require("inventory.reconcile")

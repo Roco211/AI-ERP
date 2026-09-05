@@ -22,6 +22,9 @@ from forge_erp.core.config import settings
         "0005_inventory",
         "0006_inventory_snapshot",
         "0007_inventory_projection",
+        "0008_purchasing",
+        "0009_sales",
+        "0010_sales_shipments",
     ],
 )
 def test_clean_and_bootstrap_migrations(baseline):
@@ -62,6 +65,9 @@ def test_clean_and_bootstrap_migrations(baseline):
                 "0005_inventory",
                 "0006_inventory_snapshot",
                 "0007_inventory_projection",
+                "0008_purchasing",
+                "0009_sales",
+                "0010_sales_shipments",
             ):
                 with target.begin() as db:
                     seed_upgrade_fixture(
@@ -71,12 +77,24 @@ def test_clean_and_bootstrap_migrations(baseline):
                             "0005_inventory",
                             "0006_inventory_snapshot",
                             "0007_inventory_projection",
+                            "0008_purchasing",
+                            "0009_sales",
+                            "0010_sales_shipments",
                         ),
                     )
+                if revision in {"0008_purchasing", "0009_sales", "0010_sales_shipments"}:
+                    with target.begin() as db:
+                        seed_purchase_upgrade_fixture(db)
+                if revision in {"0009_sales", "0010_sales_shipments"}:
+                    with target.begin() as db:
+                        seed_sales_upgrade_fixture(db)
+                if revision == "0010_sales_shipments":
+                    with target.begin() as db:
+                        seed_shipment_upgrade_fixture(db)
         with target.connect() as db:
             assert (
                 db.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
-                == "0008_purchasing"
+                == "0011_sales_returns"
             )
             assert db.execute(text("SELECT count(*) FROM forge.products")).scalar_one() == (
                 1
@@ -86,6 +104,9 @@ def test_clean_and_bootstrap_migrations(baseline):
                     "0005_inventory",
                     "0006_inventory_snapshot",
                     "0007_inventory_projection",
+                    "0008_purchasing",
+                    "0009_sales",
+                    "0010_sales_shipments",
                 )
                 else 0
             )
@@ -94,6 +115,9 @@ def test_clean_and_bootstrap_migrations(baseline):
                 "0005_inventory",
                 "0006_inventory_snapshot",
                 "0007_inventory_projection",
+                "0008_purchasing",
+                "0009_sales",
+                "0010_sales_shipments",
             ):
                 assert db.execute(text("SELECT price FROM forge.product_prices")).scalar_one() == 2
                 assert (
@@ -106,23 +130,99 @@ def test_clean_and_bootstrap_migrations(baseline):
                 "0005_inventory",
                 "0006_inventory_snapshot",
                 "0007_inventory_projection",
+                "0008_purchasing",
+                "0009_sales",
+                "0010_sales_shipments",
             ):
+                assert db.execute(
+                    text("SELECT on_hand_qty FROM forge.inventory_balances")
+                ).scalar_one() == (3 if baseline == "0010_sales_shipments" else 4)
                 assert (
                     db.execute(
-                        text("SELECT on_hand_qty FROM forge.inventory_balances")
-                    ).scalar_one()
-                    == 4
-                )
-                assert (
-                    db.execute(
-                        text("SELECT value_delta FROM forge.inventory_movements")
+                        text(
+                            "SELECT value_delta FROM forge.inventory_movements WHERE kind='RECEIVE'"
+                        )
                     ).scalar_one()
                     == 5
                 )
                 assert (
-                    db.execute(text("SELECT status FROM forge.inventory_documents")).scalar_one()
+                    db.execute(
+                        text("SELECT status FROM forge.inventory_documents WHERE type='OPENING'")
+                    ).scalar_one()
                     == "POSTED"
                 )
+            if baseline in {"0008_purchasing", "0009_sales", "0010_sales_shipments"}:
+                assert (
+                    db.execute(text("SELECT status FROM forge.purchase_orders")).scalar_one()
+                    == "CONFIRMED"
+                )
+                assert (
+                    db.execute(text("SELECT amount FROM forge.purchase_order_lines")).scalar_one()
+                    == 14
+                )
+                assert (
+                    db.execute(text("SELECT count(*) FROM forge.role_permissions")).scalar_one()
+                    == 1
+                )
+            if baseline in {"0009_sales", "0010_sales_shipments"}:
+                assert (
+                    db.execute(text("SELECT status FROM forge.sales_orders")).scalar_one()
+                    == "CONFIRMED"
+                )
+                assert (
+                    db.execute(
+                        text("SELECT price_source->>'source' FROM forge.sales_order_lines")
+                    ).scalar_one()
+                    == "manual"
+                )
+                assert db.execute(
+                    text("SELECT remaining_qty FROM forge.inventory_reservations")
+                ).scalar_one() == (1 if baseline == "0010_sales_shipments" else 2)
+                assert db.execute(
+                    text(
+                        "SELECT count(*) FROM forge.inventory_document_lines WHERE "
+                        "reservation_source_line_id IS NOT NULL"
+                    )
+                ).scalar_one() == (1 if baseline == "0010_sales_shipments" else 0)
+            if baseline == "0010_sales_shipments":
+                assert (
+                    db.execute(
+                        text(
+                            "SELECT -value_delta FROM forge.inventory_movements WHERE kind='ISSUE'"
+                        )
+                    ).scalar_one()
+                    == 1.25
+                )
+                assert (
+                    db.execute(
+                        text(
+                            "SELECT count(*) FROM forge.sales_document_lines WHERE return_cost "
+                            "IS NOT NULL"
+                        )
+                    ).scalar_one()
+                    == 0
+                )
+                assert (
+                    db.execute(
+                        text(
+                            "SELECT count(*) FROM forge.inventory_document_lines WHERE "
+                            "original_line_id IS NOT NULL"
+                        )
+                    ).scalar_one()
+                    == 0
+                )
+            for table in (
+                "sales_orders",
+                "sales_order_lines",
+                "sales_documents",
+                "sales_document_lines",
+            ):
+                assert db.execute(
+                    text(
+                        "SELECT relforcerowsecurity FROM pg_class WHERE oid=CAST(:name AS regclass)"
+                    ),
+                    {"name": "forge." + table},
+                ).scalar_one()
             assert db.execute(
                 text(
                     "SELECT relforcerowsecurity FROM pg_class WHERE oid='forge.products'::regclass"
@@ -205,3 +305,164 @@ def seed_upgrade_fixture(db, with_stock):
             ),
             p,
         )
+
+
+def seed_purchase_upgrade_fixture(db):
+    row = (
+        db.execute(
+            text(
+                "SELECT b.organization_id AS org,b.warehouse_id AS wh,b.product_id AS product,"
+                "p.base_unit_id AS unit,u.id AS actor FROM "
+                "forge.inventory_balances b JOIN forge.products p "
+                "ON p.id=b.product_id JOIN forge.users u ON u.organization_id=b.organization_id"
+            )
+        )
+        .mappings()
+        .one()
+    )
+    params = dict(row) | {"supplier": uuid4(), "order": uuid4(), "role": uuid4()}
+    statements = [
+        "INSERT INTO forge.suppliers(id,organization_id,code,name) "
+        "VALUES (:supplier,:org,'OLD','Old supplier')",
+        "INSERT INTO forge.roles(id,organization_id,code,name) VALUES "
+        "(:role,:org,'OLD','Old role')",
+        "INSERT INTO forge.role_permissions VALUES (:org,:role,'purchase.order.confirm')",
+        "INSERT INTO forge.purchase_orders(id,organization_id,number,supplier_id,supplier_name,"
+        "warehouse_id,warehouse_name,reason,amount,created_by) VALUES "
+        "(:order,:org,'OLD-PO',:supplier,'Old supplier',:wh,'主仓','历史采购',14,:actor)",
+        "INSERT INTO "
+        "forge.purchase_order_lines(organization_id,order_id,line_no,product_id,unit_id,"
+        "product_label,unit_label,qty,unit_to_base_factor,base_qty,"
+        "conversion_version,unit_price,amount) "
+        "VALUES (:org,:order,1,:product,:unit,'Bolt','个',7,1,7,1,2,14)",
+        "UPDATE forge.purchase_orders SET "
+        "status='CONFIRMED',confirmed_at=now(),version=2 WHERE id=:order",
+    ]
+    for sql in statements:
+        db.execute(text(sql), params)
+
+
+def seed_sales_upgrade_fixture(db):
+    """Preserve a real S1 confirmed order, reservation source and ledger through S2 migration."""
+    row = (
+        db.execute(
+            text(
+                "SELECT b.organization_id AS org,b.warehouse_id AS wh,"
+                "b.product_id AS product,p.base_unit_id AS unit,u.id AS actor "
+                "FROM forge.inventory_balances b "
+                "JOIN forge.products p ON p.id=b.product_id "
+                "JOIN forge.users u ON u.organization_id=b.organization_id"
+            )
+        )
+        .mappings()
+        .one()
+    )
+    params = dict(row) | {
+        "customer": uuid4(),
+        "order": uuid4(),
+        "line": uuid4(),
+        "doc": uuid4(),
+        "source": uuid4(),
+        "reservation": uuid4(),
+    }
+    statements = [
+        "INSERT INTO forge.customers(id,organization_id,code,name) "
+        "VALUES(:customer,:org,'OLD-C','Sales customer')",
+        "INSERT INTO "
+        "forge.sales_orders(id,organization_id,number,customer_id,"
+        "customer_name,warehouse_id,warehouse_name,reason,amount,"
+        "created_by) VALUES(:order,:org,'OLD-SO',:customer,'Sales "
+        "customer',:wh,'主仓','Sales fixture',4,:actor)",
+        "INSERT INTO "
+        "forge.sales_order_lines(id,organization_id,order_id,line_no,"
+        "product_id,unit_id,product_label,unit_label,qty,"
+        "unit_to_base_factor,base_qty,conversion_version,pricing_mode,"
+        "price_source,unit_price,amount) "
+        "VALUES(:line,:org,:order,1,:product,:unit,'Bolt','个',2,1,2,1,"
+        "'MANUAL','{\"source\":\"manual\"}',2,4)",
+        "INSERT INTO "
+        "forge.inventory_documents(id,organization_id,number,type,reason,"
+        "warehouse_id,created_by) "
+        "VALUES(:doc,:org,'OLD-SR','SALES_RESERVATION','Sales "
+        "fixture',:wh,:actor)",
+        "INSERT INTO "
+        "forge.sales_documents(id,organization_id,order_id,kind) "
+        "VALUES(:doc,:org,:order,'RESERVATION')",
+        "INSERT INTO "
+        "forge.inventory_document_lines(id,organization_id,document_id,"
+        "line_no,product_id,unit_id,product_label,unit_label,qty,"
+        "unit_to_base_factor,base_qty,conversion_version,direction) "
+        "VALUES(:source,:org,:doc,1,:product,:unit,'Bolt','个',2,1,2,1,"
+        "'OUT')",
+        "INSERT INTO "
+        "forge.sales_document_lines(id,organization_id,document_id,"
+        "order_id,order_line_id,unit_price,amount) "
+        "VALUES(:source,:org,:doc,:order,:line,2,4)",
+        "INSERT INTO "
+        "forge.inventory_reservations(id,organization_id,warehouse_id,"
+        "product_id,document_id,line_id,reserved_qty,remaining_qty,"
+        "version) "
+        "VALUES(:reservation,:org,:wh,:product,:doc,:source,2,2,1)",
+        "INSERT INTO "
+        "forge.inventory_movements(organization_id,warehouse_id,"
+        "product_id,sequence,kind,base_qty,reserved_qty_delta,"
+        "value_delta,before_avg_cost,after_avg_cost,document_id,line_id,"
+        "operation_id,reservation_id,reservation_reserved_delta,actor_id,"
+        "request_id) "
+        "VALUES(:org,:wh,:product,2,'RESERVE',0,2,0,1.25,1.25,:doc,"
+        ":source,:doc,:reservation,2,:actor,'sales-migration-fixture')",
+        "UPDATE forge.inventory_balances SET "
+        "reserved_qty=2,version=version+1,movement_sequence=2 WHERE "
+        "organization_id=:org",
+        "UPDATE forge.inventory_documents SET "
+        "status='POSTED',posted_at=now(),version=2 WHERE id=:doc",
+        "UPDATE forge.sales_orders SET "
+        "status='CONFIRMED',confirmed_at=now(),version=2 WHERE id=:order",
+    ]
+    for sql in statements:
+        db.execute(text(sql), params)
+
+
+def seed_shipment_upgrade_fixture(db):
+    """Preserve a posted S2 shipment, its separate source and consumed reservation."""
+    row = (
+        db.execute(
+            text("""SELECT sd.organization_id AS org,sd.order_id AS order,
+        sl.order_line_id AS orderline,l.id AS source,d.warehouse_id AS wh,
+        l.product_id AS product,l.unit_id AS unit,d.created_by AS actor,r.id AS reservation
+        FROM forge.sales_documents sd JOIN forge.inventory_documents d ON d.id=sd.id
+        JOIN forge.sales_document_lines sl ON sl.document_id=sd.id
+        JOIN forge.inventory_document_lines l ON l.id=sl.id
+        JOIN forge.inventory_reservations r ON r.line_id=l.id
+        WHERE sd.kind='RESERVATION'""")
+        )
+        .mappings()
+        .one()
+    )
+    params = dict(row) | {"doc": uuid4(), "line": uuid4()}
+    statements = [
+        "INSERT INTO forge.inventory_documents(id,organization_id,number,type,reason,"
+        "warehouse_id,created_by) VALUES(:doc,:org,'OLD-SS','SALES_SHIPMENT','Shipment fixture',"
+        ":wh,:actor)",
+        "INSERT INTO forge.sales_documents(id,organization_id,order_id,kind) VALUES(:doc,:org,"
+        ":order,'SHIPMENT')",
+        "INSERT INTO forge.inventory_document_lines(id,organization_id,document_id,line_no,"
+        "product_id,unit_id,product_label,unit_label,qty,unit_to_base_factor,base_qty,"
+        "conversion_version,direction,reservation_source_line_id) VALUES(:line,:org,:doc,1,"
+        ":product,:unit,'Bolt','个',1,1,1,1,'OUT',:source)",
+        "INSERT INTO forge.sales_document_lines(id,organization_id,document_id,order_id,"
+        "order_line_id,unit_price,amount) VALUES(:line,:org,:doc,:order,:orderline,2,2)",
+        "INSERT INTO forge.inventory_movements(organization_id,warehouse_id,product_id,sequence,"
+        "kind,base_qty,reserved_qty_delta,value_delta,before_avg_cost,after_avg_cost,"
+        "document_id,line_id,operation_id,reservation_id,reservation_consumed_delta,actor_id,"
+        "request_id) VALUES(:org,:wh,:product,3,'ISSUE',-1,-1,-1.25,1.25,1.25,:doc,:line,:doc,"
+        ":reservation,1,:actor,'sales-shipment-migration-fixture')",
+        "UPDATE forge.inventory_reservations SET consumed_qty=1,remaining_qty=1,"
+        "version=version+1 WHERE id=:reservation",
+        "UPDATE forge.inventory_balances SET on_hand_qty=3,reserved_qty=1,inventory_value=3.75,"
+        "version=version+1,movement_sequence=3 WHERE organization_id=:org",
+        "UPDATE forge.inventory_documents SET status='POSTED',posted_at=now(),version=2 WHERE "
+        "id=:doc",
+    ]
+    for sql in statements:
+        db.execute(text(sql), params)

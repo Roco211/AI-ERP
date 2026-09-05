@@ -24,6 +24,7 @@ import {
 import { Dialog } from "@base-ui/react/dialog";
 import { api, ApiError, getProfile } from "@/lib/api";
 import { Button } from "@/components/ui/button";
+import { SalesWorkspace } from "@/features/sales/workspace";
 import { PurchasingWorkspace } from "@/features/purchasing/workspace";
 import { InventoryWorkspace } from "@/features/inventory/workspace";
 import { CatalogWorkspace } from "@/features/catalog/workspace";
@@ -157,7 +158,7 @@ export function ERPShell({
         <div className="mt-auto hidden border-t border-border px-3 pt-4 md:block">
           <p className="text-xs font-medium">一步一步，把生意做好。</p>
           <p className="mt-2 text-[10px] text-muted-foreground">
-            Forge ERP · v0.7
+            Forge ERP · v0.8
           </p>
         </div>
       </aside>
@@ -215,11 +216,13 @@ export function ERPShell({
           <p className="mt-3 text-sm text-muted-foreground">
             {section === "profile"
               ? "你的账户与所属企业。"
-              : section === "purchase"
-                ? "从采购订单到分批收货，追溯价格与退货。"
-                : section === "inventory"
-                ? "按仓库查看库存，追溯每次变动。"
-                : "工作空间已就绪，业务功能将逐步开放。"}
+              : section === "sales"
+                ? "从客户开单到出库退货，查看成交价格与经营毛利。"
+                : section === "purchase"
+                  ? "从采购订单到分批收货，追溯价格与退货。"
+                  : section === "inventory"
+                    ? "按仓库查看库存，追溯每次变动。"
+                    : "工作空间已就绪，业务功能将逐步开放。"}
           </p>
           {["products", "customers", "suppliers"].includes(section) ? (
             <CatalogWorkspace
@@ -227,6 +230,8 @@ export function ERPShell({
               section={section}
               permissions={me.permissions}
             />
+          ) : section === "sales" ? (
+            <SalesWorkspace permissions={me.permissions} />
           ) : section === "purchase" ? (
             <PurchasingWorkspace permissions={me.permissions} />
           ) : section === "inventory" ? (
@@ -279,11 +284,9 @@ export function ERPShell({
                     从清晰的工作空间开始。
                   </h2>
                   <p className="mt-3 text-sm leading-7 text-muted-foreground">
-                    当前可以登录、查看个人信息并浏览导航。
                     {section === "dashboard"
-                      ? "销售、采购、库存等业务模块"
-                      : current?.label}
-                    将在后续版本开放。
+                      ? "销售、采购与库存工作台已开放，可从下方进入并按账户权限办理业务。"
+                      : `${current?.label ?? "此功能"}将在后续版本开放。`}
                   </p>
                   <Link
                     href="/profile"
@@ -303,7 +306,7 @@ export function ERPShell({
                   <div className="mb-4 flex items-center justify-between">
                     <h2 className="text-sm font-semibold">业务空间</h2>
                     <span className="text-xs text-muted-foreground">
-                      即将开放
+                      按账户权限使用
                     </span>
                   </div>
                   <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -325,7 +328,9 @@ export function ERPShell({
                           <p className="mt-2 text-xs text-muted-foreground">
                             {path === "inventory"
                               ? "查看库存、流水与库存单据"
-                              : "功能正在准备中"}
+                              : path === "sales"
+                                ? "客户开单、出库退货与成交历史"
+                                : "采购开单、分批收货与退货"}
                           </p>
                         </Link>
                       ))}

@@ -91,7 +91,16 @@ class InventoryLineRead(BaseModel):
 class InventoryDocumentRead(BaseModel):
     id: UUID
     number: str
-    type: Kind | Literal["PURCHASE_RECEIPT", "PURCHASE_RETURN"]
+    type: (
+        Kind
+        | Literal[
+            "PURCHASE_RECEIPT",
+            "PURCHASE_RETURN",
+            "SALES_RESERVATION",
+            "SALES_SHIPMENT",
+            "SALES_RETURN",
+        ]
+    )
     status: Status
     version: int
     reason: str
@@ -141,6 +150,10 @@ class InventoryMovementRead(BaseModel):
     product_id: UUID
     document_id: UUID
     document_number: str
+    document_type: str
+    sales_order_id: UUID | None = Field(
+        default=None, description="Originating sales order; requires sales.read"
+    )
     product_label: str
     unit_label: str
     warehouse_name: str
