@@ -1,4 +1,10 @@
-# Forge ERP — Funds v0.9 and Operations v0.10 implementation
+# Forge ERP — AI assistant v0.11 implementation
+
+## Current AI implementation authorization (2026-09-06)
+
+Funds and Operations were merged/released as prereleases; main is `ed7749d03b291073d2d86bb846dfa87130422be5`, database `0015_reporting`. See `../Forge-ERP-v0.9-v0.10-release-record.md`. User requested continuing and explicitly selected “明确规范后直接分步实现” for v0.11: inventory/operating questions, daily briefs, natural-language sales/purchase draft previews and reviewed creation. This supersedes historical AI prohibitions only for this scope. Work on `ai/v0.11`; read `docs/ai-v0.11.md`, its acceptance and ADR0017. Complete A0–A5 incrementally with tests. Do not stop at the specification or claim mock responses prove real model acceptance. The user then explicitly required WEB-configurable LLM suppliers: implement organization-admin settings for custom OpenAI-compatible base URL/model/encrypted key, enabling and synthetic connection tests. Do not require terminal credential entry or freeze the earlier preset provider. Provider-config changes invalidate old conversation context; credentials never appear in read DTOs/logs/audit.
+
+Keep one LangGraph assistant and fixed tools; current authenticated identity/permissions never come from the model/checkpoint. New AI tables require organization+owner FORCE RLS. Existing Query output must pass its Pydantic DTO before model use. Model waits occur outside database transactions; respect reporting snapshot vs pricing FOR SHARE differences. All displayed business numbers and sources come from server facts. No overdue claims without due-date facts. Risk 1 is reviewed creation only; no confirmation/POST/cash or other Risk 2–4 tools. AI draft receipt, Command and Audit/Outbox commit atomically and remain deduplicated after generic idempotency expiry. Preserve existing data/migrations/tags; no implicit merge/release, production deployment or v1.0 scope.
 
 ## Operations implementation baseline
 
@@ -131,3 +137,10 @@ See docs/operations-v0.10-delivery.md, its 42-item checklist and full tree. PR #
 ## Operations accepted code and final-delivery gate
 
 Code `3189c7c5b169c4218eabee23ed8c928bdfe26107` passed push CI33985790211 and PR CI33985818640, each with 651 backend, 99 frontend and 18 production-browser tests. The 42-item implementation acceptance and delivery documentation are complete. The final documentation commit MUST also pass its own push/PR CI before final delivery; record its exact SHA and results in ../Forge-ERP-Operations-v0.10-verification.json. No required implementation remains after that gate. Do not start another phase or merge/tag/release implicitly.
+
+
+## AI v0.11 final-delivery gate
+
+A0–A5 implementation is complete on `ai/v0.11`, with the user's web-managed provider requirement implemented. Code `0c585f42ad973f0c3a1466354474af829b6d85ee` passed push CI33993106772 and PR CI33993119410, each with 1069 backend, 136 frontend and 24 production-browser tests. Real configured-model product/inventory queries and both exact draft previews passed; previews were rejected without changing order counts. An ambiguous model request was safely rejected, not counted as correct model clarification. See the 47-item acceptance and delivery/evidence documents.
+
+The final documentation commit MUST pass its own push/PR CI before final delivery. Record its exact SHA and counts in `../Forge-ERP-AI-v0.11-verification.json`, without treating the code CI as its proof. Live runtime is 0.11.0, migration head0018_ai_retention; original account, encrypted provider configuration and posted facts are preserved. Browser test tenants/fault objects have no residue. LangSmith remote remains disabled/unconfigured; its metadata-only boundary is tested locally. Do not start v1.0, merge PR #7, tag or release without user authorization.

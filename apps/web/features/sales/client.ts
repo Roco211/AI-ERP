@@ -1,9 +1,9 @@
 import { api } from "@/lib/api";
 import { unwrap } from "@/features/inventory/client";
-import type { components } from "@/generated/api/schema";
+import type { components, paths } from "@/generated/api/schema";
 export type Order = components["schemas"]["SalesOrderRead"];
 export type StockDocument = components["schemas"]["SalesDocumentRead"];
-export type OrderInput = components["schemas"]["SalesOrderInput"];
+export type OrderInput = paths["/api/v1/sales/orders"]["post"]["requestBody"]["content"]["application/json"];
 export type DocumentInput = components["schemas"]["SalesShipmentInput"];
 export type Receipt =
   | components["schemas"]["SalesReceipt"]

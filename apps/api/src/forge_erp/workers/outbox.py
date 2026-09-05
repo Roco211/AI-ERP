@@ -53,6 +53,19 @@ KNOWN_EVENTS |= {
     "catalog.import.expired",
     "replenishment.purchase.created",
 }
+KNOWN_EVENTS |= {
+    "ai.provider.updated",
+    "ai.provider.tested",
+    "ai.conversation.created",
+    "ai.conversation.deleted",
+    "ai.turn.claimed",
+    "ai.turn.finished",
+    "ai.proposal.created",
+    "ai.proposal.edited",
+    "ai.proposal.approved",
+    "ai.proposal.rejected",
+    "ai.retention.purged",
+}
 log = structlog.get_logger()
 
 

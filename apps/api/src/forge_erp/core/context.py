@@ -11,6 +11,7 @@ class RuntimeContext:
     permissions: frozenset[str]
     request_id: str
     source: str = "WEB"
+    conversation_id: UUID | None = None
 
     def require(self, permission: str) -> None:
         if permission not in self.permissions:
