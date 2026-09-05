@@ -2,6 +2,7 @@
 const key = "__forge_history_v1";
 type Entry = { scope: string; index: number; id: string };
 let installed = false;
+let traversalGuard: ((event: PopStateEvent) => void) | undefined;
 
 export function historyEntry(state: unknown): Entry | null {
   if (!state || typeof state !== "object") return null;
@@ -31,6 +32,10 @@ function withEntry(state: unknown, entry: Entry) {
 export function installHistoryTracking() {
   if (installed) return;
   installed = true;
+  // Native Window popstate dispatch can reach an earlier router listener before
+  // a capture listener installed later. Reserve this slot at application mount,
+  // before Next's passive effect; guards only change its active callback.
+  window.addEventListener("popstate", (event) => traversalGuard?.(event), true);
   const push = window.history.pushState.bind(window.history);
   const replace = window.history.replaceState.bind(window.history);
   replace(
@@ -55,5 +60,13 @@ export function installHistoryTracking() {
   window.history.replaceState = (state: unknown, unused, url) => {
     const entry = historyEntry(window.history.state) ?? initialEntry();
     replace(withEntry(state, entry), unused, url);
+  };
+}
+
+export function guardHistoryTraversals(guard: (event: PopStateEvent) => void) {
+  installHistoryTracking();
+  traversalGuard = guard;
+  return () => {
+    if (traversalGuard === guard) traversalGuard = undefined;
   };
 }

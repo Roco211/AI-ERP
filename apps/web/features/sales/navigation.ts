@@ -1,6 +1,10 @@
 "use client";
 import { useEffect } from "react";
-import { historyEntry, installHistoryTracking } from "@/lib/navigation-history";
+import {
+  guardHistoryTraversals,
+  historyEntry,
+  installHistoryTracking,
+} from "@/lib/navigation-history";
 
 /** Keep an unresolved submission mounted, including same-document history navigation. */
 export function usePendingNavigationGuard(locked: boolean) {
@@ -53,7 +57,7 @@ export function usePendingNavigationGuard(locked: boolean) {
     };
     document.addEventListener("click", navigation, true);
     window.addEventListener("beforeunload", leave);
-    window.addEventListener("popstate", historyNavigation, true);
+    const removeHistoryGuard = guardHistoryTraversals(historyNavigation);
     return () => {
       if (restoreTimer !== undefined) {
         window.clearTimeout(restoreTimer);
@@ -63,7 +67,7 @@ export function usePendingNavigationGuard(locked: boolean) {
       }
       document.removeEventListener("click", navigation, true);
       window.removeEventListener("beforeunload", leave);
-      window.removeEventListener("popstate", historyNavigation, true);
+      removeHistoryGuard();
     };
   }, [locked]);
 }

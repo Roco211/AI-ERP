@@ -4,27 +4,37 @@ import {
   renderHook,
   waitFor,
 } from "@testing-library/react";
-import { afterEach, expect, test, vi } from "vitest";
+import { afterAll, afterEach, expect, test, vi } from "vitest";
 import { usePendingNavigationGuard } from "@/features/sales/navigation";
 import { historyEntry, installHistoryTracking } from "@/lib/navigation-history";
 
 const replaceUntracked = window.history.replaceState.bind(window.history);
 const removals: (() => void)[] = [];
+let capturePaths: string[] | null = null;
+let nextTraversal: (() => void) | null = null;
+const earlyObserver = () => {
+  capturePaths?.push(window.location.pathname);
+  const done = nextTraversal;
+  nextTraversal = null;
+  done?.();
+};
+window.addEventListener("popstate", earlyObserver, true);
+afterAll(() => window.removeEventListener("popstate", earlyObserver, true));
 
 afterEach(() => {
   cleanup();
   for (const remove of removals.splice(0)) remove();
+  capturePaths = null;
+  nextTraversal = null;
   window.history.replaceState({}, "", "/");
 });
 
 function observe() {
   const paths: string[] = [];
-  const capture = () => paths.push(window.location.pathname);
+  capturePaths = paths;
   const router = vi.fn();
-  window.addEventListener("popstate", capture, true);
   window.addEventListener("popstate", router);
   removals.push(() => {
-    window.removeEventListener("popstate", capture, true);
     window.removeEventListener("popstate", router);
   });
   return { paths, router };
@@ -40,7 +50,16 @@ function state(section: string) {
 }
 
 test("application push and replace preserve Next state and distinct entry identities", () => {
+  const add = vi.spyOn(window, "addEventListener");
   installHistoryTracking();
+  const reserved = add.mock.calls.filter(([type]) => type === "popstate");
+  expect(reserved).toHaveLength(1);
+  const view = renderHook(() => usePendingNavigationGuard(true));
+  expect(add.mock.calls.filter(([type]) => type === "popstate")).toHaveLength(
+    1,
+  );
+  view.unmount();
+  add.mockRestore();
   window.history.replaceState(state("dashboard"), "", "/dashboard");
   const initial = historyEntry(window.history.state)!;
   window.history.pushState(state("sales"), "", "/sales");
@@ -155,13 +174,8 @@ test("settling the receipt during a blocked traversal still completes its restor
     initialProps: { locked: true },
   });
   const attempted = new Promise<void>((resolve) => {
-    const done = () => resolve();
-    window.addEventListener("popstate", done, { capture: true, once: true });
-    removals.push(() => window.removeEventListener("popstate", done, true));
+    nextTraversal = resolve;
   });
-  // Observe before the guard (it stops later capture handlers too).
-  view.rerender({ locked: false });
-  view.rerender({ locked: true });
   window.history.back();
   await attempted;
   view.rerender({ locked: false });
