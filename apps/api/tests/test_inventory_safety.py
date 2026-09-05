@@ -502,3 +502,92 @@ async def test_repair_invalidates_stocktake_without_gaps_in_ledger(catalog_clien
             ).scalars()
         ) == [1, 2, 3]
     assert (await reconcile_scope(ctx, key[0], [key[1]]))[0]["differences"] == {}
+
+
+@pytest.mark.parametrize(
+    "kind,permission",
+    [
+        ("openings", "inventory.opening"),
+        ("adjustments", "inventory.adjust"),
+        ("transfers", "inventory.transfer"),
+        ("stocktakes", "inventory.stocktake"),
+    ],
+)
+async def test_each_document_action_requires_its_own_permission(
+    catalog_client, stock, kind, permission
+):
+    doc, body = await draft(catalog_client, stock, kind)
+    with create_engine(settings().migration_database_url).begin() as db:
+        db.execute(
+            text(
+                "DELETE FROM forge.role_permissions WHERE organization_id=:org "
+                "AND permission_code=:permission"
+            ),
+            {"org": stock[0].organization_id, "permission": permission},
+        )
+    assert (await create(catalog_client, "inventory/" + kind, body)).status_code == 403
+    assert (await command(catalog_client, doc)).status_code == 403
+
+
+async def test_historical_snapshot_survives_rename_and_unit_deactivation(catalog_client, stock):
+    c = catalog_client
+    doc, body = await draft(c, stock)
+    posted = (await command(c, doc)).json()
+    before = (await c.get("/api/v1/inventory/documents/" + doc["id"])).json()["lines"]
+    with create_engine(settings().migration_database_url).begin() as db:
+        db.execute(
+            text("UPDATE forge.products SET name='Renamed after posting' WHERE id=:id"),
+            {"id": stock[1][1]},
+        )
+    unit = body["lines"][0]["unit_id"]
+    changed = await create(c, "units/" + unit + "/deactivate", {"expected_version": 1})
+    assert changed.status_code == 200, changed.text
+    assert (await c.get("/api/v1/inventory/documents/" + doc["id"])).json()["lines"] == before
+    assert (
+        await command(c, posted, "reverse", reason="Historical snapshot reversal")
+    ).status_code == 200
+
+
+async def test_conversion_change_waits_for_post_snapshot(catalog_client, stock):
+    from forge_erp.modules.catalog.application.service import write_command
+
+    c = catalog_client
+    doc, body = await draft(c, stock)
+    ctx = replace(
+        stock[0], permissions=stock[0].permissions | {"inventory.opening", "catalog.write"}
+    )
+    conversion = (
+        await c.get("/api/v1/product-units", params={"product_id": str(stock[1][1])})
+    ).json()["items"][0]
+    entered = asyncio.Event()
+
+    async def change():
+        async with sessions.begin() as db:
+            await set_tenant(db, ctx.organization_id)
+            entered.set()
+            return await write_command(
+                db,
+                ctx,
+                "product-units",
+                {
+                    "product_id": stock[1][1],
+                    "unit_id": UUID(body["lines"][0]["unit_id"]),
+                    "unit_to_base_factor": D(1),
+                },
+                uuid4().hex,
+                UUID(conversion["id"]),
+                conversion["version"],
+            )
+
+    async with sessions.begin() as db:
+        await set_tenant(db, ctx.organization_id)
+        # Post holds conversion FOR SHARE until its transaction commits.
+        posted = await documents.transition(db, ctx, UUID(doc["id"]), 1, uuid4().hex, "post")
+        pending = asyncio.create_task(change())
+        await entered.wait()
+        assert not pending.done()
+    changed = await pending
+    assert changed["version"] == conversion["version"] + 1
+    assert posted["status"] == "POSTED"
+    detail = (await c.get("/api/v1/inventory/documents/" + doc["id"])).json()
+    assert detail["lines"][0]["conversion_version"] == conversion["version"]
