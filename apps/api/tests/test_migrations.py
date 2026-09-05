@@ -3,6 +3,7 @@
 import os
 import subprocess
 import sys
+from decimal import Decimal
 from pathlib import Path
 from uuid import uuid4
 
@@ -25,6 +26,7 @@ from forge_erp.core.config import settings
         "0008_purchasing",
         "0009_sales",
         "0010_sales_shipments",
+        "0011_sales_returns",
     ],
 )
 def test_clean_and_bootstrap_migrations(baseline):
@@ -68,6 +70,7 @@ def test_clean_and_bootstrap_migrations(baseline):
                 "0008_purchasing",
                 "0009_sales",
                 "0010_sales_shipments",
+                "0011_sales_returns",
             ):
                 with target.begin() as db:
                     seed_upgrade_fixture(
@@ -80,21 +83,30 @@ def test_clean_and_bootstrap_migrations(baseline):
                             "0008_purchasing",
                             "0009_sales",
                             "0010_sales_shipments",
+                            "0011_sales_returns",
                         ),
                     )
-                if revision in {"0008_purchasing", "0009_sales", "0010_sales_shipments"}:
+                if revision in {
+                    "0008_purchasing",
+                    "0009_sales",
+                    "0010_sales_shipments",
+                    "0011_sales_returns",
+                }:
                     with target.begin() as db:
                         seed_purchase_upgrade_fixture(db)
-                if revision in {"0009_sales", "0010_sales_shipments"}:
+                if revision in {"0009_sales", "0010_sales_shipments", "0011_sales_returns"}:
                     with target.begin() as db:
                         seed_sales_upgrade_fixture(db)
-                if revision == "0010_sales_shipments":
+                if revision in {"0010_sales_shipments", "0011_sales_returns"}:
                     with target.begin() as db:
                         seed_shipment_upgrade_fixture(db)
+                if revision == "0011_sales_returns":
+                    with target.begin() as db:
+                        seed_return_upgrade_fixture(db)
         with target.connect() as db:
             assert (
                 db.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
-                == "0011_sales_returns"
+                == "0012_funds"
             )
             assert db.execute(text("SELECT count(*) FROM forge.products")).scalar_one() == (
                 1
@@ -107,6 +119,7 @@ def test_clean_and_bootstrap_migrations(baseline):
                     "0008_purchasing",
                     "0009_sales",
                     "0010_sales_shipments",
+                    "0011_sales_returns",
                 )
                 else 0
             )
@@ -118,6 +131,7 @@ def test_clean_and_bootstrap_migrations(baseline):
                 "0008_purchasing",
                 "0009_sales",
                 "0010_sales_shipments",
+                "0011_sales_returns",
             ):
                 assert db.execute(text("SELECT price FROM forge.product_prices")).scalar_one() == 2
                 assert (
@@ -133,14 +147,22 @@ def test_clean_and_bootstrap_migrations(baseline):
                 "0008_purchasing",
                 "0009_sales",
                 "0010_sales_shipments",
+                "0011_sales_returns",
             ):
                 assert db.execute(
                     text("SELECT on_hand_qty FROM forge.inventory_balances")
-                ).scalar_one() == (3 if baseline == "0010_sales_shipments" else 4)
+                ).scalar_one() == (
+                    Decimal("3.4")
+                    if baseline == "0011_sales_returns"
+                    else 3
+                    if baseline == "0010_sales_shipments"
+                    else 4
+                )
                 assert (
                     db.execute(
                         text(
-                            "SELECT value_delta FROM forge.inventory_movements WHERE kind='RECEIVE'"
+                            "SELECT value_delta FROM forge.inventory_movements "
+                            "WHERE kind='RECEIVE' AND sequence=1"
                         )
                     ).scalar_one()
                     == 5
@@ -151,7 +173,12 @@ def test_clean_and_bootstrap_migrations(baseline):
                     ).scalar_one()
                     == "POSTED"
                 )
-            if baseline in {"0008_purchasing", "0009_sales", "0010_sales_shipments"}:
+            if baseline in {
+                "0008_purchasing",
+                "0009_sales",
+                "0010_sales_shipments",
+                "0011_sales_returns",
+            }:
                 assert (
                     db.execute(text("SELECT status FROM forge.purchase_orders")).scalar_one()
                     == "CONFIRMED"
@@ -164,7 +191,7 @@ def test_clean_and_bootstrap_migrations(baseline):
                     db.execute(text("SELECT count(*) FROM forge.role_permissions")).scalar_one()
                     == 1
                 )
-            if baseline in {"0009_sales", "0010_sales_shipments"}:
+            if baseline in {"0009_sales", "0010_sales_shipments", "0011_sales_returns"}:
                 assert (
                     db.execute(text("SELECT status FROM forge.sales_orders")).scalar_one()
                     == "CONFIRMED"
@@ -177,14 +204,18 @@ def test_clean_and_bootstrap_migrations(baseline):
                 )
                 assert db.execute(
                     text("SELECT remaining_qty FROM forge.inventory_reservations")
-                ).scalar_one() == (1 if baseline == "0010_sales_shipments" else 2)
+                ).scalar_one() == (
+                    1 if baseline in {"0010_sales_shipments", "0011_sales_returns"} else 2
+                )
                 assert db.execute(
                     text(
                         "SELECT count(*) FROM forge.inventory_document_lines WHERE "
                         "reservation_source_line_id IS NOT NULL"
                     )
-                ).scalar_one() == (1 if baseline == "0010_sales_shipments" else 0)
-            if baseline == "0010_sales_shipments":
+                ).scalar_one() == (
+                    1 if baseline in {"0010_sales_shipments", "0011_sales_returns"} else 0
+                )
+            if baseline in {"0010_sales_shipments", "0011_sales_returns"}:
                 assert (
                     db.execute(
                         text(
@@ -193,25 +224,38 @@ def test_clean_and_bootstrap_migrations(baseline):
                     ).scalar_one()
                     == 1.25
                 )
-                assert (
-                    db.execute(
-                        text(
-                            "SELECT count(*) FROM forge.sales_document_lines WHERE return_cost "
-                            "IS NOT NULL"
-                        )
-                    ).scalar_one()
-                    == 0
-                )
-                assert (
-                    db.execute(
-                        text(
-                            "SELECT count(*) FROM forge.inventory_document_lines WHERE "
-                            "original_line_id IS NOT NULL"
-                        )
-                    ).scalar_one()
-                    == 0
-                )
+                assert db.execute(
+                    text(
+                        "SELECT count(*) FROM forge.sales_document_lines WHERE return_cost "
+                        "IS NOT NULL"
+                    )
+                ).scalar_one() == (1 if baseline == "0011_sales_returns" else 0)
+                assert db.execute(
+                    text(
+                        "SELECT count(*) FROM forge.inventory_document_lines WHERE "
+                        "original_line_id IS NOT NULL"
+                    )
+                ).scalar_one() == (1 if baseline == "0011_sales_returns" else 0)
+            if baseline == "0011_sales_returns":
+                assert db.execute(
+                    text(
+                        "SELECT return_cost FROM forge.sales_document_lines "
+                        "WHERE return_cost IS NOT NULL"
+                    )
+                ).scalar_one() == Decimal("0.5")
+                assert db.execute(
+                    text("SELECT value_delta FROM forge.inventory_movements WHERE sequence=4")
+                ).scalar_one() == Decimal("0.5")
+            assert db.execute(text("SELECT count(*) FROM forge.funds_sources")).scalar_one() == 0
+            assert db.execute(text("SELECT count(*) FROM forge.funds_activation")).scalar_one() == 0
             for table in (
+                "funds_activation",
+                "funds_sources",
+                "funds_entries",
+                "funds_cash_documents",
+                "funds_cash_allocations",
+                "funds_cash_reversals",
+                "funds_operations",
                 "sales_orders",
                 "sales_order_lines",
                 "sales_documents",
@@ -466,3 +510,44 @@ def seed_shipment_upgrade_fixture(db):
     ]
     for sql in statements:
         db.execute(text(sql), params)
+
+
+def seed_return_upgrade_fixture(db):
+    """An actual v0.8 return survives funds migration without guessed opening cash/debt."""
+    row = db.execute(
+        text(
+            "SELECT d.organization_id org,sd.order_id AS order_id,"
+            "sl.order_line_id orderline,d.id original,l.id original_line,d.warehouse_id wh,"
+            "l.product_id product,l.unit_id unit,d.created_by actor "
+            "FROM forge.sales_documents sd JOIN forge.inventory_documents d ON d.id=sd.id "
+            "JOIN forge.sales_document_lines sl ON sl.document_id=d.id "
+            "JOIN forge.inventory_document_lines l ON l.id=sl.id WHERE sd.kind='SHIPMENT'"
+        )
+    )
+    params = dict(row.mappings().one()) | {"doc": uuid4(), "line": uuid4()}
+    statements = [
+        "INSERT INTO forge.inventory_documents(id,organization_id,number,type,reason,warehouse_id,"
+        "created_by) VALUES(:doc,:org,'OLD-SRET','SALES_RETURN','Return fixture',:wh,:actor)",
+        "INSERT INTO forge.sales_documents(id,organization_id,order_id,kind,original_document_id) "
+        "VALUES(:doc,:org,:order_id,'RETURN',:original)",
+        "INSERT INTO forge.inventory_document_lines(id,organization_id,document_id,"
+        "line_no,product_id,"
+        "unit_id,product_label,unit_label,qty,unit_to_base_factor,base_qty,conversion_version,direction,"
+        "original_line_id) VALUES(:line,:org,:doc,1,:product,:unit,'Bolt','个',"
+        "0.4,1,0.4,1,'IN',:original_line)",
+        "INSERT INTO forge.sales_document_lines(id,organization_id,document_id,"
+        "order_id,order_line_id,"
+        "shipment_line_id,unit_price,amount,return_cost) "
+        "VALUES(:line,:org,:doc,:order_id,:orderline,:original_line,2,0.8,0.5)",
+        "INSERT INTO forge.inventory_movements(organization_id,warehouse_id,product_id,"
+        "sequence,kind,"
+        "base_qty,value_delta,before_avg_cost,after_avg_cost,document_id,line_id,operation_id,actor_id,"
+        "request_id) VALUES(:org,:wh,:product,4,'RECEIVE',0.4,0.5,1.25,1.25,:doc,:line,:doc,:actor,"
+        "'sales-return-migration-fixture')",
+        "UPDATE forge.inventory_balances SET on_hand_qty=3.4,inventory_value=4.25,"
+        "version=version+1,movement_sequence=4 WHERE organization_id=:org",
+        "UPDATE forge.inventory_documents SET status='POSTED',posted_at=now(),"
+        "version=2 WHERE id=:doc",
+    ]
+    for statement in statements:
+        db.execute(text(statement), params)

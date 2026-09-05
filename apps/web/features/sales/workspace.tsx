@@ -26,6 +26,7 @@ import {
 } from "./client";
 import { Grid, names, number, positive, PriceProvenance } from "./presentation";
 import { usePendingNavigationGuard } from "./navigation";
+import { OrderFundsSummary } from "@/features/funds/order-summary";
 
 type Tab = "orders" | "SHIPMENT" | "RETURN" | "prices";
 type Selection = { id: string; document: boolean };
@@ -751,7 +752,7 @@ export function SalesWorkspace({ permissions }: { permissions: string[] }) {
   return (
     <div className="min-w-0 max-w-full space-y-5">
       <p className="text-sm text-muted-foreground">
-        确认订单占用库存，按实发数量出库；退货沿用原成交与成本。销售金额供业务核对，资金结算尚未启用。
+        确认订单占用库存，按实发数量出库；退货沿用原成交与成本。销售金额与资金结算分别按来源核对。
       </p>
       <div className="flex flex-wrap gap-2">
         {tabs
@@ -1026,6 +1027,13 @@ export function SalesWorkspace({ permissions }: { permissions: string[] }) {
             </Button>
           </div>
           <p className="break-words text-sm">原因：{order.reason}</p>
+          <OrderFundsSummary
+            value={order.funds}
+            side="AR"
+            partyId={order.customer_id}
+            permissions={permissions}
+            locked={locked}
+          />
           {order.action_reason && (
             <p className="break-words text-sm">
               操作原因：{order.action_reason}

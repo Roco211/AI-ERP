@@ -3,6 +3,7 @@ from decimal import Decimal, localcontext
 from sqlalchemy import text
 
 from forge_erp.core.errors import Problem
+from forge_erp.modules.funds.application import queries as funds_queries
 from forge_erp.modules.purchasing.application import orders
 
 COST_FIELDS = {
@@ -25,7 +26,7 @@ def redact(ctx, row):
 
 async def order_detail(db, ctx, id, include_lines=True):
     ctx.require("purchase.read")
-    row = await orders.load(db, ctx, id)
+    row = await orders.load(db, ctx, id, share=True)
     lines = await orders.raw_lines(db, ctx, id)
     amounts = await orders.quantities(db, ctx, id)
     for line in lines:
@@ -45,6 +46,8 @@ async def order_detail(db, ctx, id, include_lines=True):
         if any(x["received_base_qty"] for x in lines)
         else "UNRECEIVED"
     )
+    if include_lines and {"funds.ap.read", "product.cost.read"} <= ctx.permissions:
+        row["funds"] = await funds_queries.order_summary(db, ctx, "AP", id)
     row["lines"] = [redact(ctx, x) for x in lines] if include_lines else []
     return redact(ctx, row)
 

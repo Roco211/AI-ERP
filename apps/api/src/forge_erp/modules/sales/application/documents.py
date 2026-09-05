@@ -8,6 +8,8 @@ from sqlalchemy import text
 from forge_erp.core.errors import Problem
 from forge_erp.modules.audit.service import record_mutation
 from forge_erp.modules.catalog.domain.values import ConversionSnapshot
+from forge_erp.modules.funds.application import integration as funds
+from forge_erp.modules.funds.application.shared import cutover
 from forge_erp.modules.inventory.application.engine import InventoryEngine
 from forge_erp.modules.inventory.domain.values import exact
 from forge_erp.modules.sales.application import orders, queries
@@ -224,6 +226,7 @@ async def post(db, ctx, id, expected, key):
     ctx.require("sales.ship")
 
     async def execute():
+        await cutover(db, ctx)
         initial = await queries.raw_document(db, ctx, id)
         order = await orders.load(db, ctx, initial["order_id"], True)
         sources = await reservation_sources(db, ctx, order["id"])
@@ -288,6 +291,7 @@ async def post(db, ctx, id, expected, key):
             ),
             {"org": ctx.organization_id, "id": id},
         )
+        await funds.post(db, ctx, "AR", id)
         result = await queries.raw_document(db, ctx, id)
         await record_mutation(
             db,

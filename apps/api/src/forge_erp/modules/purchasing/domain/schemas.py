@@ -6,6 +6,7 @@ from uuid import UUID
 from pydantic import BaseModel, Field, model_validator
 
 from forge_erp.modules.catalog.domain.schemas import Amount, InputModel
+from forge_erp.modules.funds.domain.schemas import FundsOrderSummary
 
 Reason = Annotated[str, Field(min_length=1, max_length=2000)]
 OrderStatus = Literal["DRAFT", "CONFIRMED", "CLOSED", "CANCELLED"]
@@ -104,6 +105,7 @@ class PurchaseOrderRead(BaseModel):
     amount: Decimal | None = None
     created_at: datetime
     action_reason: str | None = None
+    funds: FundsOrderSummary | None = None
     lines: list[PurchaseOrderLineRead] = Field(default_factory=list)
 
 

@@ -60,9 +60,10 @@ with create_engine(cfg.migration_database_url).begin() as db:
         ).scalar_one()
         if not code.startswith("BROWSER_INV_"):
             raise RuntimeError("Not a browser fixture organization")
+        # Keep the same event-first lock order as the background worker.
         for table in (
-            "idempotency_keys",
             "outbox_events",
+            "idempotency_keys",
             "audit_events",
             "sessions",
             "role_permissions",

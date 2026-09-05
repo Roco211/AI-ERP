@@ -1,4 +1,12 @@
-# Forge ERP — Sales v0.8 implementation
+# Forge ERP — Funds v0.9 and Operations v0.10 implementation
+
+## Current authorization (2026-09-06)
+
+The user explicitly requested “OK，请进行阶段v0.9和V0.10” after reviewing the development plan. This authorizes specification and incremental implementation of lightweight funds (receivables, receipts, payables, payments, allocations, return credits/refunds, reversals, opening balances), followed by formal Excel import, deterministic replenishment and a traceable operating overview. Finish and verify v0.9 before implementing v0.10 business features. No further permission is required for this authorized implementation. Earlier stage-specific prohibitions below are historical boundaries, superseded only for this scope. AI business tools, general accounting and new infrastructure remain excluded.
+
+Sales v0.8 has been merged and published: main `5a5c0e07053e1935ae11fdbf78609246308c8901`, tag `sales-v0.8`, database head `0011_sales_returns`. See `../Forge-ERP-sales-v0.8-release-record.md`. Preserve existing data, posted facts and published tags. Work on `funds/v0.9`, then an operations branch from its accepted result. This request authorizes implementation and reviewable PRs, not automatic production deployment. Keep unverified acceptance items unchecked.
+
+Read `docs/funds-v0.9.md` and `docs/funds-v0.9-acceptance.md` for the current stage. Core writes and their Audit/Outbox/idempotency receipt must remain atomic; money stays Decimal/NUMERIC, never browser arithmetic. Every new tenant table requires FORCE RLS and composite tenant references. Existing migrations are append-only. Document unresolved policy choices rather than silently changing existing sales/purchasing/inventory semantics.
 
 The user authorized Catalog v0.5 after Bootstrap passed acceptance. Implement Category, Brand, Unit, Product, ProductUnit, ProductPrice, Customer, Supplier, SupplierProduct, Warehouse, Product Search and ProductPicker. Excel work is template/validation/workflow design only. The user authorized local embeddings; implement optional Ollama/BGE-M3 without cloud calls (ADR 0011). The user authorized Inventory v0.6 implementation after reviewing the specification. The user subsequently authorized Purchasing v0.7: clarify the specification and directly implement it incrementally. Implement procurement orders, partial receipts, returns and purchase price history. Do not implement Receivables, Payables or AI business tools. Frozen stack: Python 3.14, FastAPI, Pydantic v2, SQLAlchemy 2 async, Alembic, psycopg3, PostgreSQL 18 + pgvector + pg_trgm, Redis, Celery, uv; Next.js App Router, React, TypeScript, shadcn Base UI, Tailwind, TanStack Query, pnpm.
 
@@ -99,3 +107,9 @@ After S4 delivery (2cd3d93, 316 backend / 37 frontend / 10 browser tests and bot
 ## Sales S5 completion record
 
 S1–S5 implementation is complete: 357 backend tests, 44 frontend tests and 11 production-browser scenarios passed locally. Code acceptance commit `9d7961e` passed both push CI 33977824715 and PR CI 33977827345. The final documentation commit must also pass both CI runs; its exact SHA and results are recorded in `../Forge-ERP-Sales-v0.8-verification.json` after verification. See `docs/sales-v0.8-delivery.md`, the 46-item acceptance checklist and repository tree for the final state. Application metadata is 0.8.0 / Sales; migration head remains 0011_sales_returns. PR #4 remains a draft, with no sales tag, merge or release performed. Do not infer authorization for funds or AI business modules from this completed increment.
+
+## Funds v0.9 completion gate
+
+F0–F5 implementation and local acceptance are complete. The baseline `f8a110b` passed both CI runs 33982396517/33982398145 with 471 backend tests. Final local verification is 74 frontend tests and 14 production-browser scenarios; two real zero-price source cases additionally passed. Independent review fixed frontend reversal permissions and the test-fixture/Outbox cleanup lock order without changing business rules. The local database is 0012_funds; application metadata is 0.9.0 / Funds.
+
+See docs/funds-v0.9-delivery.md, its 27-item acceptance and tree. The final commit includes these last review fixes and documentation and MUST pass its own push/PR CI, recorded in ../Forge-ERP-Funds-v0.9-verification.json. Only after those results are verified may the already-authorized v0.10 implementation begin. Use operations/v0.10 from that accepted result; read docs/operations-v0.10.md and ADR0016, preserve historical facts and published tags, and do not implement AI business tools or automatically merge/release.

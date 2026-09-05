@@ -33,6 +33,18 @@ KNOWN_EVENTS |= {
     f"sales.order.{action}" for action in ("create", "update", "confirm", "cancel", "close")
 }
 KNOWN_EVENTS |= {f"sales.document.{action}" for action in ("create", "update", "post", "reverse")}
+KNOWN_EVENTS |= {
+    "funds.activate",
+    "funds.opening",
+    "funds.adjustment",
+    "funds.legacy.bind",
+    "funds.cash.post",
+    "funds.cash.reverse",
+    "funds.source.reverse",
+    "funds.source.post",
+    "funds.source.return",
+    "funds.source.document.reverse",
+}
 log = structlog.get_logger()
 
 
@@ -46,12 +58,15 @@ async def drain_outbox(organization_id: UUID | None = None) -> int:
             continue
         async with sessions.begin() as db:
             await set_tenant(db, org)
-            rows = (
+            # Ordinary committed events must advance even if local embeddings
+            # are disabled or unavailable. Bound and lock each lane separately.
+            rows = list(
                 (
                     await db.execute(
                         text(
                             "SELECT id,event_type,request_id,payload FROM forge.outbox_events "
                             "WHERE organization_id=:org AND processed_at IS NULL "
+                            "AND event_type NOT LIKE 'catalog.products.%' "
                             "ORDER BY created_at,id LIMIT 100 FOR UPDATE SKIP LOCKED"
                         ),
                         {"org": org},
@@ -60,6 +75,22 @@ async def drain_outbox(organization_id: UUID | None = None) -> int:
                 .mappings()
                 .all()
             )
+            if settings().embedding_enabled:
+                rows.extend(
+                    (
+                        await db.execute(
+                            text(
+                                "SELECT id,event_type,request_id,payload FROM forge.outbox_events "
+                                "WHERE organization_id=:org AND processed_at IS NULL "
+                                "AND event_type LIKE 'catalog.products.%' "
+                                "ORDER BY created_at,id LIMIT 100 FOR UPDATE SKIP LOCKED"
+                            ),
+                            {"org": org},
+                        )
+                    )
+                    .mappings()
+                    .all()
+                )
             for row in rows:
                 if row["event_type"] not in KNOWN_EVENTS:
                     log.warning("unknown_outbox_event", event_id=str(row["id"]))

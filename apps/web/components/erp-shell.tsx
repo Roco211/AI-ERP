@@ -25,11 +25,13 @@ import { Dialog } from "@base-ui/react/dialog";
 import { api, ApiError, getProfile } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { SalesWorkspace } from "@/features/sales/workspace";
+import { FundsWorkspace } from "@/features/funds/workspace";
 import { PurchasingWorkspace } from "@/features/purchasing/workspace";
 import { InventoryWorkspace } from "@/features/inventory/workspace";
 import { CatalogWorkspace } from "@/features/catalog/workspace";
 import { CatalogManager } from "@/features/catalog/manager";
 import { configs } from "@/features/catalog/config";
+import packageMetadata from "@/package.json";
 
 export const navigation = [
   { path: "dashboard", label: "工作台", icon: LayoutDashboard },
@@ -40,7 +42,7 @@ export const navigation = [
   { path: "products", label: "商品", icon: Package },
   { path: "customers", label: "客户", icon: Users },
   { path: "suppliers", label: "供应商", icon: Building2 },
-  { path: "finance", label: "资金", icon: Wallet },
+  { path: "funds", label: "资金", icon: Wallet },
   { path: "reports", label: "报表", icon: BarChart3 },
   { path: "settings", label: "设置", icon: Settings },
 ];
@@ -158,7 +160,7 @@ export function ERPShell({
         <div className="mt-auto hidden border-t border-border px-3 pt-4 md:block">
           <p className="text-xs font-medium">一步一步，把生意做好。</p>
           <p className="mt-2 text-[10px] text-muted-foreground">
-            Forge ERP · v0.8
+            Forge ERP · v{packageMetadata.version}
           </p>
         </div>
       </aside>
@@ -222,7 +224,9 @@ export function ERPShell({
                   ? "从采购订单到分批收货，追溯价格与退货。"
                   : section === "inventory"
                     ? "按仓库查看库存，追溯每次变动。"
-                    : "工作空间已就绪，业务功能将逐步开放。"}
+                    : section === "funds"
+                      ? "按客户与供应商核对往来，记录收付款并追溯每笔来源。"
+                      : "工作空间已就绪，业务功能将逐步开放。"}
           </p>
           {["products", "customers", "suppliers"].includes(section) ? (
             <CatalogWorkspace
@@ -232,6 +236,8 @@ export function ERPShell({
             />
           ) : section === "sales" ? (
             <SalesWorkspace permissions={me.permissions} />
+          ) : section === "funds" ? (
+            <FundsWorkspace permissions={me.permissions} />
           ) : section === "purchase" ? (
             <PurchasingWorkspace permissions={me.permissions} />
           ) : section === "inventory" ? (

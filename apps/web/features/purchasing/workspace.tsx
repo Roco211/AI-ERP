@@ -1,4 +1,5 @@
 "use client";
+import { OrderFundsSummary } from "@/features/funds/order-summary";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -542,7 +543,7 @@ export function PurchasingWorkspace({
   return (
     <div className="space-y-5">
       <p className="text-sm text-muted-foreground">
-        确认采购，再按实收数量入库。采购金额供业务核对，资金结算尚未启用。
+        确认采购，再按实收数量入库。采购金额与资金结算分别按来源核对。
       </p>
       <div className="flex flex-wrap gap-2">
         {tabs
@@ -746,6 +747,13 @@ export function PurchasingWorkspace({
             </Button>
           </div>
           <p className="text-sm">原因：{order.reason}</p>
+          <OrderFundsSummary
+            value={order.funds}
+            side="AP"
+            partyId={order.supplier_id}
+            permissions={permissions}
+            locked={locked}
+          />
           <Grid
             headers={[
               "商品",

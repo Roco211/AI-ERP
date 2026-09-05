@@ -14,13 +14,13 @@ from forge_erp.modules.purchasing.domain.schemas import PurchaseOrderInput
 from forge_erp.modules.purchasing.domain.values import line_amount
 
 
-async def load(db: AsyncSession, ctx: RuntimeContext, id: UUID, lock=False) -> dict:
+async def load(db: AsyncSession, ctx: RuntimeContext, id: UUID, lock=False, *, share=False) -> dict:
     row = (
         (
             await db.execute(
                 text(
                     "SELECT * FROM forge.purchase_orders WHERE organization_id=:org AND id=:id"
-                    + (" FOR UPDATE" if lock else "")
+                    + (" FOR UPDATE" if lock else " FOR SHARE" if share else "")
                 ),
                 {"org": ctx.organization_id, "id": id},
             )

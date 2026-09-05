@@ -3,6 +3,7 @@ from decimal import Decimal, localcontext
 from sqlalchemy import text
 
 from forge_erp.core.errors import Problem
+from forge_erp.modules.funds.application import queries as funds_queries
 from forge_erp.modules.inventory.domain.values import exact
 from forge_erp.modules.sales.application import orders
 
@@ -180,6 +181,8 @@ async def order_detail(db, ctx, id, include_lines=True):
         else "UNFULFILLED"
     )
     row.update(await order_margin(db, ctx, id))
+    if include_lines and {"funds.ar.read", "product.price.read"} <= ctx.permissions:
+        row["funds"] = await funds_queries.order_summary(db, ctx, "AR", id)
     row["lines"] = [redact(ctx, x) for x in lines] if include_lines else []
     return redact(ctx, row)
 
