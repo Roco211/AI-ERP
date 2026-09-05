@@ -1,8 +1,8 @@
 # 运营 v0.10 施工规范
 
-状态：O1–O4 施工中。用户于 2026-09-06 授权 v0.9 与 v0.10 分步推进；资金最终提交 `7fded4f730d87a8bedaf60491bbaf52f7d358564` 已通过双CI（33983285324、33983287501），473项后端、74项前端、14项浏览器测试全部通过。本阶段从该提交和实际数据库 `0012_funds` 开始，完整证据见仓库外资金验收记录。未验证的运营清单仍保持待验收。
+状态：O1–O5 已实施，42 项验收及代码 `3189c7c` 双 CI 已通过；最后交付提交按仓库外核验附件确认。用户于 2026-09-06 授权 v0.9 与 v0.10 分步推进；资金最终提交 `7fded4f730d87a8bedaf60491bbaf52f7d358564` 已通过双CI（33983285324、33983287501），473项后端、74项前端、14项浏览器测试全部通过。本阶段从该提交和实际数据库 `0012_funds` 开始，完整证据见仓库外资金验收记录。未验证的运营清单仍保持待验收。
 
-依据：[权威迁移上下文](architecture/migration-context.md)第 40、41、45 节、[Catalog 导入设计](import/catalog-import-design.md)、既有库存/采购/销售规范以及[ADR0016](adr/0016-catalog-import-execution.md)。原文没有给出完整补货公式和文件保留期；下文明确记录本阶段选择，不把它们描述为原文已有规定。[验收清单](operations-v0.10-acceptance.md)的实现项全部待验收。
+依据：[权威迁移上下文](architecture/migration-context.md)第 40、41、45 节、[Catalog 导入设计](import/catalog-import-design.md)、既有库存/采购/销售规范以及[ADR0016](adr/0016-catalog-import-execution.md)。原文没有给出完整补货公式和文件保留期；下文明确记录本阶段选择，不把它们描述为原文已有规定。[验收清单](operations-v0.10-acceptance.md)按实际测试证据更新，最终交付以最后 SHA 的 CI 记录为准。
 
 ## 1. 目标与边界
 
@@ -181,7 +181,7 @@ D>0 时 `days_of_stock = V / D`，仅用于说明当前可用库存覆盖天数�
 
 | 增量 | 交付 | 主要接入点 / 门槛 |
 |---|---|---|
-| O0 | 本规范、ADR0016、验收清单 | 当前仅完成准备；v0.9先验收 |
+| O0 | 本规范、ADR0016、验收清单 | 资金基线 `7fded4f` 已验收，运营依此实现 |
 | O1 | 文件解析/模板、持久批次/行、预览和RLS | 新模块catalog_import；复用Catalog schemas/RESOURCES/rules；追加迁移，不改旧迁移 |
 | O2 | 10资源逐行Command执行、恢复/清理及导入工作台 | catalog.service.write_command、独立Celery持久批次轮询；真实上传/部分失败/重试验收 |
 | O3 | 补货领域公式、聚合、预览和采购DRAFT | inventory.queries.low_stock口径；purchase订单/有效收货；sales有效出库/退货；purchase.orders.save |

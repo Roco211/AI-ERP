@@ -54,7 +54,10 @@ uv run --project apps/api celery -A forge_erp.workers.celery_app.celery_app beat
 
 ```bash
 uv run --project apps/api python -m forge_erp.workers.catalog_import --limit 100
-uv run --project apps/api python -m forge_erp.workers.catalog_import --organization <组织UUID> --limit 100
+IMPORT_ORGANIZATION_ID='替换为目标组织UUID'
+uv run --project apps/api python -m forge_erp.workers.catalog_import --organization "$IMPORT_ORGANIZATION_ID" --limit 100
 ```
+
+先将变量替换为目标组织 UUID。省略 `--organization` 会实际处理发现的各组织已确认任务及到期正文；指定组织则只处理该组织。这是恢复与清理的组合入口。
 
 这些恢复命令不会代替用户确认、自动刷新冲突版本、复活到期批次或重做成功行。失败且可重试的行仍需由原创建者在界面确认重试。
