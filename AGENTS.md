@@ -1,4 +1,10 @@
-# Forge ERP — Funds v0.9 and Operations v0.10 implementation
+# Forge ERP — AI assistant v0.11 implementation
+
+## Current AI implementation authorization (2026-09-06)
+
+Funds and Operations were merged/released as prereleases; main is `ed7749d03b291073d2d86bb846dfa87130422be5`, database `0015_reporting`. See `../Forge-ERP-v0.9-v0.10-release-record.md`. User requested continuing and explicitly selected “明确规范后直接分步实现” for v0.11: inventory/operating questions, daily briefs, natural-language sales/purchase draft previews and reviewed creation. This supersedes historical AI prohibitions only for this scope. Work on `ai/v0.11`; read `docs/ai-v0.11.md`, its acceptance and ADR0017. Complete A0–A5 incrementally with tests. Do not stop at the specification or claim mock responses prove real model acceptance.
+
+Keep one LangGraph assistant and fixed tools; current authenticated identity/permissions never come from the model/checkpoint. New AI tables require organization+owner FORCE RLS. Existing Query output must pass its Pydantic DTO before model use. Model waits occur outside database transactions; respect reporting snapshot vs pricing FOR SHARE differences. All displayed business numbers and sources come from server facts. No overdue claims without due-date facts. Risk 1 is reviewed creation only; no confirmation/POST/cash or other Risk 2–4 tools. AI draft receipt, Command and Audit/Outbox commit atomically and remain deduplicated after generic idempotency expiry. Preserve existing data/migrations/tags; no implicit merge/release, production deployment or v1.0 scope.
 
 ## Operations implementation baseline
 
