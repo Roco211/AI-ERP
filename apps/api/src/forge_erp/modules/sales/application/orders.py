@@ -347,7 +347,9 @@ async def inventory_once(db, ctx, operation, key, body, command):
         return await shared_once(db, ctx, operation, key, body, command)
     except InventoryError as exc:
         raise Problem(
-            409 if exc.code == "PRICE_PRECISION_CONFLICT" else 422,
+            409
+            if exc.code in {"PRICE_PRECISION_CONFLICT", "OVER_RETURN", "RETURN_PRECISION_CONFLICT"}
+            else 422,
             exc.code,
             exc.detail,
         ) from exc

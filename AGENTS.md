@@ -83,3 +83,7 @@ After delivery of the specification and draft PR #4, the user said “好的，�
 ## Sales S2 authorization
 
 After S1 delivery (135e87c, 164 backend tests, PR #4 CI green), the user said “请继续”. Implement S2: shipment drafts/POST, frozen order snapshots, controlled cross-document reservation consumption, actual issue costs, tenant/RBAC/concurrency/atomicity tests. Append migration0010; preserve0009 and older migrations. S3 returns/reversals/margin and S4 UI remain pending. Do not merge or publish PR #4.
+
+## Sales S3 authorization
+
+After S2 delivery (292b46e, 219 backend tests and current-commit CI green), the user said “OK，请继续”. Proceed with S3 under the existing specification: source-based sales returns, independent sales/cost tail allocation, strict last-document reversal, realized margin and customer sales history. Append migration0011; preserve prior migrations. Keep S4 sales UI and S5 full-stage acceptance pending. Continue draft PR #4 without merging, tagging or releasing.

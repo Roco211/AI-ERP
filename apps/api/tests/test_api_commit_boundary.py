@@ -20,7 +20,7 @@ from forge_erp.main import app
 
 
 @pytest.mark.parametrize(
-    "operation", ["catalog", "inventory", "purchasing", "sales", "sales_shipment"]
+    "operation", ["catalog", "inventory", "purchasing", "sales", "sales_shipment", "sales_reverse"]
 )
 async def test_success_headers_require_committed_data(
     catalog_client, purchase, identities, operation
@@ -44,7 +44,7 @@ async def test_success_headers_require_committed_data(
         }
         query = "SELECT count(*) FROM forge.inventory_documents WHERE reason=:code"
         params = {"code": code}
-    elif operation in {"sales", "sales_shipment"}:
+    elif operation in {"sales", "sales_shipment", "sales_reverse"}:
         customer = (await create(c, "customers", {"code": "COMMIT-C", "name": "Sales"})).json()
         sales_body = {
             "customer_id": customer["id"],
@@ -58,7 +58,7 @@ async def test_success_headers_require_committed_data(
         body = {"expected_version": row["version"]}
         query = "SELECT count(*) FROM forge.sales_orders WHERE id=:id AND status='CONFIRMED'"
         params = {"id": row["id"]}
-        if operation == "sales_shipment":
+        if operation in {"sales_shipment", "sales_reverse"}:
             assert (await create(c, path.removeprefix("/api/v1/"), body)).status_code == 200
             source = (await c.get("/api/v1/sales/orders/" + row["id"])).json()
             shipment = await create(
@@ -78,6 +78,16 @@ async def test_success_headers_require_committed_data(
                 "SELECT count(*) FROM forge.inventory_documents WHERE id=:id AND status='POSTED'"
             )
             params = {"id": row["id"]}
+            if operation == "sales_reverse":
+                response = await create(c, path.removeprefix("/api/v1/"), body)
+                assert response.status_code == 200, response.text
+                row = response.json()
+                path = "/api/v1/sales/documents/" + row["id"] + "/reverse"
+                body = {"expected_version": row["version"], "reason": code}
+                query = (
+                    "SELECT count(*) FROM forge.inventory_documents "
+                    "WHERE id=:id AND status='REVERSED'"
+                )
     else:
         order = await po(c, purchase)
         await action(c, order)

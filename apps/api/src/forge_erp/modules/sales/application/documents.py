@@ -66,6 +66,12 @@ def confirmed(order):
 
 
 async def save(db, ctx, body, key, id=None, expected=None):
+    if id:
+        current = await queries.raw_document(db, ctx, id)
+        if current["kind"] == "RETURN":
+            from forge_erp.modules.sales.application import returns
+
+            return await returns.save(db, ctx, body, key, id, expected)
     ctx.require("sales.ship")
 
     async def execute():
@@ -210,6 +216,11 @@ async def save(db, ctx, body, key, id=None, expected=None):
 
 
 async def post(db, ctx, id, expected, key):
+    current = await queries.raw_document(db, ctx, id)
+    if current["kind"] == "RETURN":
+        from forge_erp.modules.sales.application import returns
+
+        return await returns.post(db, ctx, id, expected, key)
     ctx.require("sales.ship")
 
     async def execute():

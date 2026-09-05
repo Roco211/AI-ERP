@@ -1,6 +1,6 @@
 # ADR 0014 — 销售占用、退货成本与毛利
 
-Status: Accepted for incremental implementation after user continuation。S1–S2后端已实施，后续规则在S3–S5按验收落实；基线为已发布main64bec0a / purchasing-v0.7。依据权威迁移上下文4.3、5、7–10、12、41及ADR0009/0012/0013。详见[施工规范](../sales-v0.8.md)和[验收清单](../sales-v0.8-acceptance.md)。
+Status: Accepted for incremental implementation after user continuation。S1–S3后端已实施，工作台和完整验收在S4–S5落实；基线为已发布main64bec0a / purchasing-v0.7。依据权威迁移上下文4.3、5、7–10、12、41及ADR0009/0012/0013。详见[施工规范](../sales-v0.8.md)和[验收清单](../sales-v0.8-acceptance.md)。
 
 ## 原文已经固定
 
@@ -39,3 +39,12 @@ Status: Accepted for incremental implementation after user continuation。S1–S
 0010_sales_shipments追加reservation_source_line_id和租户复合自引用外键；引擎sales.ship能力仅允许DRAFT销售出库的ISSUE，必须提供与冻结来源匹配的reservation，不能消费别单或绕过占用。同一INVOCER权限的只读SQL谓词服务于延迟约束和立即引擎校验，不授予新的业务写权限。
 
 出库实际成本从不可变流水读取；订单行与出库商业行保持不可变。当前不开放销售冲销，避免在S3前形成不完整逆向状态。详情共享锁和列表重新筛选属于读取一致性修复，不改变业务语义。
+
+
+## S3 落地
+
+0011_sales_returns 追加原出库行租户外键和准确退货成本快照。销售冲减与原成本回收各自分配尾差；草稿保存和过账都校验剩余可退量，过账发现已保存分配变化时要求显式刷新草稿。库存引擎核对实际原流水与准确成本，保留原事实。
+
+销售出库冲销恢复原占用，退货冲销只恢复可退额度；严格末笔、闭单规则不变。当前成本查询从不可变流水取得，订单净毛利只纳入有效 POSTED 事实；退货单毛利表示带符号的净影响，DRAFT/REVERSED 不计已实现毛利。成交历史保留全部退回但未冲销的出库。
+
+销售金额汇总只需销售与价格读取权限；成本和毛利另需成本读取权限。数量操作回执不包含商业值。S4 页面须延续这些边界，明确展示退货的销售冲减和成本回收。
