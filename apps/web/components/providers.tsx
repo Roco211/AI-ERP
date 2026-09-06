@@ -1,4 +1,5 @@
 "use client";
+import { ThemeProvider } from "next-themes";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useLayoutEffect, useState } from "react";
 import { installHistoryTracking } from "@/lib/navigation-history";
@@ -11,5 +12,5 @@ export function Providers({ children }: { children: React.ReactNode }) {
         defaultOptions: { queries: { retry: false, staleTime: 0 } },
       }),
   );
-  return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+  return <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} storageKey="forge-theme"><QueryClientProvider client={client}>{children}</QueryClientProvider></ThemeProvider>;
 }

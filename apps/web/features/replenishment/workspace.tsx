@@ -378,7 +378,7 @@ export function ReplenishmentWorkspace({
           <p className="text-sm text-muted-foreground">
             按组织汇总可用库存、已确认采购在途及最近30个完整业务日的净销量。建议供人工复核，生成后仍是采购草稿。
           </p>
-          <div className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid min-w-0 gap-5 rounded-2xl border border-border bg-card/25 p-4 sm:grid-cols-2 sm:p-5 lg:grid-cols-3">
             <label className="text-sm">
               商品关键词
               <Input
@@ -625,7 +625,7 @@ export function ReplenishmentWorkspace({
       >
         <Dialog.Portal>
           <Dialog.Backdrop className="fixed inset-0 z-40 bg-black/25" />
-          <Dialog.Popup className="fixed top-1/2 left-1/2 z-50 max-h-[88vh] w-[min(96vw,900px)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl bg-white p-4 sm:p-6">
+          <Dialog.Popup className="fixed top-1/2 left-1/2 z-50 max-h-[88vh] w-[min(96vw,900px)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-[30px] bg-background p-4 sm:p-6 border border-border">
             <Dialog.Title className="text-lg font-medium">
               补货计算依据
             </Dialog.Title>
@@ -663,7 +663,7 @@ export function ReplenishmentWorkspace({
       >
         <Dialog.Portal>
           <Dialog.Backdrop className="fixed inset-0 z-40 bg-black/25" />
-          <Dialog.Popup className="fixed top-1/2 left-1/2 z-50 max-h-[90vh] w-[min(96vw,1100px)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl bg-white p-4 sm:p-6">
+          <Dialog.Popup className="fixed top-1/2 left-1/2 z-50 max-h-[90vh] w-[min(96vw,1100px)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-[30px] bg-background p-4 sm:p-6 border border-border">
             <Dialog.Title className="text-lg font-medium">
               补货采购草稿复核
             </Dialog.Title>

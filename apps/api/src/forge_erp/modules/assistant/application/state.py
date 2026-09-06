@@ -19,6 +19,7 @@ from forge_erp.core.idempotency import execute_once
 from forge_erp.core.security import fingerprint
 from forge_erp.modules.assistant.application import drafts, providers
 from forge_erp.modules.assistant.domain.chat import (
+    Activity,
     BriefInput,
     ConversationDeleted,
     ConversationInput,
@@ -67,6 +68,8 @@ ERROR_MESSAGES = {
     "AI_DECISION_INVALID": "模型未返回可处理的操作，请重试或调整模型设置。",
     "AI_EVIDENCE_INVALID": "本轮没有取得可核对的系统来源，请明确查询条件。",
     "AI_TOOL_NOT_ALLOWED": "此操作未向助手开放，请使用对应业务工作台。",
+    "AI_CHAT_SCOPE": "回复涉及尚未核对的业务信息，请明确查询条件后再试。",
+    "AI_STREAM_UNSUPPORTED": "此模型服务未返回流式文本，请管理员检查模型设置。",
 }
 
 
@@ -386,16 +389,21 @@ async def claim_turn(
     if active:
         raise Problem(409, "AI_CONVERSATION_BUSY", "本对话仍有正在处理的问题，请稍候")
     if previous:
+        public = _response(previous["response"] or {})
+        for entry in public["activity"]:
+            if entry["state"] == "running":
+                entry.update(state="failed", finished_at=datetime.now(UTC).isoformat())
         row = (
             (
                 await db.execute(
                     text(
                         "UPDATE forge.assistant_turns SET "
                         "attempts=attempts+1,state='RUNNING',error_code=NULL,"
-                        "lease_until=clock_timestamp()+interval '120 seconds',request_id=:rid "
+                        "lease_until=clock_timestamp()+interval '120 seconds',request_id=:rid,"
+                        "response=CAST(:response AS jsonb) "
                         "WHERE organization_id=:org AND owner_id=:owner AND id=:id RETURNING *"
                     ),
-                    params(ctx, id=previous["id"], rid=ctx.request_id),
+                    params(ctx, id=previous["id"], rid=ctx.request_id, response=json.dumps(public)),
                 )
             )
             .mappings()
@@ -509,7 +517,7 @@ async def consume_budget(
 
 
 def _response(response: dict) -> dict:
-    if set(response) - {"answer", "evidence"}:
+    if set(response) - {"answer", "evidence", "activity", "interaction", "guided"}:
         raise Problem(422, "INVALID_AI_RESPONSE", "仅允许保存公开回答与事实证据")
     answer = response.get("answer")
     if answer is not None and (
@@ -523,12 +531,51 @@ def _response(response: dict) -> dict:
         result = {
             "answer": answer,
             "evidence": [Evidence.model_validate(x).model_dump(mode="json") for x in evidence],
+            "activity": [
+                Activity.model_validate(x).model_dump(mode="json")
+                for x in response.get("activity", [])
+            ],
+            "interaction": response.get("interaction", "business"),
+            "guided": response.get("guided", False),
         }
+        if (
+            len(result["activity"]) > 32
+            or result["interaction"] not in {"business", "casual"}
+            or not isinstance(result["guided"], bool)
+        ):
+            raise ValueError("invalid public progress")
         if len(json.dumps(result, ensure_ascii=False).encode()) > 1_048_576:
             raise ValueError("too large")
     except (ValidationError, ValueError) as exc:
         raise Problem(422, "INVALID_AI_RESPONSE", "事实证据格式或长度无效") from exc
     return result
+
+
+async def progress(
+    db, ctx, conversation_id, turn_id, attempt, activity: Activity, evidence: Evidence | None = None
+) -> TurnRead:
+    await require_conversation(db, ctx, conversation_id)
+    row = await _turn(db, ctx, turn_id, lock=True)
+    _fence(row, conversation_id, attempt)
+    public = _response(row["response"] or {})
+    entries = public["activity"]
+    previous = next((i for i, entry in enumerate(entries) if entry["id"] == activity.id), None)
+    if previous is None:
+        entries.append(activity.model_dump(mode="json"))
+    else:
+        entries[previous] = activity.model_dump(mode="json")
+    if evidence is not None:
+        public["evidence"] = [e for e in public["evidence"] if e["id"] != evidence.id]
+        public["evidence"].append(evidence.model_dump(mode="json"))
+    public = _response(public)
+    await db.execute(
+        text(
+            "UPDATE forge.assistant_turns SET response=CAST(:response AS jsonb) "
+            "WHERE organization_id=:org AND owner_id=:owner AND id=:id"
+        ),
+        params(ctx, id=turn_id, response=json.dumps(public)),
+    )
+    return await read_turn(db, ctx, turn_id)
 
 
 async def finish_turn(
@@ -546,7 +593,11 @@ async def finish_turn(
     _fence(row, conversation_id, attempt)
     if state not in {"WAITING", "COMPLETED", "FAILED"}:
         raise Problem(422, "INVALID_AI_STATE", "无效的助手状态")
-    public = _response(response)
+    saved = _response(row["response"] or {})
+    public = _response({**saved, **response, "activity": saved["activity"]})
+    for entry in public["activity"]:
+        if entry["state"] == "running":
+            entry.update(state="failed", finished_at=datetime.now(UTC).isoformat())
     if error_code is not None and (
         not error_code.isascii()
         or not error_code.replace("_", "").isalnum()

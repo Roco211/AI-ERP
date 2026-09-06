@@ -90,6 +90,8 @@ test("lost save response retries identical in-memory body and key without displa
   expect(put).toHaveBeenCalledTimes(1);
   expect(screen.getByLabelText("服务密钥")).toHaveValue("");
   expect(screen.getByLabelText("模型名称")).toBeDisabled();
+  expect(screen.getByRole("button", { name: "Ollama · 本机或服务器" })).toBeDisabled();
+  expect(screen.getByRole("checkbox", { name: "允许连接本机或内网服务" })).toBeDisabled();
   expect(save).toBeDisabled();
   expect(screen.getByRole("alert")).not.toHaveTextContent(secret);
   const first = put.mock.calls[0][1];
@@ -162,12 +164,25 @@ test("presets fill only after selection and local model settings remain editable
   await loaded();
   expect(screen.getByLabelText("服务地址")).toHaveValue(base.base_url);
   expect(screen.getByLabelText("允许连接本机或内网服务")).not.toBeChecked();
-  fireEvent.change(screen.getByLabelText("服务商预设"), { target: { value: "ollama" } });
+  fireEvent.click(screen.getByRole("button", { name: "Ollama · 本机或服务器" }));
   expect(screen.getByLabelText("服务地址")).toHaveValue("http://127.0.0.1:11438/v1");
   expect(screen.getByLabelText("允许连接本机或内网服务")).toBeChecked();
   expect(screen.getByLabelText("模型名称")).toHaveValue("");
   fireEvent.change(screen.getByLabelText("模型名称"), { target: { value: "my-installed-chat-model" } });
   expect(screen.getByLabelText("模型名称")).toHaveValue("my-installed-chat-model");
+  expect(put).not.toHaveBeenCalled();
+  expect(post).not.toHaveBeenCalled();
+});
+
+test("official configuration checkboxes update locally without an implicit save or connection test", async () => {
+  show(); await loaded();
+  const enabled = screen.getByRole("checkbox", { name: "启用对话模型" });
+  expect(enabled).toBeChecked();
+  fireEvent.click(enabled);
+  expect(enabled).not.toBeChecked();
+  fireEvent.click(screen.getByRole("checkbox", { name: "允许连接本机或内网服务" }));
+  expect(screen.getByRole("checkbox", { name: "允许连接本机或内网服务" })).toBeChecked();
+  expect(screen.getByText(/有未保存修改/)).toBeVisible();
   expect(put).not.toHaveBeenCalled();
   expect(post).not.toHaveBeenCalled();
 });

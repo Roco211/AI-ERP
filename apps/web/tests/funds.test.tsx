@@ -302,7 +302,7 @@ test("AR read-only renders exact server strings without AP or cash actions", asy
   expect(await screen.findByText("FR-A")).toBeVisible();
   expect(screen.getAllByText("500.0234").length).toBeGreaterThan(0);
   expect(
-    screen.queryByRole("button", { name: "应付与付款" }),
+    screen.queryByRole("tab", { name: "应付与付款" }),
   ).not.toBeInTheDocument();
   expect(
     screen.queryByRole("button", { name: "登记收款" }),

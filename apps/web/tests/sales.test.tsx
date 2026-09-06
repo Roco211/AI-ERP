@@ -229,7 +229,7 @@ test("quantity reader hides commercial and cost fields even if a response contai
     screen.queryByRole("button", { name: "新建销售订单" }),
   ).not.toBeInTheDocument();
   expect(
-    screen.queryByRole("button", { name: "客户成交历史" }),
+    screen.queryByRole("tab", { name: "客户成交历史" }),
   ).not.toBeInTheDocument();
   expect(
     screen.queryByRole("button", { name: "确认订单" }),

@@ -61,7 +61,7 @@ test("catalog forms, Decimal price and keyboard product selection", async ({
     .fill(`已编辑螺栓-${suffix}`);
   await page.getByRole("button", { name: "保存", exact: true }).click();
   await expect(page.getByRole("dialog")).toBeHidden();
-  await page.getByRole("button", { name: "商品价格", exact: true }).click();
+  await page.getByRole("tab", { name: "商品价格", exact: true }).click();
   await page.getByRole("button", { name: "新建价格", exact: true }).click();
   await page.getByLabel("搜索商品", { exact: true }).fill(`E2E-BOLT-${suffix}`);
   await page
@@ -77,7 +77,7 @@ test("catalog forms, Decimal price and keyboard product selection", async ({
       .filter({ hasText: `已编辑螺栓-${suffix}` })
       .getByRole("cell", { name: "1.234567", exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "快捷选品", exact: true }).click();
+  await page.getByRole("tab", { name: "快捷选品", exact: true }).click();
   const search = page.getByRole("combobox", { name: "搜索商品", exact: true });
   await search.fill(`E2E-BOLT-${suffix}`);
   await expect(

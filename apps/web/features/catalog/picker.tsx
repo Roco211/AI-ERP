@@ -168,7 +168,7 @@ export function ProductPicker({
           }
         }}
       />
-      <div className="flex gap-2">
+      <div className="grid gap-3 sm:grid-cols-2">
         <Input
           aria-label="属性名称筛选"
           placeholder="属性名称，例如 材质"
@@ -203,7 +203,7 @@ export function ProductPicker({
           id="product-results"
           role="listbox"
           aria-label="商品搜索结果"
-          className="max-h-96 overflow-y-auto rounded-xl border border-border bg-white"
+          className="max-h-96 space-y-1 overflow-y-auto rounded-2xl border border-border bg-background p-2"
         >
           {rows.map((p, i) => (
             <li
@@ -218,17 +218,17 @@ export function ProductPicker({
                   setIndex(i);
                   select(p);
                 }}
-                className={`w-full border-b border-border p-4 text-left ${index === i ? "bg-primary/10" : ""}`}
+                className={`w-full rounded-xl px-4 py-3 text-left transition-colors hover:bg-card focus-visible:bg-card ${index === i ? "bg-card" : ""}`}
               >
                 <span className="block text-sm font-medium">{p.name}</span>
-                <span className="mt-1 block text-xs text-muted-foreground">
+                <span className="mt-1 block font-mono text-xs text-muted-foreground">
                   {p.sku} · {p.specification}
                 </span>
               </button>
             </li>
           ))}
         </ul>
-        <div className="rounded-xl border border-border bg-white p-5">
+        <div className="rounded-2xl border border-border bg-card/30 p-5">
           {selected ? (
             <div className="space-y-4">
               <h3 className="font-medium">{selected.name}</h3>
@@ -236,7 +236,7 @@ export function ProductPicker({
                 单位
                 <select
                   aria-label="选品单位"
-                  className="mt-2 block h-9 w-full rounded-lg border border-border px-2"
+                  className="mt-2 block w-full border border-border h-11 min-w-0 max-w-full rounded-full bg-background px-4 focus:border-foreground/40 focus:outline-none focus:ring-2 focus:ring-ring/40 disabled:opacity-60"
                   value={unit}
                   onChange={(e) => {
                     setUnit(e.target.value);

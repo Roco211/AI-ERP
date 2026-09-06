@@ -1,4 +1,23 @@
-# Forge ERP — AI assistant v0.11 implementation
+# Forge ERP — beUI web reconstruction
+
+## Local workspace and WSL runtime (2026-09-06)
+
+The user requested development from `D:\Codex\Forge ERP` while keeping the runtime in WSL. This Windows directory is a junction to `D:\Codex\2026-09-05\referenced-chatgpt-conversation-this-is-an-2\outputs\forge-erp`; both paths refer to the same working tree, including existing uncommitted changes. Keep the original target directory in place.
+
+Run Git, dependency installation, builds, tests, migrations, Docker Compose and application processes inside `Ubuntu-24.04`. Windows tools may edit the mapped files; do not install Windows dependencies into this shared working tree. From PowerShell, use `wsl.exe -d Ubuntu-24.04 --cd '/mnt/d/Codex/Forge ERP' -- bash -lc '<command>'`. WSL resolves this alias to the original project directory, preserving the existing virtual environment and running services. Web remains at `http://localhost:3100`, API at `http://localhost:8100`.
+
+## Streaming assistant authorization (2026-09-06)
+
+The user now explicitly requests closer alignment with the official beUI Chat App, real execution progress and streaming data, distinct business result cards, and casual conversation with a gentle return to ERP after repeated casual turns. This supersedes the earlier UI-only scope for these changes. Keep the single graph, allowlisted tools, current cookie/tenant/RBAC checks, evidence provenance, original idempotency keys and human draft approval. Display application activity, never hidden model reasoning or simulated tool/token activity. Use the existing bounded private turn JSON for public progress; preserve retention and owner RLS. No new infrastructure, business stage, merge or release. Test behavior with controlled transports and separately verify the already-configured model without exposing credentials.
+
+## AI assistant experience authorization (2026-09-06)
+
+After beUI acceptance at `80c5f1b`, the user approved optimizing the AI assistant using beUI with a conversation history rail, focused chat/composer, and evidence/draft review panel, inspired by the public BoardUI AI Chat layout. Independently compose the existing beUI components; do not install or publish BoardUI Pro source. Continue `ui/beui` and draft PR #8. Preserve all existing AI API, evidence provenance, identity isolation, pending submission recovery and explicit draft approval behavior. Use responsive panels without remounting in-progress draft editors. This is UI experience work only; no new backend/AI tools, paid model calls for UI QA, merge or release.
+
+## Current UI authorization (2026-09-06)
+
+The user explicitly canceled the unfinished BoardUI redesign and requested installing the official beUI MCP or Skill and fully replacing the old UI to match beui.dev demos. The canceled edits are archived under task work/boardui-stopped; do not resume or publish them. Work on ui/beui from accepted AI baseline `21cb299`. Official beUI skill installed from starc007/ui-components at `04d6f76e9e67e35cded996b1b8d08a5ddcebc13a`. Use official beUI source, tokens and example compositions, replacing the old presentation rather than retaining its theme. Keep existing business APIs, records, tenant/RLS/permissions, precise server amounts, identity caches, idempotency and human draft review. beUI uses Motion/React primitives; integrate them through existing application-facing adapters, retaining Base UI for accessibility where appropriate and documenting the presentation-library choice. No backend redesign, new business stage, infrastructure, production deployment, merge or release. Verify real browser workflows, component behavior, responsive layout, keyboard access, reduced motion, frontend checks/build and CI. Report actual browser/tool limitations and reference provenance.
+
 
 ## Current AI implementation authorization (2026-09-06)
 

@@ -48,7 +48,7 @@ test("inventory opening, adjustment, transfer, stale stocktake and reversal", as
     name: "测试分仓-" + suffix,
   });
   await page.goto("/inventory");
-  await page.getByRole("button", { name: "期初库存", exact: true }).click();
+  await page.getByRole("tab", { name: "期初库存", exact: true }).click();
   await page.getByRole("button", { name: "新建期初库存" }).click();
   await page
     .getByRole("combobox", { name: "单据仓库", exact: true })
@@ -98,13 +98,13 @@ test("inventory opening, adjustment, transfer, stale stocktake and reversal", as
     await expect(detail.getByText(/已过账 ·/)).toBeVisible();
   }
   await postDetail(true);
-  await page.getByRole("button", { name: "库存总览", exact: true }).click();
+  await page.getByRole("tab", { name: "库存总览", exact: true }).click();
   await page.getByLabel("搜索库存商品").fill(product.sku);
   const balanceRow = page.getByRole("row").filter({ hasText: product.name });
   await expect(
     balanceRow.getByRole("cell", { name: "100", exact: true }).first(),
   ).toBeVisible();
-  await page.getByRole("button", { name: "库存流水", exact: true }).click();
+  await page.getByRole("tab", { name: "库存流水", exact: true }).click();
   await page.getByRole("row").filter({ hasText: product.sku }).getByRole("button").click();
   await expect(detail.getByText(/已过账 ·/)).toBeVisible();
   const line = {
@@ -118,7 +118,7 @@ test("inventory opening, adjustment, transfer, stale stocktake and reversal", as
     reason: "浏览器调整-" + suffix,
     lines: [line],
   });
-  await page.getByRole("button", { name: "库存调整", exact: true }).click();
+  await page.getByRole("tab", { name: "库存调整", exact: true }).click();
   await page
     .getByRole("row")
     .filter({ hasText: "浏览器调整-" + suffix })
@@ -131,7 +131,7 @@ test("inventory opening, adjustment, transfer, stale stocktake and reversal", as
     reason: "浏览器调拨-" + suffix,
     lines: [{ ...line, qty: "10" }],
   });
-  await page.getByRole("button", { name: "仓库调拨", exact: true }).click();
+  await page.getByRole("tab", { name: "仓库调拨", exact: true }).click();
   await page
     .getByRole("row")
     .filter({ hasText: "浏览器调拨-" + suffix })
@@ -159,7 +159,7 @@ test("inventory opening, adjustment, transfer, stale stocktake and reversal", as
   await create("inventory/documents/" + change.id + "/post", {
     expected_version: change.version,
   });
-  await page.getByRole("button", { name: "库存盘点", exact: true }).click();
+  await page.getByRole("tab", { name: "库存盘点", exact: true }).click();
   await page
     .getByRole("row")
     .filter({ hasText: "浏览器盘点-" + suffix })
@@ -185,7 +185,7 @@ test("inventory opening, adjustment, transfer, stale stocktake and reversal", as
   await expect(page.getByRole("dialog")).toBeHidden();
   await postDetail();
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.getByRole("button", { name: "库存流水", exact: true }).click();
+  await page.getByRole("tab", { name: "库存流水", exact: true }).click();
   await page.getByLabel("搜索仓库", { exact: true }).fill(wh.code);
   await page.getByLabel("筛选仓库", { exact: true }).selectOption(wh.id);
   await expect(
@@ -232,7 +232,7 @@ test("real quantity-only user cannot see costs or create inventory documents", a
     await expect(
       page.getByRole("columnheader", { name: "库存金额", exact: true }),
     ).toHaveCount(0);
-    await page.getByRole("button", { name: "期初库存", exact: true }).click();
+    await page.getByRole("tab", { name: "期初库存", exact: true }).click();
     await expect(
       page.getByRole("button", { name: "新建期初库存" }),
     ).toHaveCount(0);

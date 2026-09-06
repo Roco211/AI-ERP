@@ -1,14 +1,11 @@
 "use client";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { BusinessStatus } from "@/features/operations/business-status";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useId, useEffect, useRef, useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm, useWatch } from "react-hook-form";
 import { useSearchParams } from "next/navigation";
-import {
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-  type ColumnDef,
-} from "@tanstack/react-table";
+import { BusinessTable } from "@/features/operations/business-table";
 import { z } from "zod";
 import { Dialog } from "@base-ui/react/dialog";
 import { Button } from "@/components/ui/button";
@@ -48,7 +45,7 @@ type EditableLine = Draft["lines"][number] & {
   unitLabel: string;
 };
 const selectClass =
-  "h-9 max-w-full rounded-lg border border-border bg-white px-2 text-sm";
+  "h-11 min-w-0 max-w-full rounded-full border border-border bg-background px-4 text-sm focus:border-foreground/40 focus:outline-none focus:ring-2 focus:ring-ring/40 disabled:opacity-60";
 const number = (value: string | number | undefined | null) =>
   value == null ? "—" : String(value).replace(/(\.\d*?[1-9])0+$|\.0+$/, "$1");
 
@@ -56,64 +53,12 @@ type GridRow = { id: string; cells: ReactNode[] };
 function Grid({
   headers,
   rows,
-  page = 1,
 }: {
   headers: string[];
   rows: GridRow[];
   page?: number;
 }) {
-  const columns = headers.map<ColumnDef<GridRow>>((label, index) => ({
-    id: String(index),
-    header: label,
-    cell: ({ row }) => row.original.cells[index],
-  }));
-  const table = useReactTable({
-    data: rows,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    getRowId: (row) => row.id,
-    manualPagination: true,
-    state: { pagination: { pageIndex: page - 1, pageSize: 25 } },
-  });
-  return (
-    <div className="overflow-x-auto rounded-xl border border-border bg-white">
-      <table className="w-full text-left text-sm">
-        <thead className="bg-[#f5f7f2] text-muted-foreground">
-          {table.getHeaderGroups().map((group) => (
-            <tr key={group.id}>
-              {group.headers.map((header) => (
-                <th
-                  key={header.id}
-                  className="whitespace-nowrap px-4 py-3 font-medium"
-                >
-                  {flexRender(
-                    header.column.columnDef.header,
-                    header.getContext(),
-                  )}
-                </th>
-              ))}
-            </tr>
-          ))}
-        </thead>
-        <tbody>
-          {table.getRowModel().rows.map((row) => (
-            <tr key={row.id} className="border-t border-border">
-              {row.getVisibleCells().map((cell) => (
-                <td key={cell.id} className="px-4 py-3 tabular-nums">
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      {!rows.length && (
-        <p className="p-8 text-center text-sm text-muted-foreground">
-          暂无记录。可先录入期初库存。
-        </p>
-      )}
-    </div>
-  );
+  return <BusinessTable headers={headers} rows={rows} empty={"暂无记录。可先录入期初库存。"} />;
 }
 const draftFormSchema = z.object({
   from: z.string().uuid(),
@@ -129,6 +74,7 @@ type EditorFields = {
 };
 
 export function InventoryWorkspace({ permissions }: { permissions: string[] }) {
+  const tabId = useId();
   const qc = useQueryClient();
   const cost = permissions.includes("product.cost.read");
   const searchParams = useSearchParams();
@@ -462,21 +408,16 @@ export function InventoryWorkspace({ permissions }: { permissions: string[] }) {
   );
   return (
     <div className="mt-7 space-y-5">
-      <div className="flex flex-wrap gap-2 border-b border-border pb-4">
-        {tabs.map((t) => (
-          <Button
-            key={t.id}
-            variant={tab === t.id ? "default" : "outline"}
-            onClick={() => {
-              setTab(t.id);
-              setPage(1);
-              setCursors([undefined]);
-            }}
-          >
-            {t.label}
-          </Button>
-        ))}
-      </div>
+      <Tabs value={tab} variant="underline" onValueChange={(value) => {
+        setTab(value);
+        setPage(1);
+        setCursors([undefined]);
+      }}>
+        <TabsList aria-label="库存记录分类" className="flex w-full flex-wrap justify-start">
+          {tabs.map((item) => <TabsTrigger id={`${tabId}-records-tab-${item.id}`} aria-controls={`${tabId}-records-panel`} key={item.id} value={item.id}>{item.label}</TabsTrigger>)}
+        </TabsList>
+      </Tabs>
+      <div role="tabpanel" id={`${tabId}-records-panel`} aria-labelledby={`${tabId}-records-tab-${tab}`} tabIndex={0} className="min-w-0 space-y-5">
       <div className="flex flex-wrap items-center gap-3">
         {(tab === "balances" || tab === "movements") && (
           <>
@@ -558,7 +499,7 @@ export function InventoryWorkspace({ permissions }: { permissions: string[] }) {
       {(error || active.error || wh.error) && (
         <p
           role="alert"
-          className="rounded-lg bg-red-50 p-3 text-sm text-destructive"
+          className="rounded-lg bg-destructive/5 p-3 text-sm text-destructive"
         >
           {error || String(active.error ?? wh.error)}
         </p>
@@ -694,12 +635,7 @@ export function InventoryWorkspace({ permissions }: { permissions: string[] }) {
                 (r.target_warehouse_name
                   ? " → " + r.target_warehouse_name
                   : ""),
-              <span
-                key="status"
-                className="rounded bg-[#edf1e8] px-2 py-1 text-xs"
-              >
-                {statuses[r.status]}
-              </span>,
+              <BusinessStatus key="status" status={r.status}>{statuses[r.status]}</BusinessStatus>,
               r.reason,
               new Date(r.created_at).toLocaleString(),
               <Button
@@ -754,7 +690,7 @@ export function InventoryWorkspace({ permissions }: { permissions: string[] }) {
       {detail && (
         <section
           aria-label="库存单据详情"
-          className="space-y-4 rounded-xl border border-border bg-white p-5"
+          className="space-y-4 rounded-2xl border border-border bg-background p-5"
         >
           <div className="flex flex-wrap justify-between gap-3">
             <div>
@@ -881,7 +817,7 @@ export function InventoryWorkspace({ permissions }: { permissions: string[] }) {
       >
         <Dialog.Portal>
           <Dialog.Backdrop className="fixed inset-0 z-40 bg-black/30" />
-          <Dialog.Popup className="fixed top-[4vh] left-1/2 z-50 max-h-[92vh] w-[min(96vw,1000px)] -translate-x-1/2 overflow-y-auto rounded-xl bg-white p-5 shadow-xl">
+          <Dialog.Popup className="fixed top-[4vh] left-1/2 z-50 max-h-[92vh] w-[min(96vw,1000px)] -translate-x-1/2 overflow-y-auto rounded-[30px] bg-background p-5 shadow-2xl border border-border">
             <Dialog.Title className="text-xl font-semibold">
               {editing ? "编辑" : "新建"}
               {labels[kind]}
@@ -944,7 +880,7 @@ export function InventoryWorkspace({ permissions }: { permissions: string[] }) {
                 {showPicker ? "收起选品" : "添加商品"}
               </Button>
               {showPicker && (
-                <div className="rounded-xl border border-border p-4">
+                <div className="rounded-2xl border border-border p-4">
                   <ProductPicker
                     permissions={permissions}
                     onSelect={({ product, snapshot, unitLabel }) => {
@@ -1074,7 +1010,7 @@ export function InventoryWorkspace({ permissions }: { permissions: string[] }) {
       >
         <Dialog.Portal>
           <Dialog.Backdrop className="fixed inset-0 z-50 bg-black/30" />
-          <Dialog.Popup className="fixed top-[20vh] left-1/2 z-50 w-[min(92vw,520px)] -translate-x-1/2 rounded-xl bg-white p-6 shadow-xl">
+          <Dialog.Popup className="fixed top-[20vh] left-1/2 z-50 w-[min(92vw,520px)] -translate-x-1/2 rounded-[30px] bg-background p-6 shadow-2xl border border-border">
             <Dialog.Title className="text-lg font-semibold">
               {confirmation === "reverse"
                 ? "确认冲销"
@@ -1130,6 +1066,7 @@ export function InventoryWorkspace({ permissions }: { permissions: string[] }) {
           </Dialog.Popup>
         </Dialog.Portal>
       </Dialog.Root>
+      </div>
     </div>
   );
 }

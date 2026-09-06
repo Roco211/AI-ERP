@@ -122,7 +122,11 @@ async def request_middleware(request: Request, call_next):
         log.error("request_failed", error_type=type(exc).__name__)
         response = problem_response(request, 500, "INTERNAL_ERROR", "Unexpected server error")
     response.headers["X-Request-ID"] = rid
-    response.headers["Cache-Control"] = "no-store"
+    response.headers["Cache-Control"] = (
+        "no-store, no-transform"
+        if response.headers.get("content-type", "").startswith("text/event-stream")
+        else "no-store"
+    )
     log.info(
         "http_request",
         method=request.method,

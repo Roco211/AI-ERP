@@ -33,7 +33,7 @@ export function OrderFundsSummary({
   return (
     <section
       aria-label="订单资金结算概览"
-      className="min-w-0 space-y-2 rounded-lg bg-[#f4f6f2] p-4 text-sm"
+      className="min-w-0 space-y-2 rounded-lg bg-card p-4 text-sm"
     >
       <h3 className="font-medium">资金结算</h3>
       {value.integration_status === "NOT_ENABLED" ? (

@@ -42,7 +42,8 @@ async function login(page: Page, identity: Identity, role = "admin") {
     .getByLabel("密码", { exact: true })
     .fill("funds-browser-fixture-only-9638");
   await page.getByRole("button", { name: "进入工作空间" }).click();
-  await expect(page.getByRole("navigation", { name: "主导航" })).toBeVisible();
+  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page.getByRole("button", { name: "切换导航", exact: true })).toBeVisible();
 }
 async function logout(page: Page) {
   await page.getByRole("button", { name: "退出登录" }).click();
@@ -511,11 +512,15 @@ test("isolated funds roles and lost receipt preserve one cash fact across Back a
   }
   await login(page, fundsIdentity, "cashier");
   await page.setViewportSize({ width: 390, height: 844 });
-  await page
+  await page.getByRole("button", { name: "切换导航", exact: true }).click();
+  const navigationDialog = page.getByRole("dialog", { name: "工作空间侧栏", exact: true });
+  await expect(navigationDialog).toBeVisible();
+  await navigationDialog
     .getByRole("navigation", { name: "主导航" })
     .getByRole("link", { name: "资金", exact: true })
     .click();
-  await expect(page.getByRole("button", { name: "应付与付款" })).toHaveCount(0);
+  await expect(navigationDialog).not.toBeVisible();
+  await expect(page.getByRole("tab", { name: "应付与付款" })).toHaveCount(0);
   const dialog = await recordUI(
     page,
     "收款",

@@ -1,0 +1,204 @@
+{
+  "items": [
+    "animated-sidebar",
+    "button-base",
+    "input",
+    "tabs",
+    "table",
+    "animated-badge",
+    "loader",
+    "prompt-input",
+    "message",
+    "message-scroller",
+    "approval-card",
+    "command-palette",
+    "checkbox",
+    "theme-toggle",
+    "chat-app",
+    "thinking-shimmer"
+  ],
+  "files": {
+    "components/motion/animated-sidebar.tsx": "9cc11d0c3200be51dcc6964c7ccfd306037e2f1e8f2f5cf11eb5d92b06c2cad1",
+    "components/motion/shared-layout-bg.tsx": "e6355b3b408d8cbe7855f61ca502d945eaeef867cbd9cfc070685aece079b9f6",
+    "lib/ease.ts": "bdfa2814cffaa4d974a5fc8614868ddb89e0310a0ead9e7105f2e8132b219ff3",
+    "components/motion/button/base.tsx": "2fe395feff1a12875b29de66b2582796500257d29763640dab3a2716952f9a1c",
+    "lib/hooks/use-hover-capable.ts": "b5b9397bfa03859e04673c8f1817cf13ff55d2a9688955d6e0459ae70db90d06",
+    "components/motion/input.tsx": "1467f467c24cf6c89fa88ce00acdc6e6cbd40f225bdb0c3a026b0773445e1475",
+    "components/motion/tabs.tsx": "b111d28a66af6b71129782e868f093c1f9f0c9a5186b07cdd15c220da9183a58",
+    "components/motion/table/index.tsx": "4ee5691581c22e0ab31ca398fa50e48a8a36f07e94f6cc891d095bbf21e8f6bc",
+    "components/motion/table/editable-cell.tsx": "6e010b990dafee7d908bdb101b547bfd9580883a6d732fb48c71d9e8ae09b817",
+    "components/motion/table/row-handle.tsx": "3934e553142a6beec7f4a370b9f6f57a07b3aea22657d23e30bf5f6371d6e58a",
+    "components/motion/table/skeleton-rows.tsx": "bad1dea521f4bc9248e7d8608f6066d134fe8714463b44b5cb2336ff009e104e",
+    "components/motion/table/table-header.tsx": "782b77e14730825ff9dda7f132d99c242048f525660888c03120bff76959345a",
+    "components/motion/table/types.ts": "6f78aadfd4149c53f8e5bda06dc4fbcbf8196ffdec36e4da799c7d0f0a673ef6",
+    "components/motion/table/use-column-reorder.ts": "26344a1389f47632c71163c13eb0ca36b5ded2296b454de6bd548e5e41414279",
+    "components/motion/table/use-column-resize.ts": "6a3c2cda505517a9dd4012005691b087058e15d2ec5e7c89a26b73dcb3ea0d4c",
+    "components/motion/table/use-column-sort.ts": "82ed0e6b68437d9c7295016212b75f9f194c1ab86959f8c7ecd1845453b1186b",
+    "components/motion/table/use-row-selection.ts": "b160e0e9083da2df2d230fc553364e24bdeceab0ae04a7cac598b2a009aa9c92",
+    "components/motion/table/utils.ts": "0d88d78dd533c6d55ce6ba888f4efc87d8a90f0aa9cdd4149c6e4b506f47b369",
+    "components/motion/checkbox.tsx": "a1699740e6db8455026138f595d9e03b99ec81fc2606b36d9dfc20024c84bf03",
+    "components/motion/table/table-menu.tsx": "358acf804b343dab15c6792823a643ea6e3eeedc6de4e65d3eb36353cc4f42f4",
+    "lib/touch.ts": "f2a15c243c86c8bd1abb6e2e65a423b3a4c45cc1d797ebd83997f21cd1beadb9",
+    "components/motion/animated-badge.tsx": "d4ef79f4ebed61965a3cca66a72df5e884db03a074bd710adf94b5f9777239ca",
+    "components/motion/loader.tsx": "bf4d4dc7245e6d75910203c34611ebfc08718a1fdfdb1d48ec1e051aebc8cbae",
+    "components/agents/prompt-input.tsx": "48b4a23b00b33e6d52c89ed8f36a479364c020fc64c2c9ad4b0d02175ab6a21f",
+    "components/motion/button/index.tsx": "df1d7b59bcef7549c02c5d231114d62d4ddba9773a9ea05ca6c842210fcf6b46",
+    "components/motion/popover-morph.tsx": "7e271e38f2e93e8583907e8213f55b107100c9ff720ef922f161a42662d85a1a",
+    "components/motion/select.tsx": "2752510f98d60caea18794d93f868916dbf27f099746828ca9e5bde8c4a201ab",
+    "components/motion/button/magnetic.tsx": "864dc7db0cda2d8ee9bff7127706c546632d00f554595c9ce1816e283acb2a1f",
+    "components/motion/button/metallic.tsx": "e95693277c7dfd71f55c096fca8a3aee2cc92fde1826f46ceab07d56d20b9f0e",
+    "components/motion/button/stateful.tsx": "4e5805735deba5583a2005c6bb1445ed31f9a6055725bbaf29a6693284540379",
+    "components/motion/popover-position.ts": "a31a9dc602243c3966aa1043cfd41dec5c13df1a52c847e745c88cbf00cb1f2e",
+    "components/motion/magnetic.tsx": "f7802af9bbe57998575f6d9846ecfccc842f3c682e8fb0958957581dfd9873a3",
+    "components/agents/message.tsx": "d0515c5065e8d0db0cb871e8321a7b48d3f7cfe893bd10d9848acdd07488d490",
+    "components/agents/message-bubble.tsx": "1071e6e9cc8bf81c8e5ba67c98e650e2e7a194ff06d8e5164423850c5f597f54",
+    "components/agents/message-context.tsx": "ae4f2fd5459abcc15535f78b56f2d156cb6e066d4ecc2db3f09e2f9d1f734933",
+    "components/agents/message-scroller.tsx": "bf6105eecd904be5022d75e9c66be9d3bdb4d439b9097db3b422d9ed5edab0e0",
+    "components/motion/preview-rail.tsx": "1f95783020d5f0e8401acbd73985fe11223f6e4164d3486ec364f0bb75d290b4",
+    "lib/hooks/use-dismiss.ts": "af14b2fed0bf0e79a7ad3d3890ca6b5d0d1ffce9f7e289dc5840a34c16fabedd",
+    "lib/hooks/use-hover-gesture.ts": "d381531c81668faf22cada58671451f4e7b53cf8d8718d6768e485139810755d",
+    "lib/hooks/use-tap-gesture.ts": "b91954bf9f1cdc1771b2a6eac815d2f4e2493cb2cde5f508b2d96509dd71aeee",
+    "components/agents/approval-card/index.tsx": "bf26d7c19a186dc823b3f64f12910fcf39d043e42bf4db9048f682c42f0da900",
+    "components/agents/approval-card/types.ts": "14bf61158781c2c5029cf34d6c4c1a09cce3222cf24150c3033968168883885b",
+    "components/agents/agent-disclosure.tsx": "5113ab48b4ff542edda92ace14d0c4de89e3e3f06fca9e354b133fec93ce4265",
+    "components/motion/action-swap-roll.tsx": "271933ba92771ecb6ae5a7769d70cea3953e3c919ad51c324ee6290ce890a35f",
+    "components/motion/radio.tsx": "95dfea97e4a83f2a986f7f30440be2df883b8d353f69fc7b9b30f5636ca9140f",
+    "components/motion/action-swap.tsx": "5723d304f9d574c7787ab8f6accc7dfa9ed30cde09b8bdd2f769a884d216a885",
+    "components/motion/command-palette.tsx": "5115ec80ca631271f98c434cace8b3621f05c60e80e1bd94d7ae1022cb147b9d",
+    "lib/hooks/use-on-open.ts": "40fe63a564880b119063066621dac972ad01da73481fc26996377565f82c0083",
+    "lib/hooks/use-row-cursor.ts": "95afe34ad19661c405bbec11da7d32a7a84343e660492f46f578ead2aed8c750",
+    "lib/hooks/use-touch-capable.ts": "7b9ad8640b0d775057826ba7d3121e3f670c49a41f0cea2db211eca94274d720",
+    "lib/presence-gate.tsx": "f3c3911933dda28679c108281da9acc37e8f98bc28d7bb79ff63bc0e3aaa9c74",
+    "components/motion/theme-toggle.tsx": "c7e7edd22be7c64222eb4476b6054c8147299f83bf66af76d0580dd10698e923",
+    "components/agents/chat-app.tsx": "7538d59f148adccc236c7a5e45d8821526f538536650223a6ba5c47d04f634d5",
+    "components/agents/agent-activity/index.tsx": "6bf800ed0c5e2262a8f8ced52bc175e426958b827a559cddb86c9d9ea1382ab7",
+    "components/agents/agent-activity/activity-row.tsx": "81eca79e4a921ab1862ff930a4177ba9098bb9f83b7356196cc1094dca2fa511",
+    "components/agents/agent-activity/types.ts": "4e0038a255aead2d9d6aaf9dd9544346570d099928e7d361149ee8ab17ae39d3",
+    "components/agents/loading-states/thinking-shimmer.tsx": "2879bd5fd406c014610be6f304bb4b71e1aac0ac6eec531de4cd3eba4827b7bf",
+    "components/motion/text-shimmer.tsx": "a8ae8ca2966009a4c9d14085985cb2e571af1b5c75e8e64cb1f4dd99f3fb3236",
+    "lib/text-shimmer.ts": "b997e94846a75326464408132a569c9f33f26ba7373fe5f8f9c2214fec8e9fbd"
+  },
+  "dependencies": {
+    "animated-sidebar": [
+      "clsx",
+      "lucide-react",
+      "motion",
+      "tailwind-merge"
+    ],
+    "button-base": [
+      "clsx",
+      "motion",
+      "tailwind-merge"
+    ],
+    "input": [
+      "clsx",
+      "motion",
+      "tailwind-merge"
+    ],
+    "tabs": [
+      "clsx",
+      "motion",
+      "tailwind-merge"
+    ],
+    "table": [
+      "@tanstack/react-virtual",
+      "clsx",
+      "lucide-react",
+      "motion",
+      "tailwind-merge"
+    ],
+    "animated-badge": [
+      "clsx",
+      "lucide-react",
+      "motion",
+      "tailwind-merge"
+    ],
+    "loader": [
+      "clsx",
+      "motion",
+      "tailwind-merge"
+    ],
+    "prompt-input": [
+      "clsx",
+      "lucide-react",
+      "motion",
+      "tailwind-merge"
+    ],
+    "message": [
+      "clsx",
+      "lucide-react",
+      "motion",
+      "tailwind-merge"
+    ],
+    "message-scroller": [
+      "clsx",
+      "motion",
+      "tailwind-merge"
+    ],
+    "approval-card": [
+      "clsx",
+      "lucide-react",
+      "motion",
+      "tailwind-merge"
+    ],
+    "command-palette": [
+      "clsx",
+      "lucide-react",
+      "motion",
+      "tailwind-merge"
+    ],
+    "checkbox": [
+      "clsx",
+      "motion",
+      "tailwind-merge"
+    ],
+    "thinking-shimmer": [
+      "clsx",
+      "tailwind-merge"
+    ],
+    "theme-toggle": [
+      "clsx",
+      "lucide-react",
+      "motion",
+      "next-themes",
+      "tailwind-merge"
+    ]
+  },
+  "upstream": "https://github.com/starc007/ui-components",
+  "reference_commit": "04d6f76e9e67e35cded996b1b8d08a5ddcebc13a",
+  "registry": "https://beui.dev/r/registry.json",
+  "retrieved": "2026-09-06",
+  "hashes": "SHA-256 of normalized installed source before compatibility patches; upstream attribution comments deduplicated.",
+  "chat_app_installation": {
+    "registry": "https://beui.dev/r/chat-app.json",
+    "installed_files": [
+      "components/agents/chat-app.tsx"
+    ],
+    "note": "Install only the ChatApp composition entry: its AnimatedSidebar and utils imports already exist. Other demo features and Shiki are not imported or installed."
+  },
+  "streaming_assistant_installation": {
+    "retrieved": "2026-09-06",
+    "hashes": "SHA-256 of the exact UTF-8 content field returned by each live registry item. These raw source hashes supplement, and do not replace, the historical normalized files hashes above.",
+    "sources": [
+      {
+        "registry": "https://beui.dev/r/chat-app.json",
+        "source_sha256": {
+          "components/agents/agent-activity/index.tsx": "91c6ae50af528975c405d443bed08458dd7d84fd143d890d6735ab5bc1722915",
+          "components/agents/agent-activity/activity-row.tsx": "81eca79e4a921ab1862ff930a4177ba9098bb9f83b7356196cc1094dca2fa511",
+          "components/agents/agent-activity/types.ts": "4e0038a255aead2d9d6aaf9dd9544346570d099928e7d361149ee8ab17ae39d3",
+          "components/agents/loading-states/thinking-shimmer.tsx": "14b4c62bfa0c672d630cd135397a3f462306fa0be978a17eee93b3a62e0867fc"
+        }
+      },
+      {
+        "registry": "https://beui.dev/r/thinking-shimmer.json",
+        "source_sha256": {
+          "components/agents/loading-states/thinking-shimmer.tsx": "53f0d23bd9857d5f61aac878dd03253cbda1ff14a7aa0557a05f1df22b79db87",
+          "components/motion/text-shimmer.tsx": "a8ae8ca2966009a4c9d14085985cb2e571af1b5c75e8e64cb1f4dd99f3fb3236",
+          "lib/text-shimmer.ts": "b997e94846a75326464408132a569c9f33f26ba7373fe5f8f9c2214fec8e9fbd"
+        }
+      }
+    ],
+    "normalization": "AgentActivity's registry Chat App attribution comment is replaced with the component-specific upstream comment. ThinkingShimmer's registry attribution comment is omitted; the two registry variants differ only in that comment. The four remaining activity/shimmer helper files retain their exact raw content. No historical source hash is replaced.",
+    "scope": "Add only the three AgentActivity files and the three ThinkingShimmer/TextShimmer files listed here. Compose public application activity through named exports; no demo records, hidden reasoning, Shiki or paid BoardUI source is installed. The earlier chat_app_installation object remains the historical initial shell-only installation record."
+  }
+}

@@ -71,7 +71,7 @@ test("quantity-only purchase readers see no prices or mutation controls", async 
   expect(await screen.findByText("PO-TEST")).toBeVisible();
   expect(screen.queryByText("123.45")).not.toBeInTheDocument();
   expect(
-    screen.queryByRole("button", { name: "历史采购价" }),
+    screen.queryByRole("tab", { name: "历史采购价" }),
   ).not.toBeInTheDocument();
   expect(
     screen.queryByRole("button", { name: "新建采购订单" }),

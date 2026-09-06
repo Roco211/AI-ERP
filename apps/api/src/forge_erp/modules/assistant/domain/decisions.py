@@ -46,8 +46,12 @@ class DraftDecision(InputModel):
     draft: DraftInput
 
 
+class ChatDecision(InputModel):
+    action: Literal["chat"]
+
+
 Decision = Annotated[
-    QueryDecision | QueriesDecision | AnswerDecision | DraftDecision,
+    QueryDecision | QueriesDecision | AnswerDecision | DraftDecision | ChatDecision,
     Field(discriminator="action"),
 ]
 DECISION = TypeAdapter(Decision)

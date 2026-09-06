@@ -33,13 +33,13 @@ test("same-origin login, shell, profile, navigation and logout", async ({
   await expect(page.getByRole("dialog")).toBeVisible();
   await page
     .getByRole("dialog")
-    .getByRole("link", { name: "库存", exact: true })
+    .getByRole("option", { name: "库存", exact: true })
     .click();
   await expect(
     page.getByRole("heading", { name: "库存", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "库存总览", exact: true }),
+    page.getByRole("tab", { name: "库存总览", exact: true }),
   ).toBeVisible();
   expect([...apiOrigins]).toEqual(["http://localhost:3100"]);
   expect(await page.evaluate(() => localStorage.length)).toBe(0);

@@ -287,3 +287,117 @@ async def test_actual_http_requests_never_log_provider_path_credentials(monkeypa
     finally:
         for name, level in old_levels.items():
             logging.getLogger(name).setLevel(level)
+
+
+class ChatBytes(httpx.AsyncByteStream):
+    def __init__(self, body):
+        self.body = body
+
+    async def __aiter__(self):
+        # Deliberately split every multi-byte character and CRLF across chunks.
+        for i in range(0, len(self.body), 2):
+            yield self.body[i : i + 2]
+
+
+def chat_frame(delta, finish=None):
+    return (
+        "data: "
+        + json.dumps({"choices": [{"delta": delta, "finish_reason": finish}]}, ensure_ascii=False)
+        + "\r\n\r\n"
+    ).encode()
+
+
+async def test_chat_stream_yields_only_public_text_across_utf8_frames(monkeypatch):
+    body = (
+        chat_frame({"reasoning_content": "private hidden reasoning"})
+        + chat_frame({"content": "你好"})
+        + chat_frame({"content": "，很高兴见到你。"})
+        + chat_frame({}, "stop")
+        + b"data: [DONE]\r\n\r\n"
+    )
+    real_client = httpx.AsyncClient
+
+    def handler(request):
+        assert json.loads(request.content)["stream"] is True
+        assert json.loads(request.content)["max_tokens"] == 512
+        return httpx.Response(
+            200, headers={"Content-Type": "text/event-stream"}, stream=ChatBytes(body)
+        )
+
+    monkeypatch.setattr(
+        provider.httpx,
+        "AsyncClient",
+        lambda **kwargs: real_client(**kwargs, transport=httpx.MockTransport(handler)),
+    )
+    chunks = [
+        part async for part in provider.stream_chat([HumanMessage(content="你好")], connection())
+    ]
+    assert chunks == ["你好", "，很高兴见到你。"]
+
+
+@pytest.mark.parametrize(
+    "body,code",
+    [
+        (chat_frame({"content": "partial"}), "AI_INVALID_RESPONSE"),
+        (chat_frame({}, "length"), "AI_RESPONSE_TRUNCATED"),
+        (chat_frame({"tool_calls": [{"id": "private tool"}]}), "AI_INVALID_RESPONSE"),
+        (chat_frame({"content": "x" * 2001}), "AI_RESPONSE_LIMIT"),
+        (b"data: [DONE]\n\n", "AI_INVALID_RESPONSE"),
+        (b"data: null\n\n", "AI_INVALID_RESPONSE"),
+        (b"x" * (provider.MAX_RESPONSE_BYTES + 1), "AI_RESPONSE_LIMIT"),
+    ],
+)
+async def test_chat_stream_rejects_truncation_tools_and_unbounded_frames(monkeypatch, body, code):
+    real_client = httpx.AsyncClient
+    monkeypatch.setattr(
+        provider.httpx,
+        "AsyncClient",
+        lambda **kwargs: real_client(
+            **kwargs,
+            transport=httpx.MockTransport(
+                lambda request: httpx.Response(
+                    200, headers={"Content-Type": "text/event-stream"}, stream=ChatBytes(body)
+                )
+            ),
+        ),
+    )
+    with pytest.raises(Problem) as exc:
+        _ = [
+            part
+            async for part in provider.stream_chat([HumanMessage(content="你好")], connection())
+        ]
+    assert exc.value.code == code
+
+
+@pytest.mark.parametrize(
+    "status,headers,code",
+    [
+        (401, {}, "AI_PROVIDER_AUTH"),
+        (429, {}, "AI_PROVIDER_RATE_LIMIT"),
+        (500, {}, "AI_PROVIDER_UNAVAILABLE"),
+        (302, {}, "AI_PROVIDER_UNAVAILABLE"),
+        (200, {"Content-Encoding": "gzip"}, "AI_PROVIDER_ENCODING"),
+        (200, {"Content-Type": "application/json"}, "AI_STREAM_UNSUPPORTED"),
+    ],
+)
+async def test_chat_transport_failures_never_echo_upstream_content(
+    monkeypatch, status, headers, code
+):
+    real_client = httpx.AsyncClient
+    secret = "private-chat-upstream-content"
+
+    def handler(request):
+        assert "tools" not in json.loads(request.content)
+        return httpx.Response(status, headers=headers, stream=ChatBytes(secret.encode()))
+
+    monkeypatch.setattr(
+        provider.httpx,
+        "AsyncClient",
+        lambda **kwargs: real_client(**kwargs, transport=httpx.MockTransport(handler)),
+    )
+    with pytest.raises(Problem) as exc:
+        _ = [
+            part
+            async for part in provider.stream_chat([HumanMessage(content="你好")], connection())
+        ]
+    assert exc.value.code == code and secret not in exc.value.detail

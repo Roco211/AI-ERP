@@ -1,11 +1,6 @@
 "use client";
 import type { ReactNode } from "react";
-import {
-  useReactTable,
-  getCoreRowModel,
-  flexRender,
-  type ColumnDef,
-} from "@tanstack/react-table";
+import { BusinessTable } from "@/features/operations/business-table";
 import Link from "next/link";
 import type { PriceSource } from "./client";
 
@@ -102,55 +97,5 @@ export function Grid({
   rows: { id: string; cells: ReactNode[] }[];
   empty?: string;
 }) {
-  const columns: ColumnDef<{ id: string; cells: ReactNode[] }>[] = headers.map(
-    (header, index) => ({
-      id: String(index),
-      header,
-      cell: ({ row }) => row.original.cells[index],
-    }),
-  );
-  const table = useReactTable({
-    data: rows,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    manualPagination: true,
-    getRowId: (row) => row.id,
-  });
-  return (
-    <div className="min-w-0 max-w-full overflow-x-auto rounded-xl border border-border bg-white">
-      <table className="w-full text-left text-sm">
-        <thead className="bg-[#f4f6f2] text-xs text-muted-foreground">
-          {table.getHeaderGroups().map((group) => (
-            <tr key={group.id}>
-              {group.headers.map((header) => (
-                <th
-                  className="whitespace-nowrap px-4 py-3 font-normal"
-                  key={header.id}
-                >
-                  {flexRender(
-                    header.column.columnDef.header,
-                    header.getContext(),
-                  )}
-                </th>
-              ))}
-            </tr>
-          ))}
-        </thead>
-        <tbody>
-          {table.getRowModel().rows.map((row) => (
-            <tr className="border-t border-border" key={row.id}>
-              {row.getVisibleCells().map((cell) => (
-                <td className="px-4 py-3 tabular-nums" key={cell.id}>
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      {!rows.length && (
-        <p className="p-8 text-center text-sm text-muted-foreground">{empty}</p>
-      )}
-    </div>
-  );
+  return <BusinessTable headers={headers} rows={rows} empty={empty} />;
 }

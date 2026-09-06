@@ -1,39 +1,46 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { MessageSquare, Plus, Send, Sparkles } from "lucide-react";
+import { ArrowLeft, CalendarDays, CheckCheck, ChevronDown, ClipboardList, Copy, Database, History, MoreHorizontal, PackageSearch, PanelRightClose, PanelRightOpen, RefreshCw, ShoppingBag, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ProductPicker } from "@/features/catalog/picker";
-import { resourceClients, unwrap } from "@/features/catalog/client";
+import { ChatApp } from "@/components/agents/chat-app";
+import { Message, MessageAvatar, MessageBubble, MessageBubbleContent, MessageContent,
+  MessageGroup, MessageHeader } from "@/components/agents/message";
+import { MessageScroller } from "@/components/agents/message-scroller";
+import { PromptInput } from "@/components/agents/prompt-input";
 import { useOperationSubmission } from "@/features/operations/use-submission";
-import { SubmissionFeedback, selectClass } from "@/features/operations/presentation";
+import { SubmissionFeedback } from "@/features/operations/presentation";
+import { ConversationHistory } from "./conversation-history";
+import { EvidenceCard, ProposalCard } from "./context-panel";
+import { BusinessResultCards } from "./business-result-cards";
+import { TurnActivity } from "./turn-activity";
+import { ThinkingShimmer } from "@/components/agents/loading-states/thinking-shimmer";
 import {
   AssistantError, getAssistantStatus, listConversations, getConversation, createConversation,
-  deleteConversation, sendMessage, requestBrief, editProposal, approveProposal, rejectProposal,
-  retryTurn, safeSourceHref,
-  type Evidence, type Conversation, type Turn, type Proposal, type Preview, type Receipt,
-  type DraftInput,
+  deleteConversation, sendMessage, requestBrief, retryTurn,
+  type AssistantStreamOptions, type Conversation, type ConversationsPage, type Turn,
 } from "./assistant-client";
 
-type Submission = ReturnType<typeof useOperationSubmission>;
-const hasAll = (permissions: string[], required: string[]) => required.every((p) => permissions.includes(p));
 const authorityError = (error: unknown) => error instanceof AssistantError && (
   [401, 403].includes(error.status) || error.status === 409 &&
   /AUTHORITY|PERMISSION|PROVIDER|CONTEXT/.test(error.code ?? "")
 );
 const when = (value: string) => new Date(value).toLocaleString("zh-CN", { hour12: false });
-const PRICE_SOURCE_LABELS: Record<string, string> = { standard: "标准价", customer: "客户专价",
-  history: "有效成交历史", retail: "零售价", wholesale: "批发价", manual: "手工复核",
-};
-const priceSourceLabel = (value: unknown) => PRICE_SOURCE_LABELS[String(value)] ?? "当前报价规则";
+type Panel = "chat" | "history" | "context";
+const starters = [
+  { title: "查询库存", description: "核对商品与可用数量", text: "请帮我查询以下商品的可用库存：", icon: PackageSearch, permission: "inventory.read" },
+  { title: "了解经营情况", description: "从业务记录了解经营状况", text: "请根据业务记录汇总最近的经营情况。", icon: Database, permission: "dashboard.read" },
+  { title: "准备销售草稿", description: "说明客户、商品和数量", text: "请准备销售草稿，客户：，商品：，数量：。先给我预览。", icon: ShoppingBag, permission: "sales.order.write" },
+  { title: "准备采购草稿", description: "说明供应商与采购需求", text: "请准备采购草稿，供应商：，商品：，数量：，单价：。先给我预览。", icon: ClipboardList, permission: "purchase.order.write" },
+];
 
 export function AssistantWorkspace({ permissions, identityKey = "current" }: {
   permissions: string[]; identityKey?: string;
 }) {
-  if (!permissions.includes("ai.use")) return <p role="alert" className="mt-8 text-sm">
+  if (!permissions.includes("ai.use")) return <p role="alert" className="p-6 text-sm">
     当前账户没有使用 AI 助手的权限，请联系管理员。
   </p>;
   return <AuthorizedAssistant key={identityKey + permissions.slice().sort().join("|")}
@@ -49,36 +56,84 @@ function AuthorizedAssistant({ permissions }: { permissions: string[] }) {
     const value = new URL(window.location.href).searchParams.get("conversation");
     return value && /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(value) ? value : null;
   });
-  const [question, setQuestion] = useState("");
+  // Unsent text is private, in-memory and scoped to this identity and conversation.
+  const [questions, setQuestions] = useState<Record<string, string>>({});
   const [day, setDay] = useState("");
   const [blocked, setBlocked] = useState(false);
   const [accessError, setAccessError] = useState<AssistantError | null>(null);
   const [deleteCheck, setDeleteCheck] = useState(false);
-  const submission = useOperationSubmission();
+  const [panel, setPanel] = useState<Panel>("chat");
+  const [contextOpen, setContextOpen] = useState(false);
+  const [live, setLive] = useState<{ conversationId: string; turn: Turn; text: string } | null>(null);
+  const streamController = useRef<AbortController | null>(null);
+  const [contextTurn, setContextTurn] = useState<string | null>(null);
+  const [copyStatus, setCopyStatus] = useState<{ id: string; ok: boolean } | null>(null);
+  const submission = useOperationSubmission({ success: "" });
   const base = ["assistant", cacheScope];
   const status = useQuery({ queryKey: [...base, "status"], queryFn: ({ signal }) => getAssistantStatus(signal),
     retry: false, gcTime: 0 });
   const conversations = useQuery({ queryKey: [...base, "list", page],
     queryFn: ({ signal }) => listConversations(page, signal), retry: false, gcTime: 0 });
-  const id = chosen ?? conversations.data?.items[0]?.id;
+  const firstConversation = conversations.data?.items[0]?.id;
+  // Pin the initial selection: passive list refreshes cannot move an in-flight turn.
+  if (chosen === null && firstConversation) setChosen(firstConversation);
+  const id = chosen ?? firstConversation;
+  const question = questions[id ?? "empty"] ?? "";
+  function setQuestion(value: string) { setQuestions((old) => ({ ...old, [id ?? "empty"]: value })); }
   const detailKey = [...base, "conversation", id];
   const detail = useQuery({ queryKey: detailKey,
     queryFn: ({ signal }) => getConversation(id!, signal), enabled: !!id && !blocked,
     retry: false, gcTime: 0,
-    refetchInterval: (query) => query.state.data?.turns.some((turn) => turn.state === "RUNNING") ? 2500 : false,
+    refetchInterval: (query) => !submission.busy && query.state.data?.turns.some((turn) => turn.state === "RUNNING") ? 2500 : false,
   });
-  const unavailable = blocked || authorityError(detail.error) || authorityError(status.error);
-  const conversation = detail.error || unavailable ? undefined : detail.data;
-  const running = conversation?.turns.some((turn) => turn.state === "RUNNING") ?? false;
-  const locked = submission.locked || running;
+  const historyUnavailable = detail.error instanceof AssistantError && [404, 410].includes(detail.error.status);
+  const rejectedRead = detail.error instanceof AssistantError && detail.error.status >= 400 && detail.error.status < 500;
+  const unavailable = blocked || rejectedRead || authorityError(status.error);
+  const conversation = unavailable ? undefined : detail.data;
+  const visibleLive = !unavailable && live?.conversationId === id ? live : null;
+  const liveTurn = visibleLive ? { ...visibleLive.turn, answer: visibleLive.text || visibleLive.turn.answer } : null;
+  const turns = conversation ? liveTurn
+    ? conversation.turns.some((turn) => turn.id === liveTurn.id)
+      ? conversation.turns.map((turn) => turn.id === liveTurn.id ? liveTurn : turn)
+      : [...conversation.turns, liveTurn]
+    : conversation.turns : [];
+  const readFailed = !!detail.error || !!status.error;
+  const running = turns.some((turn) => turn.state === "RUNNING");
+  const activeStage = turns.findLast((turn) => turn.state === "RUNNING")?.activity
+    ?.findLast((item) => item.state === "running")?.title;
+  const activityAnnouncement = unavailable ? "" : submission.uncertain ? "连接已中断，处理结果待确认。"
+    : running || submission.busy ? activeStage ?? "正在处理请求…" : "";
+  const locked = submission.locked || running || readFailed;
+  const contextTurns = turns.filter((turn) => (turn.evidence ?? []).length || turn.proposal);
+  const focused = contextTurns.find((turn) => turn.id === contextTurn) ?? contextTurns.at(-1);
+  const pendingCount = turns.filter((turn) => turn.proposal?.status === "PENDING").length;
+
+  useEffect(() => () => { streamController.current?.abort(); }, []);
+  useEffect(() => { if (unavailable) streamController.current?.abort(); }, [unavailable]);
+
+  useEffect(() => {
+    const media = window.matchMedia("(min-width: 1280px)");
+    const preserveFocus = (event: MediaQueryListEvent) => {
+      if (event.matches) return;
+      const active = document.activeElement?.closest<HTMLElement>("[data-assistant-panel]")?.dataset.assistantPanel;
+      if (active === "chat" || active === "history" || active === "context") setPanel(active);
+    };
+    media.addEventListener("change", preserveFocus);
+    return () => media.removeEventListener("change", preserveFocus);
+  }, []);
+
+  function showPanel(value: Panel) {
+    setPanel(value);
+    if (value === "context") setContextOpen(true);
+    requestAnimationFrame(() => document.getElementById(`assistant-${value}-heading`)?.focus({ preventScroll: true }));
+  }
   function selectConversation(value: string | null) {
-    setChosen(value);
+    setChosen(value); setContextTurn(null); setCopyStatus(null); setLive(null);
     const url = new URL(window.location.href);
     if (value) url.searchParams.set("conversation", value);
     else url.searchParams.delete("conversation");
     window.history.replaceState(window.history.state, "", url);
   }
-
   async function protect<T>(operation: () => Promise<T>): Promise<T> {
     try { return await operation(); }
     catch (error) {
@@ -92,7 +147,34 @@ function AuthorizedAssistant({ permissions }: { permissions: string[] }) {
       ...old, turns: old.turns.some((t) => t.id === turn.id)
         ? old.turns.map((t) => t.id === turn.id ? turn : t) : [...old.turns, turn],
     } : old);
+    setLive(null);
+    setContextTurn(turn.id);
     void detail.refetch();
+  }
+  async function streamed(conversationId: string, operation: (options: AssistantStreamOptions) => Promise<Turn>) {
+    const controller = new AbortController();
+    streamController.current = controller;
+    setLive(null);
+    try {
+      return await operation({ signal: controller.signal,
+        onTurn: (turn) => {
+          if (controller.signal.aborted || streamController.current !== controller) return;
+          setLive((old) => ({ conversationId, turn,
+            text: turn.state !== "RUNNING" ? turn.answer ?? ""
+              : old?.turn.id === turn.id ? old.text : "" }));
+        },
+        onDelta: (delta, turnId) => {
+          if (controller.signal.aborted || streamController.current !== controller) return;
+          setLive((old) => old?.turn.id === turnId ? { ...old, text: old.text + delta } : old);
+        },
+      });
+    } catch (error) {
+      // Partial output is provisional; receipt recovery owns the next visible result.
+      setLive(null);
+      throw error;
+    } finally {
+      if (streamController.current === controller) streamController.current = null;
+    }
   }
   async function refresh() {
     const value = await detail.refetch();
@@ -100,295 +182,187 @@ function AuthorizedAssistant({ permissions }: { permissions: string[] }) {
   }
   function newConversation() {
     void submission.submit((key) => protect(() => createConversation("新对话", key)), async (value) => {
-      selectConversation(value.id); setBlocked(false); setAccessError(null); setQuestion(""); setDeleteCheck(false);
+      selectConversation(value.id); setPage(1); setBlocked(false); setAccessError(null); setDeleteCheck(false); showPanel("chat");
       await qc.invalidateQueries({ queryKey: [...base, "list"] });
       void status.refetch();
     });
   }
-  function ask(event: FormEvent) {
-    event.preventDefault();
-    if (!id || !question.trim() || locked || unavailable || !status.data?.configured) return;
-    const body = { message: question.trim(), selected_ids: [] };
-    void submission.submit((key) => protect(() => sendMessage(id, body, key)), (turn) => {
-      setQuestion(""); acceptTurn(turn);
+  function ask(value: string) {
+    if (!id || !value.trim() || locked || submission.isLocked() || unavailable || !status.data?.configured) return;
+    const body = { message: value.trim(), selected_ids: [] };
+    void submission.submit((key) => protect(() => streamed(id, (options) => sendMessage(id, body, key, options))), (turn) => {
+      setQuestions((old) => ({ ...old, [id]: "" })); acceptTurn(turn);
     });
   }
-  return <section aria-label="AI 助手" className="mt-6 grid gap-5 lg:grid-cols-[230px_minmax(0,1fr)]">
-    <aside className="min-w-0 space-y-3 rounded-xl border bg-white p-4">
-      <div className="flex items-center justify-between gap-2"><h2 className="font-medium">我的对话</h2>
-        <Button size="sm" variant="outline" disabled={submission.locked} onClick={newConversation}>
-          <Plus aria-hidden className="size-4" />新对话
-        </Button></div>
-      <p className="text-xs text-muted-foreground">对话仅自己可见，正文保留 7 天。</p>
-      {conversations.isPending && <p role="status">正在读取对话…</p>}
-      {conversations.error && <p role="alert">无法读取对话列表，请重新读取。</p>}
-      <nav aria-label="对话列表" className="space-y-2">
-        {conversations.data?.items.map((item) => <button key={item.id}
-          aria-current={item.id === id ? "page" : undefined} disabled={submission.locked}
-          className={`w-full rounded-lg border p-3 text-left text-sm ${item.id === id ? "border-primary bg-primary/5" : "border-transparent hover:bg-muted"}`}
-          onClick={() => { selectConversation(item.id); setBlocked(false); setDeleteCheck(false); }}>
-          <span className="block truncate"><MessageSquare className="mr-1 inline size-3" aria-hidden />{item.title}</span>
-          <time className="mt-1 block text-xs text-muted-foreground">{when(item.created_at)}</time>
-        </button>)}
-      </nav>
-      {!conversations.isPending && !conversations.data?.items.length && <p className="text-sm text-muted-foreground">还没有对话，创建一个开始。</p>}
-      {(conversations.data?.total ?? 0) > 20 && <div className="flex gap-2">
-        <Button variant="outline" disabled={page <= 1 || submission.locked} onClick={() => setPage(page - 1)}>上一页</Button>
-        <Button variant="outline" disabled={page * 20 >= (conversations.data?.total ?? 0) || submission.locked}
-          onClick={() => setPage(page + 1)}>下一页</Button>
-      </div>}
-    </aside>
-    <div className="min-w-0 space-y-5">
-      <header className="rounded-xl border bg-white p-5">
-        <h2 className="flex items-center gap-2 text-xl font-semibold"><Sparkles className="size-5 text-primary" aria-hidden />经营助手</h2>
-        <p className="mt-2 text-sm text-muted-foreground">查询商品、库存与经营记录，复核后创建销售或采购草稿。</p>
-        {status.data?.configured ? <p className="mt-2 text-xs text-muted-foreground">{status.data.provider_name} · {status.data.model}</p>
-          : !status.isPending && <p role="status" className="mt-3 text-sm">对话模型尚未配置。
-            {status.data?.can_manage_provider && permissions.includes("ai.provider.manage")
-              ? <Link href="/settings/llm" className="ml-2 text-primary underline">配置模型服务</Link>
-              : "请联系管理员配置后再提问。"}</p>}
-        {status.error && <p role="alert" className="mt-3">暂时无法读取模型状态。</p>}
-      </header>
+  function openContext(turn: Turn) { setContextTurn(turn.id); showPanel("context"); }
+  const modelName = status.data?.configured ? `${status.data.provider_name} · ${status.data.model}` : "尚未配置模型";
+
+  return <section aria-label="AI 助手" className="assistant-experience flex h-full min-h-0 min-w-0 flex-col">
+    {/* Keep stage announcements outside the busy transcript, which intentionally
+        defers full reply announcements until the response is complete. */}
+    <p role="status" aria-label="助手处理状态" aria-live="polite" aria-atomic="true" className="sr-only">{activityAnnouncement}</p>
+    <div className="flex h-12 shrink-0 items-center justify-between gap-2 border-b border-border/70 px-3 xl:hidden">
+      <Button size="sm" variant="ghost" aria-label="历史会话" aria-pressed={panel === "history"} onClick={() => showPanel(panel === "history" ? "chat" : "history")}><History className="size-4" aria-hidden />会话</Button>
+      {panel !== "chat" && <Button size="sm" variant="ghost" onClick={() => showPanel("chat")}><ArrowLeft className="size-4" aria-hidden />返回对话</Button>}
+      <Button size="sm" variant="ghost" aria-label="业务依据与草稿" aria-pressed={panel === "context"} onClick={() => showPanel(panel === "context" ? "chat" : "context")}><ClipboardList className="size-4" aria-hidden />依据与草稿{pendingCount > 0 && <span className="rounded-full bg-primary px-1.5 text-primary-foreground">{pendingCount}</span>}</Button>
+    </div>
+    {(submission.error || submission.notice || unavailable) && <section aria-label="操作反馈" className="max-h-40 shrink-0 space-y-2 overflow-y-auto border-b border-border/60 bg-background px-4 py-3 text-sm">
       <SubmissionFeedback value={submission} onRefresh={() => void refresh()} />
-      {submission.busy && <p role="status" className="text-sm">正在提交并等待处理结果…</p>}
-      {unavailable && <div role="alert" className="rounded-lg bg-amber-50 p-4 text-sm">
-        {accessError?.status === 401 || detail.error instanceof AssistantError && detail.error.status === 401
+      {unavailable && <div role="alert" className="rounded-xl bg-amber-500/10 p-3 text-sm text-amber-900 dark:text-amber-200">
+        {historyUnavailable ? "此对话已删除或聊天正文已到期，旧内容已停止展示。请新建对话后继续。"
+          : accessError?.status === 401 || detail.error instanceof AssistantError && detail.error.status === 401
           ? <>登录已失效，旧对话已停止展示。<Link href="/login" className="ml-2 underline">重新登录</Link></>
           : "权限或模型服务已变化，旧对话已停止展示。请新建对话后继续。"}
       </div>}
-      {!!id && <div className="flex flex-wrap items-end gap-3 rounded-xl border bg-white p-4">
-        <label className="text-sm">简报日期<Input aria-label="简报日期" type="date" value={day} disabled={locked || unavailable}
-          onChange={(event) => setDay(event.target.value)} /></label>
-        <Button variant="outline" disabled={locked || unavailable || !permissions.includes("dashboard.read")} onClick={() => {
-          const selectedDay = day || undefined;
-          void submission.submit((key) => protect(() => requestBrief(id, selectedDay, key)), acceptTurn);
-        }}>生成每日简报</Button>
-        <span className="text-xs text-muted-foreground">{permissions.includes("dashboard.read") ? "留空使用上一个完整业务日" : "生成简报需要经营概览权限"}</span>
-        <Button variant="ghost" disabled={submission.busy} onClick={() => { void detail.refetch(); void conversations.refetch(); void status.refetch(); }}>重新读取记录</Button>
-        <Button variant="ghost" disabled={locked || unavailable} onClick={() => setDeleteCheck(!deleteCheck)}>删除对话</Button>
-        {deleteCheck && <div className="w-full space-y-2 text-sm"><p>删除聊天正文及未执行提案，已创建单据仍然保留。</p>
-          <Button variant="destructive" disabled={locked} onClick={() => {
-            void submission.submit((key) => protect(() => deleteConversation(id, key)), async () => {
-              selectConversation(null); setDeleteCheck(false); qc.removeQueries({ queryKey: detailKey });
-              await conversations.refetch();
-            });
-          }}>确认删除对话</Button></div>}
-      </div>}
-      {!!id && detail.isPending && !unavailable && <p role="status">正在读取对话记录…</p>}
-      {detail.error && !unavailable && <p role="alert">{detail.error.message} 请重新读取记录。</p>}
-      {conversation?.older_turns_omitted && <p className="text-xs text-muted-foreground">仅展示最近的对话记录。</p>}
-      <div className="space-y-6" aria-live="polite">
-        {conversation?.turns.map((turn) => <article key={turn.id} className="space-y-4">
-          <div className="ml-auto max-w-3xl rounded-xl bg-primary/5 p-4"><p className="whitespace-pre-wrap break-words text-sm">{turn.prompt}</p>
-            <time className="mt-2 block text-xs text-muted-foreground">{when(turn.created_at)}</time></div>
-          {turn.state === "RUNNING" && <p role="status" className="text-sm">正在查询并核对依据…</p>}
-          {turn.answer && <p className="whitespace-pre-wrap break-words text-sm">{turn.answer}</p>}
-          {turn.error_message && <p role="alert" className="rounded-lg bg-amber-50 p-3 text-sm">{turn.error_message}</p>}
-          {turn.can_retry && <Button variant="outline" disabled={submission.locked || unavailable} onClick={() => {
-            void submission.submit((key) => protect(() => retryTurn(turn.id, key)), acceptTurn);
-          }}>恢复本次处理</Button>}
-          {(turn.evidence ?? []).map((item) => <EvidenceCard key={item.id} value={item} />)}
-          {turn.proposal && <ProposalCard key={`${turn.proposal.id}:${turn.proposal.revision}:${turn.proposal.status}`}
-            proposal={turn.proposal} permissions={permissions} submission={submission} blocked={unavailable || running}
-            protect={protect} onChanged={refresh} />}
-        </article>)}
-      </div>
-      <form onSubmit={ask} className="space-y-3 rounded-xl border bg-white p-4">
-        <label htmlFor="assistant-question" className="text-sm font-medium">你的问题</label>
-        <textarea id="assistant-question" maxLength={4000} value={question}
-          disabled={!id || locked || unavailable || !status.data?.configured}
-          className="min-h-28 w-full rounded-lg border p-3 text-sm focus:outline-primary"
-          placeholder="例如：M8 螺栓还有多少可用库存？" onChange={(event) => setQuestion(event.target.value)} />
-        <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-muted-foreground">候选不明确时请补充编码；金额、数量以业务记录为准。</p>
-          <Button type="submit" disabled={!id || !question.trim() || locked || unavailable || !status.data?.configured}>
-            <Send className="size-4" aria-hidden />发送问题
-          </Button></div>
-      </form>
-    </div>
-  </section>;
-}
 
-function EvidenceCard({ value }: { value: Evidence }) {
-  return <section aria-label={value.title} className="min-w-0 space-y-4 rounded-xl border bg-white p-5">
-    <h3 className="font-medium">{value.title}</h3>
-    <p className="text-xs text-muted-foreground">查询时间：{when(value.as_of)} · {value.scope}</p>
-    <dl className="grid gap-3 text-sm sm:grid-cols-2 xl:grid-cols-3">{value.summary.map((fact, index) =>
-      <div key={index}><dt className="text-muted-foreground">{fact.label}</dt>
-        <dd className="mt-1 whitespace-pre-wrap break-words tabular-nums">{fact.value}{fact.unit ? ` ${fact.unit}` : ""}</dd></div>)}</dl>
-    {!!value.columns.length && <div className="overflow-auto"><table className="w-full text-left text-sm">
-      <thead><tr>{value.columns.map((column) => <th key={column} className="whitespace-nowrap border-b p-2 font-medium">{column}</th>)}</tr></thead>
-      <tbody>{value.rows.map((row, index) => <tr key={index}>{value.columns.map((column) =>
-        <td key={column} className="max-w-xs whitespace-pre-wrap break-words border-b p-2 tabular-nums">{row[column] ?? "—"}</td>)}</tr>)}</tbody>
-    </table></div>}
-    {value.truncated && <p className="text-xs text-muted-foreground">当前只展示部分记录，可补充条件缩小范围。</p>}
-    <div className="flex flex-wrap gap-3 text-sm">{value.links.filter((link) => safeSourceHref(link.href)).map((link) =>
-      <a className="text-primary underline" key={link.href} href={link.href}>{link.label}</a>)}</div>
-  </section>;
-}
-
-type EditableLine = {
-  product_id: string; unit_id: string; product_label: string; unit_label: string;
-  qty: string; pricing_mode: "AUTO" | "MANUAL"; unit_price: string;
-};
-function EntitySelect({ resource, label, value, currentName, disabled, allowed, onChange }: {
-  resource: "customers" | "suppliers" | "warehouses"; label: string; value: string;
-  currentName: string; disabled: boolean; allowed: boolean; onChange: (value: string) => void;
-}) {
-  const [q, setQ] = useState("");
-  const data = useQuery({ queryKey: ["assistant-entity", resource, q],
-    queryFn: async () => unwrap(await resourceClients[resource].list({ q, active: true, page_size: 25 })),
-    enabled: allowed, gcTime: 0, retry: false });
-  return <div className="space-y-2"><label className="block text-sm">{label}
-    <select aria-label={label} className={`${selectClass} mt-1 w-full`} value={value}
-      disabled={disabled || !allowed} onChange={(event) => onChange(event.target.value)}>
-      {!data.data?.items.some((item) => item.id === value) && <option value={value}>{currentName}</option>}
-      {data.data?.items.map((item) => <option key={item.id} value={item.id}>{String(item.code)} · {String(item.name)}</option>)}
-    </select></label>
-    {allowed && <Input aria-label={`搜索${label}`} placeholder={`按编码或名称搜索${label}`} value={q}
-      disabled={disabled} onChange={(event) => setQ(event.target.value)} />}
-    {data.error && <p role="alert" className="text-xs">暂时无法读取{label}选项。</p>}
-  </div>;
-}
-
-function ProposalCard({ proposal, permissions, submission, blocked, protect, onChanged }: {
-  proposal: Proposal; permissions: string[]; submission: Submission; blocked: boolean;
-  protect: <T>(operation: () => Promise<T>) => Promise<T>; onChanged: () => Promise<void>;
-}) {
-  const [receipt, setReceipt] = useState<Receipt | null>(proposal.receipt ?? null);
-  if (receipt) return <section aria-label="草稿创建结果" className="rounded-xl border border-green-200 bg-green-50 p-5">
-    <h3 className="font-medium">草稿已创建</h3><p className="mt-2 text-sm">已保存为草稿，可进入业务页面继续复核。</p>
-    {safeSourceHref(receipt.href) && <a className="mt-3 inline-block text-primary underline" href={receipt.href}>查看已创建草稿</a>}
-  </section>;
-  if (proposal.status !== "PENDING" || !proposal.preview) return <p className="rounded-lg border p-4 text-sm">
-    {proposal.status === "REJECTED" ? "已取消此提案。" : proposal.status === "EXPIRED" ? "提案已过期，请重新提出开单请求。" : "此提案暂时不可复核。"}
-  </p>;
-  return <DraftEditor proposal={proposal} initial={proposal.preview} permissions={permissions}
-    submission={submission} blocked={blocked} protect={protect} onChanged={onChanged} onCreated={setReceipt} />;
-}
-
-function DraftEditor({ proposal, initial, permissions, submission, blocked, protect, onChanged, onCreated }: {
-  proposal: Proposal; initial: Preview; permissions: string[]; submission: Submission; blocked: boolean;
-  protect: <T>(operation: () => Promise<T>) => Promise<T>; onChanged: () => Promise<void>;
-  onCreated: (value: Receipt) => void;
-}) {
-  const [preview, setPreview] = useState(initial);
-  const [revision, setRevision] = useState(proposal.revision);
-  const sales = proposal.kind === "SALES";
-  const [party, setParty] = useState("customer_id" in initial.order ? initial.order.customer_id : initial.order.supplier_id);
-  const [warehouse, setWarehouse] = useState(initial.order.warehouse_id);
-  const [reason, setReason] = useState(initial.order.reason);
-  const [lines, setLines] = useState<EditableLine[]>(() => initial.lines.map((line) => {
-    const original = initial.order.lines.find((input) => input.product_id === line.product_id);
-    return { product_id: line.product_id, unit_id: line.unit_id, product_label: line.product_label,
-      unit_label: line.unit_label, qty: String(original?.qty ?? line.qty),
-      pricing_mode: sales && original && "pricing_mode" in original ? original.pricing_mode ?? "AUTO" : "MANUAL",
-      unit_price: String(line.unit_price) };
-  }));
-  const [dirty, setDirty] = useState(false);
-  const [picker, setPicker] = useState<number | "add" | null>(null);
-  const [error, setError] = useState("");
-  const [mustPreview, setMustPreview] = useState(false);
-  const allowed = hasAll(permissions, ["ai.use", "ai.draft.create", "catalog.read", "warehouse.read",
-    sales ? "sales.read" : "purchase.read", sales ? "customer.read" : "supplier.read",
-    sales ? "sales.order.write" : "purchase.order.write", sales ? "product.price.read" : "product.cost.read"]);
-  const locked = submission.locked || blocked || !allowed;
-  const [expired, setExpired] = useState(() => Date.parse(proposal.expires_at) <= Date.now());
-  useEffect(() => {
-    const delay = Math.min(2_147_483_647, Math.max(0, Date.parse(proposal.expires_at) - Date.now()));
-    const timer = window.setTimeout(() => setExpired(true), delay);
-    return () => window.clearTimeout(timer);
-  }, [proposal.expires_at]);
-  function changeLine(index: number, changes: Partial<EditableLine>) {
-    setLines((old) => old.map((line, i) => i === index ? { ...line, ...changes } : line)); setDirty(true);
-  }
-  function body(): DraftInput {
-    const common = { warehouse_id: warehouse, reason };
-    return sales ? { kind: "SALES", order: { ...common, customer_id: party,
-      lines: lines.map((line) => ({ product_id: line.product_id, unit_id: line.unit_id, qty: line.qty,
-        pricing_mode: line.pricing_mode,
-        ...(line.pricing_mode === "MANUAL" ? { unit_price: line.unit_price } : {}) })) } }
-      : { kind: "PURCHASE", order: { ...common, supplier_id: party,
-        lines: lines.map((line) => ({ product_id: line.product_id, unit_id: line.unit_id,
-          qty: line.qty, unit_price: line.unit_price })) } };
-  }
-  return <section aria-label="开单复核" className="space-y-5 rounded-xl border border-primary/30 bg-white p-5">
-    <div><h3 className="font-semibold">{sales ? "销售" : "采购"}草稿复核</h3>
-      <p className="mt-1 text-xs text-muted-foreground">有效至 {when(proposal.expires_at)}。修改后重新预览，再明确创建草稿。</p></div>
-    {!allowed && <p role="alert">当前账户没有创建此类草稿的全部权限。</p>}
-    {expired && <p role="alert">提案已过期，请重新提出开单请求。</p>}
-    {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
-    <div className="grid gap-4 sm:grid-cols-2">
-      <EntitySelect resource={sales ? "customers" : "suppliers"} label={sales ? "客户" : "供应商"}
-        value={party} currentName={preview.party_name} disabled={locked || expired}
-        allowed={permissions.includes(sales ? "customer.read" : "supplier.read")}
-        onChange={(value) => { setParty(value); setDirty(true); }} />
-      <EntitySelect resource="warehouses" label="仓库" value={warehouse} currentName={preview.warehouse_name}
-        disabled={locked || expired} allowed={permissions.includes("warehouse.read")}
-        onChange={(value) => { setWarehouse(value); setDirty(true); }} />
-    </div>
-    <label className="block text-sm">开单说明<Input aria-label="开单说明" maxLength={2000} value={reason}
-      disabled={locked || expired} onChange={(event) => { setReason(event.target.value); setDirty(true); }} /></label>
-    <div className="space-y-3">{lines.map((line, index) => <div key={index} className="space-y-3 rounded-lg border p-3">
-      <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-sm font-medium">{index + 1}. {line.product_label} · {line.unit_label}</p>
-        <div className="flex gap-2"><Button variant="ghost" disabled={locked || expired || !permissions.includes("catalog.read")}
-          onClick={() => setPicker(index)}>替换第 {index + 1} 行商品或单位</Button>
-          <Button variant="ghost" disabled={locked || expired || lines.length <= 1}
-            onClick={() => { setLines(lines.filter((_, i) => i !== index)); setDirty(true); }}>移除第 {index + 1} 行</Button></div></div>
-      <div className="grid gap-3 sm:grid-cols-3"><label className="text-sm">数量<Input aria-label={`第 ${index + 1} 行数量`}
-        inputMode="decimal" value={line.qty} disabled={locked || expired} onChange={(event) => changeLine(index, { qty: event.target.value })} /></label>
-        {sales && <label className="text-sm">报价方式<select aria-label={`第 ${index + 1} 行报价方式`} value={line.pricing_mode}
-          className={`${selectClass} mt-1 w-full`} disabled={locked || expired}
-          onChange={(event) => changeLine(index, { pricing_mode: event.target.value as "AUTO" | "MANUAL" })}>
-          <option value="AUTO">按当前报价规则</option><option value="MANUAL">手工复核单价</option></select></label>}
-        <label className="text-sm">单价<Input aria-label={`第 ${index + 1} 行单价`} inputMode="decimal" value={line.unit_price}
-          disabled={locked || expired || sales && line.pricing_mode === "AUTO"}
-          onChange={(event) => changeLine(index, { unit_price: event.target.value })} /></label>
-      </div>
-    </div>)}</div>
-    <Button variant="outline" disabled={locked || expired || lines.length >= 20 || !permissions.includes("catalog.read")}
-      onClick={() => setPicker("add")}>添加商品</Button>
-    {picker !== null && !locked && !expired && <div className="space-y-3 rounded-lg bg-muted/40 p-4">
-      <Button variant="ghost" onClick={() => setPicker(null)}>收起选品</Button>
-      <ProductPicker permissions={permissions} onSelect={({ product, snapshot, unitLabel }) => {
-        if (lines.some((line, index) => line.product_id === product.id && index !== picker)) {
-          setError("此商品已在草稿中，请修改原行数量。"); return;
-        }
-        const line: EditableLine = { product_id: product.id, unit_id: snapshot.unit_id,
-          product_label: `${product.sku} · ${product.name}`, unit_label: unitLabel, qty: String(snapshot.qty),
-          pricing_mode: sales ? "AUTO" : "MANUAL", unit_price: "" };
-        setLines((old) => picker === "add" ? [...old, line] : old.map((item, index) => index === picker ? line : item));
-        setPicker(null); setDirty(true); setError("");
-      }} />
-    </div>}
-    {(dirty || mustPreview) ? <p role="status" className="text-sm text-amber-800">内容已变化，请重新预览金额和依据。</p>
-      : <div className="space-y-3 rounded-lg bg-primary/5 p-4"><p className="text-sm">服务器核算合计 <strong className="tabular-nums">{preview.total_amount}</strong> 元</p>
-        <div className="overflow-auto"><table className="w-full text-left text-xs"><thead><tr>
-          {['商品', '单位', '数量', '换算因子', '基本数量', '单价', '金额', '报价来源'].map((label) => <th className="p-2" key={label}>{label}</th>)}
-        </tr></thead><tbody>{preview.lines.map((line) => <tr key={line.product_id}>
-          <td className="p-2">{line.product_label}</td><td>{line.unit_label}</td><td>{line.qty}</td>
-          <td>{line.unit_to_base_factor}</td><td>{line.base_qty}</td><td>{line.unit_price}</td><td>{line.amount}</td>
-          <td>{priceSourceLabel(line.price_source.source)}</td>
-        </tr>)}</tbody></table></div>
-        {preview.warnings.map((warning, index) => <p className="text-xs" key={index}>{warning}</p>)}
-      </div>}
-    <div className="flex flex-wrap gap-3">
-      <Button variant="outline" disabled={locked || expired || !reason.trim() || !lines.length} onClick={() => {
-        const submitted = { expected_revision: revision, draft: body() };
-        void submission.submit((key) => protect(() => editProposal(proposal.id, submitted, key)), async (next) => {
-          if (next.preview) { setPreview(next.preview); setRevision(next.revision); setDirty(false); setMustPreview(false); }
-          await onChanged();
-        });
-      }}>重新预览</Button>
-      <Button disabled={locked || expired || dirty || mustPreview} onClick={() => {
-        const submitted = { expected_revision: revision, confirmation_hash: preview.confirmation_hash };
-        void submission.submit((key) => protect(async () => {
-          try { return await approveProposal(proposal.id, submitted, key); }
-          catch (error) { if (error instanceof AssistantError && error.status === 409) setMustPreview(true); throw error; }
-        }), async (created) => { onCreated(created); await onChanged(); });
-      }}>确认创建草稿</Button>
-      <Button variant="ghost" disabled={locked || expired} onClick={() => {
-        void submission.submit((key) => protect(() => rejectProposal(proposal.id, revision, key)), onChanged);
-      }}>取消此提案</Button>
-    </div>
+    </section>}
+    <ChatApp open={false} openMobile={false} className="assistant-grid flex-1 rounded-none border-0" data-panel={panel} data-context-open={contextOpen}>
+      <aside data-assistant-panel="history" aria-label="历史会话" className="assistant-history min-h-0 min-w-0 flex-col border-r border-border/70 bg-muted/20">
+        <h2 id="assistant-history-heading" tabIndex={-1} className="sr-only">历史会话</h2>
+        <ConversationHistory items={conversations.data?.items ?? []} selectedId={id} page={page}
+          total={conversations.data?.total ?? 0} loading={conversations.isPending} error={!!conversations.error}
+          locked={submission.locked} onNew={newConversation} onPage={setPage}
+          onSelect={(value) => { selectConversation(value); setBlocked(false); setDeleteCheck(false); showPanel("chat"); }} />
+        {conversations.error && <Button variant="ghost" className="m-3" onClick={() => void conversations.refetch()}>重新读取对话</Button>}
+      </aside>
+      <section aria-label="助手对话" data-assistant-panel="chat" className="assistant-chat min-h-0 min-w-0 flex-col bg-background">
+        <header className="flex min-h-16 shrink-0 items-center gap-3 border-b border-border/60 px-4 py-3 sm:px-6">
+          <span className="grid size-8 shrink-0 place-items-center rounded-full border border-border/60"><Sparkles className="size-4" aria-hidden /></span>
+          <div className="min-w-0 flex-1"><h2 id="assistant-chat-heading" tabIndex={-1} className="truncate text-sm font-medium outline-none">{conversation?.title ?? "经营助手"}</h2>
+            <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground"><span aria-hidden className={`size-1.5 rounded-full ${running || submission.busy ? "bg-amber-400" : status.data?.configured ? "bg-emerald-500" : "bg-muted-foreground/40"}`} />{submission.uncertain ? "连接中断，等待确认处理结果" : running || submission.busy ? "正在处理你的请求" : "查业务、聊想法，一起把事情做好"}</p>
+          </div>
+          <Button variant="ghost" size="icon" aria-label="切换业务依据与草稿" aria-expanded={contextOpen}
+            className="hidden xl:inline-flex" onClick={() => { if (contextOpen) { setContextOpen(false); showPanel("chat"); } else showPanel("context"); }}>
+            {contextOpen ? <PanelRightClose className="size-4" /> : <PanelRightOpen className="size-4" />}
+          </Button>
+          <details className="assistant-actions relative shrink-0">
+            <summary aria-label="对话操作" className="grid size-9 cursor-pointer list-none place-items-center rounded-full hover:bg-muted focus-visible:outline-2"><MoreHorizontal className="size-4" /></summary>
+            <div className="absolute right-0 top-11 z-20 w-64 rounded-2xl border border-border bg-background p-2 shadow-xl">
+              <Button variant="ghost" className="w-full justify-start" disabled={submission.busy} onClick={() => { void detail.refetch(); void conversations.refetch(); void status.refetch(); }}><RefreshCw className="size-4" aria-hidden />重新读取记录</Button>
+              {status.data?.can_manage_provider && permissions.includes("ai.provider.manage") && <Link href="/settings/llm" className="block rounded-full px-4 py-2.5 text-sm hover:bg-muted">管理模型服务</Link>}
+              <Button variant="ghost" className="w-full justify-start text-destructive" disabled={!id || locked || unavailable} onClick={() => setDeleteCheck(!deleteCheck)}>删除对话</Button>
+              {deleteCheck && <div className="space-y-3 p-3 text-xs leading-5"><p>删除聊天正文及未执行提案，已创建单据仍然保留。</p>
+                <Button variant="destructive" disabled={locked} onClick={() => {
+                  if (!id) return;
+                  void submission.submit((key) => protect(() => deleteConversation(id, key)), async () => {
+                    qc.setQueryData<ConversationsPage>([...base, "list", page], (old) => old ? {
+                      ...old, items: old.items.filter((item) => item.id !== id), total: Math.max(0, old.total - 1),
+                    } : old);
+                    selectConversation(null); setDeleteCheck(false); qc.removeQueries({ queryKey: detailKey });
+                    setQuestions((old) => { const next = { ...old }; delete next[id]; return next; });
+                    await conversations.refetch();
+                  });
+                }}>确认删除对话</Button></div>}
+            </div>
+          </details>
+        </header>
+        <MessageScroller key={id ?? "empty"} label="对话记录" busy={running || submission.busy}
+          followOutput className="min-h-0 flex-1" viewportClassName="px-4 py-8 sm:px-8"
+          viewportProps={{ tabIndex: 0 }} contentClassName="mx-auto w-full max-w-3xl min-h-full">
+          {!id && conversations.isPending && <p role="status" className="text-sm text-muted-foreground">正在读取对话…</p>}
+          {!!id && detail.isPending && !unavailable && <p role="status" className="text-sm text-muted-foreground">正在读取对话记录…</p>}
+          {detail.error && !unavailable && <div role="alert" className="space-y-3 text-sm"><p>{detail.error.message} 请重新读取记录。</p><Button variant="outline" onClick={() => void detail.refetch()}>重新读取记录</Button></div>}
+          {conversation?.older_turns_omitted && <p className="mb-4 text-center text-xs text-muted-foreground">仅展示最近的对话记录。</p>}
+          {!turns.length && !submission.busy && (!id || !detail.isPending) && !unavailable && <div className="mx-auto flex min-h-full max-w-lg flex-col justify-center py-5">
+            <span className="mb-5 grid size-12 place-items-center rounded-2xl border border-border bg-muted/50"><Sparkles className="size-6" aria-hidden /></span>
+            <p className="mb-2 text-xs font-medium tracking-wider text-muted-foreground">FORGE · 经营助手</p>
+            <h3 className="text-2xl font-medium tracking-tight sm:text-3xl">今天，有什么需要一起处理？</h3>
+            <p className="mt-3 text-sm leading-7 text-muted-foreground">查一件商品，理一理经营情况，或准备一份订单。也可以先聊聊你的想法。</p>
+            {!id && <Button className="mt-5 self-start" disabled={submission.locked || conversations.isPending} onClick={newConversation}>开始新对话</Button>}
+            <div className="mt-7 grid grid-cols-1 gap-2.5 sm:grid-cols-2">{starters.filter((item) => permissions.includes(item.permission)).map(({ title, description, text, icon: Icon }) => <button key={title}
+              aria-label={title} disabled={!id || locked || unavailable || !status.data?.configured}
+              onClick={() => { setQuestion(text); document.getElementById("assistant-question")?.focus(); }}
+              className="group rounded-2xl border border-border/70 p-4 text-left transition-colors hover:bg-muted/50 focus-visible:outline-2 disabled:opacity-45">
+              <Icon aria-hidden className="mb-3 size-4 text-muted-foreground" /><span className="block text-sm font-medium">{title}</span><span className="mt-1.5 block text-xs leading-5 text-muted-foreground">{description}</span>
+            </button>)}</div>
+          </div>}
+          <MessageGroup spacing="default">
+            {turns.map((turn) => <div key={turn.id} className="min-w-0 space-y-7 pb-7">
+              <Message from="user" aria-label="你的消息">
+                <MessageContent><MessageHeader><span>你</span><time>{when(turn.created_at)}</time></MessageHeader>
+                  <MessageBubble variant="solid" animateIn={false} className="max-w-[88%] rounded-3xl"><MessageBubbleContent><p className="whitespace-pre-wrap break-words text-sm leading-6">{turn.prompt}</p></MessageBubbleContent></MessageBubble>
+                </MessageContent>
+              </Message>
+              <Message from="assistant" aria-label="经营助手回复"><MessageAvatar aria-hidden className="border border-border/60 bg-transparent"><Sparkles /></MessageAvatar>
+                <MessageContent className="gap-4"><MessageHeader>Forge 助手</MessageHeader>
+                  <TurnActivity turn={turn} interrupted={submission.uncertain && turn.state === "RUNNING"} />
+                  {turn.answer && <div className="w-full min-w-0 px-1 text-sm leading-7" aria-label={turn.state === "RUNNING" ? "正在生成的回复" : "完整回复"}>
+                    <p className="whitespace-pre-wrap break-words">{turn.answer}</p>
+                    {turn.state === "RUNNING" && <span className="mt-2 block text-[11px] text-muted-foreground">回复接收中…</span>}
+                  </div>}
+                  {turn.error_message && <p role="alert" className="rounded-2xl bg-amber-500/10 p-3 text-sm text-amber-900 dark:text-amber-200">{turn.error_message}</p>}
+                  {turn.can_retry && <Button variant="outline" disabled={submission.locked || unavailable} onClick={() => {
+                    if (!id) return;
+                    void submission.submit((key) => protect(() => streamed(id, (options) => retryTurn(turn.id, key, options))), acceptTurn);
+                  }}>恢复本次处理</Button>}
+                  <BusinessResultCards turn={turn} onReview={() => openContext(turn)} />
+                  {turn.guided && turn.state === "COMPLETED" && <div aria-label="继续处理业务" className="flex flex-wrap gap-2">
+                    {starters.filter((item) => permissions.includes(item.permission)).slice(0, 3).map((item) => <Button
+                      key={item.title} size="sm" variant="outline" disabled={locked || unavailable}
+                      onClick={() => { setQuestion(item.text); document.getElementById("assistant-question")?.focus(); }}>
+                      <item.icon aria-hidden className="size-3.5" />{item.title}
+                    </Button>)}
+                  </div>}
+                  <div className="flex flex-wrap items-center gap-2">
+                    {turn.answer && turn.state !== "RUNNING" && <Button size="icon" variant="ghost" aria-label="复制回复" className="size-8" onClick={async () => {
+                      try { await navigator.clipboard.writeText(turn.answer!); setCopyStatus({ id: turn.id, ok: true }); }
+                      catch { setCopyStatus({ id: turn.id, ok: false }); }
+                    }}>{copyStatus?.id === turn.id && copyStatus.ok ? <CheckCheck className="size-3.5" /> : <Copy className="size-3.5" />}</Button>}
+                    {copyStatus?.id === turn.id && <span role="status" className="text-xs text-muted-foreground">{copyStatus.ok ? "已复制" : "无法访问剪贴板，请选中文字复制。"}</span>}
+                  </div>
+                </MessageContent>
+              </Message>
+            </div>)}
+            {submission.busy && !liveTurn && !running && <p role="status" className="py-4 text-xs text-muted-foreground"><ThinkingShimmer>正在连接助手…</ThinkingShimmer></p>}
+          </MessageGroup>
+        </MessageScroller>
+        <section aria-label="发送消息" className="mx-auto w-full max-w-3xl shrink-0 space-y-2 bg-background px-3 pb-3 pt-2 sm:px-6 sm:pb-5">
+          <div className="space-y-2 text-sm">
+            {!status.isPending && !status.data?.configured && !status.error && <p role="status">对话模型尚未配置。
+              {status.data?.can_manage_provider && permissions.includes("ai.provider.manage")
+                ? <Link href="/settings/llm" className="ml-2 underline">配置模型服务</Link> : "请联系管理员配置后再提问。"}</p>}
+            {status.error && <p role="alert">暂时无法读取模型状态。</p>}
+          </div>
+          {!!id && <details className="group rounded-xl bg-muted/25 px-3 py-2 text-xs">
+            <summary className="flex cursor-pointer list-none items-center gap-2 text-muted-foreground"><CalendarDays className="size-3.5" aria-hidden />每日简报<ChevronDown className="ml-auto size-3 group-open:rotate-180" aria-hidden /></summary>
+            <div className="mt-3 flex flex-wrap items-end gap-2"><label className="min-w-0 flex-1">简报日期<Input aria-label="简报日期" type="date" value={day} disabled={locked || unavailable} className="mt-1 h-9"
+              onChange={(event) => setDay(event.target.value)} /></label>
+              <Button size="sm" variant="outline" disabled={locked || unavailable || !permissions.includes("dashboard.read")} onClick={() => {
+                const selectedDay = day || undefined;
+                void submission.submit((key) => protect(() => streamed(id, (options) => requestBrief(id, selectedDay, key, options))), acceptTurn);
+              }}>生成每日简报</Button>
+              <p className="w-full leading-5 text-muted-foreground">{permissions.includes("dashboard.read") ? "留空使用上一个完整业务日" : "生成简报需要经营概览权限"}</p>
+            </div>
+          </details>}
+          <label htmlFor="assistant-question" className="sr-only">你的问题</label>
+          <PromptInput id="assistant-question" aria-label="你的问题" sendLabel="发送问题" maxLength={4000} value={question}
+            disabled={!id || locked || unavailable || !status.data?.configured}
+            minRows={2} maxRows={5} className="rounded-3xl border-border/80 bg-muted/15 p-3 focus-within:bg-muted/25"
+            leadingAction={<span className="max-w-[min(260px,60vw)] truncate px-1 text-[11px] text-muted-foreground" title={modelName}>{modelName}</span>}
+            placeholder="问业务，聊想法，或从一份订单开始…" onValueChange={setQuestion} onSubmit={ask} />
+          <p className="px-1 text-[10px] leading-4 text-muted-foreground"><span className="hidden sm:inline">Enter 发送 · Shift + Enter 换行。 </span>金额与数量以业务记录为准，创建草稿前由你确认。</p>
+        </section>
+      </section>
+      <aside data-assistant-panel="context" aria-label="业务依据与草稿" className="assistant-context min-h-0 min-w-0 flex-col border-l border-border/70 bg-muted/15">
+        <header className="flex min-h-16 shrink-0 items-center gap-2 border-b border-border/60 px-4 py-3"><ClipboardList className="size-4 text-muted-foreground" aria-hidden /><h2 id="assistant-context-heading" tabIndex={-1} className="text-sm font-medium outline-none">业务依据与草稿</h2>
+          {pendingCount > 0 && <span className="ml-auto rounded-full bg-amber-500/10 px-2 py-1 text-[10px] text-amber-800 dark:text-amber-200">{pendingCount} 项待复核</span>}
+          <Button size="icon" variant="ghost" aria-label="收起业务依据与草稿" className="ml-auto hidden size-8 xl:inline-flex" onClick={() => { setContextOpen(false); showPanel("chat"); }}><PanelRightClose className="size-4" /></Button>
+        </header>
+        {contextTurns.length > 1 && <div className="shrink-0 border-b border-border/60 p-3"><label className="text-xs text-muted-foreground">对应消息<select aria-label="对应消息" className="mt-2 h-10 w-full min-w-0 rounded-xl border border-border bg-background px-2 text-sm text-foreground" value={focused?.id ?? ""} onChange={(event) => setContextTurn(event.target.value)}>
+          {contextTurns.map((turn, index) => <option key={turn.id} value={turn.id}>{index + 1}. {turn.prompt.slice(0, 45)}</option>)}
+        </select></label></div>}
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3">
+          {readFailed && !unavailable && <div role="alert" className="mb-4 rounded-xl bg-amber-500/10 p-3 text-xs leading-6 text-amber-900 dark:text-amber-200">业务记录暂时无法刷新，当前编辑已保留。恢复读取前暂停创建草稿。<Button size="sm" variant="outline" className="mt-2" onClick={() => { void detail.refetch(); void status.refetch(); }}>重新读取记录</Button></div>}
+          {!focused && <div className="flex h-full min-h-60 flex-col items-center justify-center p-5 text-center"><span className="mb-4 grid size-11 place-items-center rounded-2xl border border-border bg-background"><Database className="size-5 text-muted-foreground" aria-hidden /></span><h3 className="text-sm font-medium">让每个结论都有依据</h3><p className="mt-2 text-xs leading-6 text-muted-foreground">查询结果、来源记录和待复核的单据会显示在这里。选择回复中的入口即可查看。</p></div>}
+          {contextTurns.map((turn) => <div key={turn.id} hidden={turn.id !== focused?.id} className="space-y-4">
+            <p className="border-l-2 border-border pl-3 text-xs leading-6 text-muted-foreground">{turn.prompt}</p>
+            {turn.proposal && <ProposalCard key={`${turn.proposal.id}:${turn.proposal.revision}:${turn.proposal.status}`}
+              proposal={turn.proposal} permissions={permissions} submission={submission} blocked={unavailable || running || readFailed}
+              protect={protect} onChanged={refresh} />}
+            {(turn.evidence ?? []).map((item) => <EvidenceCard key={item.id} value={item} />)}
+          </div>)}
+        </div>
+      </aside>
+    </ChatApp>
   </section>;
 }
