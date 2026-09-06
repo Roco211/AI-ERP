@@ -1,6 +1,65 @@
 {
   "components": {
     "schemas": {
+      "Activity": {
+        "properties": {
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "id": {
+            "maxLength": 80,
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "model",
+              "query",
+              "draft",
+              "reply"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "running",
+              "complete",
+              "failed"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 120,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "title",
+          "state",
+          "started_at"
+        ],
+        "title": "Activity",
+        "type": "object"
+      },
       "AdjustmentInput": {
         "additionalProperties": false,
         "properties": {
@@ -75,6 +134,103 @@
           "can_manage_provider"
         ],
         "title": "AssistantStatus",
+        "type": "object"
+      },
+      "AssistantStreamEvent": {
+        "properties": {
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "delta": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delta"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "turn": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TurnRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "turn_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Turn Id"
+          },
+          "type": {
+            "enum": [
+              "snapshot",
+              "delta",
+              "complete",
+              "error"
+            ],
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "AssistantStreamEvent",
         "type": "object"
       },
       "AttributeDefinition": {
@@ -10781,6 +10937,14 @@
       },
       "TurnRead": {
         "properties": {
+          "activity": {
+            "items": {
+              "$ref": "#/components/schemas/Activity"
+            },
+            "maxItems": 32,
+            "title": "Activity",
+            "type": "array"
+          },
           "answer": {
             "anyOf": [
               {
@@ -10830,9 +10994,23 @@
             "title": "Evidence",
             "type": "array"
           },
+          "guided": {
+            "default": false,
+            "title": "Guided",
+            "type": "boolean"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
+            "type": "string"
+          },
+          "interaction": {
+            "default": "business",
+            "enum": [
+              "business",
+              "casual"
+            ],
+            "title": "Interaction",
             "type": "string"
           },
           "model_calls": {
@@ -11921,6 +12099,11 @@
                 "schema": {
                   "$ref": "#/components/schemas/TurnRead"
                 }
+              },
+              "text/event-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssistantStreamEvent"
+                }
               }
             },
             "description": "Successful Response"
@@ -12089,6 +12272,11 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/TurnRead"
+                }
+              },
+              "text/event-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssistantStreamEvent"
                 }
               }
             },
@@ -13347,6 +13535,11 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/TurnRead"
+                }
+              },
+              "text/event-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssistantStreamEvent"
                 }
               }
             },

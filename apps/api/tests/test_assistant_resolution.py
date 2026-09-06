@@ -3,8 +3,9 @@
 import subprocess
 import sys
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import AsyncMock
 from uuid import UUID
 
 import pytest
@@ -12,6 +13,7 @@ import pytest
 from forge_erp.core.errors import Problem
 from forge_erp.modules.assistant.application import runtime
 from forge_erp.modules.assistant.domain.decisions import DraftDecision
+from forge_erp.modules.assistant.domain.tools import Evidence
 
 PRODUCT, OTHER, EACH, BOX, CUSTOMER, SUPPLIER, WAREHOUSE = [
     str(UUID(int=value)) for value in range(1, 8)
@@ -414,10 +416,21 @@ async def test_graph_rechecks_all_candidates_and_does_not_promote_inferred_ids(m
     run = object.__new__(runtime.Run)
     run.authorize = AsyncMock()
     run.budget = AsyncMock()
+    run.activity = AsyncMock()
     short = {"id": PRODUCT, "sku": "P1", "name": "螺丝"}
     longer = {"id": OTHER, "sku": "P2", "name": "自攻螺丝"}
-    evidence = Mock()
-    evidence.model_copy.return_value.model_dump.return_value = {"id": "e1"}
+    evidence = Evidence(
+        id="e1",
+        tool="search_products",
+        title="商品",
+        as_of=datetime.now(UTC),
+        scope="test-only",
+        summary=[],
+        columns=[],
+        rows=[],
+        links=[],
+        truncated=False,
+    )
     query = AsyncMock(
         side_effect=[
             SimpleNamespace(payload={"items": [short]}, evidence=evidence),

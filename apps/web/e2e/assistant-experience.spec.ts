@@ -13,7 +13,8 @@ const permissions = ["profile.read", "ai.use", "ai.draft.create", "sales.order.w
 
 function turn(value: number, answer: string): Turn {
   return { id: uid(value), prompt: `查询记录 ${value}`, answer, state: "COMPLETED", created_at: stamp,
-    evidence: [], proposal: null, error_code: null, error_message: null, can_retry: false, model_calls: 1, tool_calls: 1 };
+    evidence: [], proposal: null, error_code: null, error_message: null, can_retry: false, model_calls: 1, tool_calls: 1,
+    guided: false, interaction: "business" };
 }
 function evidence(value: number, title: string, quantity: string): components["schemas"]["Evidence"] {
   return { id: uid(value), title, tool: "get_inventory", as_of: stamp, scope: "该轮查询的服务器库存",
@@ -104,13 +105,21 @@ async function composerVisible(page: Page) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 }
 
-test("assistant has three desktop columns and preserves a dirty draft across turns, mobile panels and resizing", async ({ page, experience }) => {
+test("assistant opens from two desktop columns into review and preserves a dirty draft across panels and resizing", async ({ page, experience }) => {
   await page.setViewportSize({ width: 1600, height: 1000 });
   await open(page);
   const historyPanel = page.getByRole("complementary", { name: "历史会话", exact: true });
   const chat = page.getByRole("region", { name: "助手对话", exact: true });
   const context = page.getByRole("complementary", { name: "业务依据与草稿", exact: true });
-  for (const panel of [historyPanel, chat, context]) await expect(panel).toBeVisible();
+  for (const panel of [historyPanel, chat]) await expect(panel).toBeVisible();
+  await expect(context).not.toBeVisible();
+  const reviewToggle = page.getByRole("button", { name: "切换业务依据与草稿", exact: true });
+  await expect(reviewToggle).toHaveAttribute("aria-expanded", "false");
+  await expect(page.locator('[data-assistant-panel="context"]')).toHaveCount(1);
+  await composerVisible(page);
+  await reviewToggle.click();
+  await expect(reviewToggle).toHaveAttribute("aria-expanded", "true");
+  await expect(context).toBeVisible();
   const [left, middle, right] = await Promise.all([historyPanel.boundingBox(), chat.boundingBox(), context.boundingBox()]);
   expect(left!.x + left!.width).toBeLessThanOrEqual(middle!.x + 1);
   expect(middle!.x + middle!.width).toBeLessThanOrEqual(right!.x + 1);
@@ -121,6 +130,7 @@ test("assistant has three desktop columns and preserves a dirty draft across tur
   await composerVisible(page);
   await expect(context.getByRole("region", { name: "较新的库存依据", exact: true })).toContainText("17.000002");
   await expect(chat.getByRole("region", { name: "较新的库存依据", exact: true })).toHaveCount(0);
+  await expect(chat.getByRole("region", { name: "较新的库存依据结果摘要", exact: true })).toContainText("17.000002");
   const draftMessage = transcript.getByRole("article", { name: "经营助手回复", exact: true }).filter({ hasText: "销售草稿已预览，请核对。" });
   const queryMessage = transcript.getByRole("article", { name: "经营助手回复", exact: true }).filter({ hasText: "另一条库存查询已经完成。" });
   await draftMessage.getByRole("button", { name: "复核草稿", exact: true }).click();
@@ -130,6 +140,12 @@ test("assistant has three desktop columns and preserves a dirty draft across tur
   await expect(editor.getByRole("button", { name: "确认创建草稿", exact: true })).toBeDisabled();
   await expect(editor).not.toContainText("服务器核算合计");
   const originalInput = await editor.getByLabel("第 1 行数量", { exact: true }).elementHandle();
+  await reviewToggle.click();
+  await expect(context).not.toBeVisible();
+  await expect(reviewToggle).toHaveAttribute("aria-expanded", "false");
+  expect(await originalInput!.evaluate((element) => element.isConnected)).toBe(true);
+  await reviewToggle.click();
+  await expect(editor.getByLabel("第 1 行数量", { exact: true })).toHaveValue("2.000001");
   await queryMessage.getByRole("button", { name: /^查看业务依据/ }).click();
   await expect(context.getByRole("region", { name: "较新的库存依据", exact: true })).toContainText("17.000002");
   await expect(editor).not.toBeVisible();

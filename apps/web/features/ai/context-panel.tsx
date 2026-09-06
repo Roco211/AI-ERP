@@ -108,6 +108,7 @@ function DraftEditor({ proposal, initial, permissions, submission, blocked, prot
   const [picker, setPicker] = useState<number | "add" | null>(null);
   const [error, setError] = useState("");
   const [mustPreview, setMustPreview] = useState(false);
+  const [approving, setApproving] = useState(false);
   const allowed = hasAll(permissions, ["ai.use", "ai.draft.create", "catalog.read", "warehouse.read",
     sales ? "sales.read" : "purchase.read", sales ? "customer.read" : "supplier.read",
     sales ? "sales.order.write" : "purchase.order.write", sales ? "product.price.read" : "product.cost.read"]);
@@ -134,14 +135,16 @@ function DraftEditor({ proposal, initial, permissions, submission, blocked, prot
   return <section aria-label="开单复核" className="w-full min-w-0">
     <ApprovalCard className="border border-border/70 bg-background p-3" title={`${sales ? "销售" : "采购"}草稿复核`}
       description={`有效至 ${when(proposal.expires_at)}。修改后重新预览，再明确创建草稿。`}
-      status={submission.busy ? "submitting" : "pending"} statusLabels={approvalStatusLabels}
+      status={approving ? "submitting" : "pending"} statusLabels={approvalStatusLabels}
       approveLabel="确认创建草稿" approveDisabled={locked || expired || dirty || mustPreview}
       onApprove={() => {
         if (locked || expired || dirty || mustPreview) return;
         const submitted = { expected_revision: revision, confirmation_hash: preview.confirmation_hash };
         void submission.submit((key) => protect(async () => {
+          setApproving(true);
           try { return await approveProposal(proposal.id, submitted, key); }
           catch (error) { if (error instanceof AssistantError && error.status === 409) setMustPreview(true); throw error; }
+          finally { setApproving(false); }
         }), async (created) => { onCreated(created); await onChanged(); });
       }}
       rejectLabel="取消此提案" onReject={locked || expired ? undefined : () => {

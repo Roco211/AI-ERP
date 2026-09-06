@@ -1,6 +1,6 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { afterEach, expect, test, vi, type Mock } from "vitest";
+import { afterEach, beforeEach, expect, test, vi, type Mock } from "vitest";
 import { AssistantWorkspace } from "@/features/ai/workspace";
 import { safeSourceHref } from "@/features/ai/assistant-client";
 import { api } from "@/lib/api";
@@ -55,7 +55,20 @@ function show(permissions = full) {
   const view = render(node(permissions));
   return { ...view, qc, permissions: (current: string[]) => view.rerender(node(current)) };
 }
-afterEach(() => { cleanup(); vi.resetAllMocks(); window.history.replaceState(null, "", "/"); });
+// Legacy interaction fixtures exercise the new negotiated client via its JSON
+// fallback. Incremental delivery and transport failures have separate stream tests.
+beforeEach(() => { vi.stubGlobal("fetch", vi.fn(async (url: string, init: RequestInit) => {
+  const message = url.match(/\/conversations\/([^/]+)\/(messages|brief)$/);
+  const retry = url.match(/\/turns\/([^/]+)\/retry$/);
+  if (!message && !retry) throw new Error("Unexpected streaming fixture request");
+  const response = await post(message ? `/api/v1/ai/conversations/{id}/${message[2]}` : "/api/v1/ai/turns/{turn_id}/retry", {
+    params: { path: message ? { id: message[1] } : { turn_id: retry![1] },
+      header: { "Idempotency-Key": new Headers(init.headers).get("Idempotency-Key")! } },
+    ...(init.body ? { body: JSON.parse(String(init.body)) } : {}),
+  });
+  return Response.json(response.response.ok ? response.data : response.error, { status: response.response.status });
+})); });
+afterEach(() => { cleanup(); vi.resetAllMocks(); vi.unstubAllGlobals(); window.history.replaceState(null, "", "/"); });
 
 test("no assistant permission means no data request", () => {
   show([]);
@@ -187,7 +200,7 @@ test("editing a draft hides stale amounts and blocks approval until server previ
   const revised = { ...current, revision: 2, preview: { ...current.preview, total_amount: "30.0001", confirmation_hash: "b".repeat(64) } };
   post.mockImplementationOnce(async () => { mocks(conversation([{ ...finished, state: "WAITING", proposal: revised }])); return ok(revised); });
   fireEvent.click(within(editor).getByRole("button", { name: "重新预览" }));
-  await screen.findByText("30.0001");
+  await waitFor(() => expect(screen.getByRole("region", { name: "开单复核" })).toHaveTextContent("30.0001"));
   const input = post.mock.calls[0][1]?.body as { expected_revision: number; draft: { order: { lines: Record<string, unknown>[] } } };
   expect(input.expected_revision).toBe(1);
   expect(input.draft.order.lines[0].qty).toBe("2.000001");
@@ -210,6 +223,48 @@ test("approval sends only reviewed revision and hash; lost response reuses origi
   expect(post.mock.calls[1]).toEqual(original);
 });
 
+test("draft submission progress belongs to its approval and original-request retry, not unrelated chat", async () => {
+  const current = proposal();
+  const draft = { ...finished, state: "WAITING", proposal: current };
+  mocks(conversation([draft])); show();
+  const editor = await screen.findByRole("region", { name: "开单复核" });
+  let finishChat!: (value: Result) => void;
+  post.mockImplementationOnce(() => new Promise((resolve) => { finishChat = resolve; }));
+  fireEvent.change(screen.getByLabelText("你的问题"), { target: { value: "聊聊今天的安排" } });
+  fireEvent.click(screen.getByRole("button", { name: "发送问题" }));
+  await waitFor(() => expect(post).toHaveBeenCalledTimes(1));
+  expect(post.mock.calls[0][0]).toBe("/api/v1/ai/conversations/{id}/messages");
+  expect(editor).toHaveTextContent("等待你复核");
+  expect(editor).not.toHaveTextContent("正在提交");
+  expect(within(editor).getByRole("button", { name: "确认创建草稿" })).toBeDisabled();
+  const chat = { ...finished, id: "turn-2", prompt: "聊聊今天的安排", evidence: [], answer: "可以，先聊聊你的想法。" };
+  mocks(conversation([draft, chat]));
+  await act(async () => { finishChat(ok(chat)); });
+  await waitFor(() => expect(within(editor).getByRole("button", { name: "确认创建草稿" })).toBeEnabled());
+
+  let loseApproval!: (error: Error) => void;
+  post.mockImplementationOnce(() => new Promise((_resolve, reject) => { loseApproval = reject; }));
+  fireEvent.click(within(editor).getByRole("button", { name: "确认创建草稿" }));
+  await waitFor(() => expect(post).toHaveBeenCalledTimes(2));
+  expect(editor).toHaveTextContent("正在提交");
+  const original = post.mock.calls[1];
+  expect(original[0]).toBe("/api/v1/ai/proposals/{id}/approve");
+  await act(async () => { loseApproval(new TypeError("connection lost")); });
+  await screen.findByText(/提交结果待确认/);
+  expect(editor).not.toHaveTextContent("正在提交");
+  expect(within(editor).getByRole("button", { name: "确认创建草稿" })).toBeDisabled();
+
+  let finishApproval!: (value: Result) => void;
+  post.mockImplementationOnce(() => new Promise((resolve) => { finishApproval = resolve; }));
+  fireEvent.click(screen.getByRole("button", { name: "重试原提交" }));
+  await waitFor(() => expect(post).toHaveBeenCalledTimes(3));
+  expect(editor).toHaveTextContent("正在提交");
+  expect(post.mock.calls[2]).toEqual(original);
+  const receipt = { id: documentId, status: "DRAFT", version: 1, request_id: "approval", proposal_id: current.id, href: `/sales?order=${documentId}` };
+  await act(async () => { finishApproval(ok(receipt)); });
+  expect(await screen.findByRole("link", { name: "查看已创建草稿" })).toHaveAttribute("href", receipt.href);
+});
+
 test("persisted creation receipt remains visible after a fresh page mount", async () => {
   const current = proposal();
   const receipt = { id: documentId, status: "DRAFT", version: 1, request_id: "saved", proposal_id: current.id, href: `/purchase?order=${documentId}` };
@@ -227,7 +282,7 @@ test("source URL validator rejects external URLs and unauthorized routes", () =>
 
 test("running work disables new questions and prior proposal approval until refreshed", async () => {
   mocks(conversation([{ ...finished, state: "RUNNING", proposal: proposal() }])); show();
-  expect(await screen.findByText("正在查询并核对依据…")).toBeVisible();
+  expect(await screen.findByText("正在等待助手响应…")).toBeVisible();
   expect(screen.getByRole("button", { name: "发送问题" })).toBeDisabled();
   expect(screen.getByRole("button", { name: "确认创建草稿" })).toBeDisabled();
   mocks(conversation([{ ...finished, state: "WAITING", proposal: proposal() }]));
@@ -306,7 +361,7 @@ test("purchase preview preserves entered decimal strings and displays only serve
     mocks(conversation([{ ...finished, state: "WAITING", proposal: updated }])); return ok(updated);
   });
   fireEvent.click(screen.getByRole("button", { name: "重新预览" }));
-  await screen.findByText("24.6914");
+  await waitFor(() => expect(screen.getByRole("region", { name: "开单复核" })).toHaveTextContent("24.6914"));
   const body = post.mock.calls[0][1]?.body as { draft: { kind: string; order: { lines: Record<string, unknown>[] } } };
   expect(body.draft.kind).toBe("PURCHASE");
   expect(body.draft.order.lines[0]).toEqual({ product_id: "product-1", unit_id: "unit-1", qty: "2.000001", unit_price: "12.345678" });

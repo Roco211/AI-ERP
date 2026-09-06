@@ -1,5 +1,8 @@
 import { api, ApiError } from "@/lib/api";
 import type { components } from "@/generated/api/schema";
+import { AssistantStreamFailure, readAssistantStream, readAssistantTurn, type AssistantStreamOptions } from "./assistant-stream";
+
+export type { AssistantStreamOptions } from "./assistant-stream";
 
 export type AssistantStatus = components["schemas"]["AssistantStatus"];
 export type Conversation = components["schemas"]["ConversationRead"];
@@ -16,7 +19,8 @@ export type ProposalEdit = components["schemas"]["ProposalEdit"];
 export type ProposalApproval = components["schemas"]["ProposalApproval"];
 
 export class AssistantError extends ApiError {
-  constructor(status: number, message: string, public code?: string, requestId?: string) {
+  constructor(status: number, message: string, public code?: string, requestId?: string,
+    public submissionUncertain = false) {
     super(status, message, requestId);
   }
 }
@@ -31,6 +35,41 @@ function result<T>({ data, error, response }: ResponseResult<T>): T {
   return data;
 }
 const header = (key: string) => ({ "Idempotency-Key": key });
+
+function jsonTurn(value: unknown): Turn {
+  try { return readAssistantTurn(value); }
+  catch {
+    throw new AssistantError(503, "接收到的回复格式不完整，请重试原提交以确认结果。",
+      "AI_RESPONSE_INVALID", undefined, true);
+  }
+}
+
+async function streamTurn(path: string, body: unknown, key: string, options: AssistantStreamOptions): Promise<Turn> {
+  let response: Response;
+  try {
+    response = await fetch(path, {
+      method: "POST", credentials: "same-origin", cache: "no-store", redirect: "error",
+      headers: { Accept: "text/event-stream", "Content-Type": "application/json", ...header(key) },
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }), signal: options.signal,
+    });
+  } catch {
+    throw new AssistantError(503, options.signal?.aborted
+      ? "已停止接收回复，请重试原提交以确认结果。" : "连接中断，请重试原提交以确认结果。",
+    options.signal?.aborted ? "AI_STREAM_ABORTED" : "AI_STREAM_INTERRUPTED", undefined, true);
+  }
+  if (!response.ok) {
+    let problem: components["schemas"]["ProblemDetails"] | undefined;
+    try { problem = await response.json(); } catch { /* A rejected HTTP response is still authoritative. */ }
+    throw new AssistantError(response.status, typeof problem?.detail === "string"
+      ? problem.detail : "暂时无法完成，请稍后重试。", problem?.code, problem?.request_id);
+  }
+  try { return await readAssistantStream(response, options); }
+  catch (error) {
+    if (error instanceof AssistantStreamFailure) throw new AssistantError(error.status, error.message,
+      error.code, error.requestId, true);
+    throw new AssistantError(503, "连接中断，请重试原提交以确认结果。", "AI_STREAM_INTERRUPTED", undefined, true);
+  }
+}
 
 export async function getAssistantStatus(signal?: AbortSignal) {
   return result(await api.GET("/api/v1/ai/status", { signal }));
@@ -55,20 +94,23 @@ export async function deleteConversation(id: string, key: string) {
     params: { path: { id }, header: header(key) },
   }));
 }
-export async function sendMessage(id: string, body: MessageInput, key: string) {
-  return result(await api.POST("/api/v1/ai/conversations/{id}/messages", {
+export async function sendMessage(id: string, body: MessageInput, key: string, options?: AssistantStreamOptions) {
+  if (options) return streamTurn(`/api/v1/ai/conversations/${encodeURIComponent(id)}/messages`, body, key, options);
+  return jsonTurn(result(await api.POST("/api/v1/ai/conversations/{id}/messages", {
     params: { path: { id }, header: header(key) }, body,
-  }));
+  })));
 }
-export async function requestBrief(id: string, day: string | undefined, key: string) {
-  return result(await api.POST("/api/v1/ai/conversations/{id}/brief", {
+export async function requestBrief(id: string, day: string | undefined, key: string, options?: AssistantStreamOptions) {
+  if (options) return streamTurn(`/api/v1/ai/conversations/${encodeURIComponent(id)}/brief`, day ? { day } : {}, key, options);
+  return jsonTurn(result(await api.POST("/api/v1/ai/conversations/{id}/brief", {
     params: { path: { id }, header: header(key) }, body: day ? { day } : {},
-  }));
+  })));
 }
-export async function retryTurn(turnId: string, key: string) {
-  return result(await api.POST("/api/v1/ai/turns/{turn_id}/retry", {
+export async function retryTurn(turnId: string, key: string, options?: AssistantStreamOptions) {
+  if (options) return streamTurn(`/api/v1/ai/turns/${encodeURIComponent(turnId)}/retry`, undefined, key, options);
+  return jsonTurn(result(await api.POST("/api/v1/ai/turns/{turn_id}/retry", {
     params: { path: { turn_id: turnId }, header: header(key) },
-  }));
+  })));
 }
 export async function editProposal(id: string, body: ProposalEdit, key: string) {
   return result(await api.POST("/api/v1/ai/proposals/{id}/preview", {

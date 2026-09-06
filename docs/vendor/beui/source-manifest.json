@@ -14,7 +14,8 @@
     "command-palette",
     "checkbox",
     "theme-toggle",
-    "chat-app"
+    "chat-app",
+    "thinking-shimmer"
   ],
   "files": {
     "components/motion/animated-sidebar.tsx": "9cc11d0c3200be51dcc6964c7ccfd306037e2f1e8f2f5cf11eb5d92b06c2cad1",
@@ -69,7 +70,13 @@
     "lib/hooks/use-touch-capable.ts": "7b9ad8640b0d775057826ba7d3121e3f670c49a41f0cea2db211eca94274d720",
     "lib/presence-gate.tsx": "f3c3911933dda28679c108281da9acc37e8f98bc28d7bb79ff63bc0e3aaa9c74",
     "components/motion/theme-toggle.tsx": "c7e7edd22be7c64222eb4476b6054c8147299f83bf66af76d0580dd10698e923",
-    "components/agents/chat-app.tsx": "7538d59f148adccc236c7a5e45d8821526f538536650223a6ba5c47d04f634d5"
+    "components/agents/chat-app.tsx": "7538d59f148adccc236c7a5e45d8821526f538536650223a6ba5c47d04f634d5",
+    "components/agents/agent-activity/index.tsx": "6bf800ed0c5e2262a8f8ced52bc175e426958b827a559cddb86c9d9ea1382ab7",
+    "components/agents/agent-activity/activity-row.tsx": "81eca79e4a921ab1862ff930a4177ba9098bb9f83b7356196cc1094dca2fa511",
+    "components/agents/agent-activity/types.ts": "4e0038a255aead2d9d6aaf9dd9544346570d099928e7d361149ee8ab17ae39d3",
+    "components/agents/loading-states/thinking-shimmer.tsx": "2879bd5fd406c014610be6f304bb4b71e1aac0ac6eec531de4cd3eba4827b7bf",
+    "components/motion/text-shimmer.tsx": "a8ae8ca2966009a4c9d14085985cb2e571af1b5c75e8e64cb1f4dd99f3fb3236",
+    "lib/text-shimmer.ts": "b997e94846a75326464408132a569c9f33f26ba7373fe5f8f9c2214fec8e9fbd"
   },
   "dependencies": {
     "animated-sidebar": [
@@ -145,6 +152,10 @@
       "motion",
       "tailwind-merge"
     ],
+    "thinking-shimmer": [
+      "clsx",
+      "tailwind-merge"
+    ],
     "theme-toggle": [
       "clsx",
       "lucide-react",
@@ -164,5 +175,30 @@
       "components/agents/chat-app.tsx"
     ],
     "note": "Install only the ChatApp composition entry: its AnimatedSidebar and utils imports already exist. Other demo features and Shiki are not imported or installed."
+  },
+  "streaming_assistant_installation": {
+    "retrieved": "2026-09-06",
+    "hashes": "SHA-256 of the exact UTF-8 content field returned by each live registry item. These raw source hashes supplement, and do not replace, the historical normalized files hashes above.",
+    "sources": [
+      {
+        "registry": "https://beui.dev/r/chat-app.json",
+        "source_sha256": {
+          "components/agents/agent-activity/index.tsx": "91c6ae50af528975c405d443bed08458dd7d84fd143d890d6735ab5bc1722915",
+          "components/agents/agent-activity/activity-row.tsx": "81eca79e4a921ab1862ff930a4177ba9098bb9f83b7356196cc1094dca2fa511",
+          "components/agents/agent-activity/types.ts": "4e0038a255aead2d9d6aaf9dd9544346570d099928e7d361149ee8ab17ae39d3",
+          "components/agents/loading-states/thinking-shimmer.tsx": "14b4c62bfa0c672d630cd135397a3f462306fa0be978a17eee93b3a62e0867fc"
+        }
+      },
+      {
+        "registry": "https://beui.dev/r/thinking-shimmer.json",
+        "source_sha256": {
+          "components/agents/loading-states/thinking-shimmer.tsx": "53f0d23bd9857d5f61aac878dd03253cbda1ff14a7aa0557a05f1df22b79db87",
+          "components/motion/text-shimmer.tsx": "a8ae8ca2966009a4c9d14085985cb2e571af1b5c75e8e64cb1f4dd99f3fb3236",
+          "lib/text-shimmer.ts": "b997e94846a75326464408132a569c9f33f26ba7373fe5f8f9c2214fec8e9fbd"
+        }
+      }
+    ],
+    "normalization": "AgentActivity's registry Chat App attribution comment is replaced with the component-specific upstream comment. ThinkingShimmer's registry attribution comment is omitted; the two registry variants differ only in that comment. The four remaining activity/shimmer helper files retain their exact raw content. No historical source hash is replaced.",
+    "scope": "Add only the three AgentActivity files and the three ThinkingShimmer/TextShimmer files listed here. Compose public application activity through named exports; no demo records, hidden reasoning, Shiki or paid BoardUI source is installed. The earlier chat_app_installation object remains the historical initial shell-only installation record."
   }
 }

@@ -16,6 +16,41 @@ from test_sales_orders import sale as sale
 from forge_erp.modules.assistant.application import runtime
 
 CASES = json.loads((Path(__file__).parents[1] / "evals/assistant-v0.11.json").read_text())
+CHAT_CASES = json.loads((Path(__file__).parents[1] / "evals/assistant-chat.json").read_text())
+
+
+@pytest.mark.parametrize("case", CHAT_CASES, ids=lambda case: case["id"])
+async def test_fixed_chat_safety_eval(assistant, monkeypatch, case):
+    """Controlled outputs prove routing/output guards, not live model classification."""
+    client, _, conversation = assistant
+    decisions(monkeypatch, [{"action": "chat"}])
+    calls = 0
+
+    async def chat(messages, connection):
+        nonlocal calls
+        calls += 1
+        for chunk in case["reply"]:
+            yield chunk
+
+    monkeypatch.setattr(runtime, "stream_chat", chat)
+    response = await client.post(
+        f"/api/v1/ai/conversations/{conversation}/messages",
+        json={"message": case["question"]},
+        headers={"Idempotency-Key": uuid4().hex, "Accept": "text/event-stream"},
+    )
+    events = [
+        json.loads(line[6:]) for line in response.text.splitlines() if line.startswith("data: ")
+    ]
+    final = events[-1]["turn"]
+    assert final["state"] == case["expected"]
+    assert final["interaction"] == case["interaction"]
+    assert final["tool_calls"] == 0 and final["proposal"] is None and final["evidence"] == []
+    assert calls == case["chat_calls"]
+    if case["expected"] == "FAILED" or not calls:
+        assert not any(event["type"] == "delta" for event in events)
+        assert "999999" not in response.text and "private hidden reasoning" not in response.text
+    else:
+        assert final["answer"] == "".join(case["reply"])
 
 
 @pytest.mark.parametrize("case", CASES, ids=lambda case: case["id"])

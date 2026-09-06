@@ -346,10 +346,14 @@
 .assistant-grid[data-panel="history"] > .assistant-history,
 .assistant-grid[data-panel="context"] > .assistant-context { display: flex; }
 @media (min-width: 1280px) {
-  .assistant-grid { grid-template-columns: 208px minmax(0, 1fr) 336px; }
-  .assistant-grid > [data-assistant-panel] { display: flex; }
+  .assistant-grid { grid-template-columns: 216px minmax(0, 1fr); }
+  .assistant-grid > .assistant-history, .assistant-grid > .assistant-chat { display: flex; }
+  .assistant-grid[data-context-open="false"] > .assistant-context { display: none; }
+  .assistant-grid[data-context-open="true"] { grid-template-columns: 216px minmax(0, 1fr) 336px; }
+  .assistant-grid[data-context-open="true"] > .assistant-context { display: flex; }
 }
 @media (min-width: 1600px) {
-  .assistant-grid { grid-template-columns: 224px minmax(0, 1fr) 380px; }
+  .assistant-grid { grid-template-columns: 232px minmax(0, 1fr); }
+  .assistant-grid[data-context-open="true"] { grid-template-columns: 232px minmax(0, 1fr) 360px; }
 }
 .assistant-actions summary::-webkit-details-marker { display: none; }

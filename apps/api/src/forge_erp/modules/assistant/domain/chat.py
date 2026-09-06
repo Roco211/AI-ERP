@@ -70,6 +70,15 @@ class ProposalRejection(InputModel):
     expected_revision: Annotated[int, Field(ge=1)]
 
 
+class Activity(BaseModel):
+    id: Annotated[str, Field(max_length=80)]
+    kind: Literal["model", "query", "draft", "reply"]
+    title: Annotated[str, Field(max_length=120)]
+    state: Literal["running", "complete", "failed"]
+    started_at: datetime
+    finished_at: datetime | None = None
+
+
 class TurnRead(BaseModel):
     id: UUID
     state: Literal["RUNNING", "WAITING", "COMPLETED", "FAILED"]
@@ -83,6 +92,20 @@ class TurnRead(BaseModel):
     model_calls: int
     tool_calls: int
     can_retry: bool
+    activity: Annotated[list[Activity], Field(max_length=32)] = Field(default_factory=list)
+    interaction: Literal["business", "casual"] = "business"
+    guided: bool = False
+
+
+class AssistantStreamEvent(BaseModel):
+    type: Literal["snapshot", "delta", "complete", "error"]
+    turn: TurnRead | None = None
+    turn_id: UUID | None = None
+    delta: Annotated[str, Field(max_length=2000)] | None = None
+    status: int | None = None
+    code: str | None = None
+    detail: str | None = None
+    request_id: str | None = None
 
 
 class ConversationSummary(BaseModel):

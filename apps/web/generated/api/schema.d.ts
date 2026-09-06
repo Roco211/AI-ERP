@@ -2261,6 +2261,30 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** Activity */
+        Activity: {
+            /** Finished At */
+            finished_at?: string | null;
+            /** Id */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "model" | "query" | "draft" | "reply";
+            /**
+             * Started At
+             * Format: date-time
+             */
+            started_at: string;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "running" | "complete" | "failed";
+            /** Title */
+            title: string;
+        };
         /** AdjustmentInput */
         AdjustmentInput: {
             /** Lines */
@@ -2285,6 +2309,27 @@ export interface components {
             model?: string | null;
             /** Provider Name */
             provider_name?: string | null;
+        };
+        /** AssistantStreamEvent */
+        AssistantStreamEvent: {
+            /** Code */
+            code?: string | null;
+            /** Delta */
+            delta?: string | null;
+            /** Detail */
+            detail?: string | null;
+            /** Request Id */
+            request_id?: string | null;
+            /** Status */
+            status?: number | null;
+            turn?: components["schemas"]["TurnRead"] | null;
+            /** Turn Id */
+            turn_id?: string | null;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "snapshot" | "delta" | "complete" | "error";
         };
         /** AttributeDefinition */
         AttributeDefinition: {
@@ -6541,6 +6586,8 @@ export interface components {
         };
         /** TurnRead */
         TurnRead: {
+            /** Activity */
+            activity?: components["schemas"]["Activity"][];
             /** Answer */
             answer?: string | null;
             /** Can Retry */
@@ -6557,10 +6604,21 @@ export interface components {
             /** Evidence */
             evidence?: components["schemas"]["Evidence"][];
             /**
+             * Guided
+             * @default false
+             */
+            guided: boolean;
+            /**
              * Id
              * Format: uuid
              */
             id: string;
+            /**
+             * Interaction
+             * @default business
+             * @enum {string}
+             */
+            interaction: "business" | "casual";
             /** Model Calls */
             model_calls: number;
             /** Prompt */
@@ -7167,6 +7225,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TurnRead"];
+                    "text/event-stream": components["schemas"]["AssistantStreamEvent"];
                 };
             };
             /** @description Unauthorized */
@@ -7267,6 +7326,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TurnRead"];
+                    "text/event-stream": components["schemas"]["AssistantStreamEvent"];
                 };
             };
             /** @description Unauthorized */
@@ -8043,6 +8103,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TurnRead"];
+                    "text/event-stream": components["schemas"]["AssistantStreamEvent"];
                 };
             };
             /** @description Unauthorized */

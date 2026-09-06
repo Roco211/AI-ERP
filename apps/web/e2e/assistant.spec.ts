@@ -6,6 +6,8 @@ import path from "node:path";
 type Identity = { id: string; code: string };
 type QueryResult = { evidence_id: string; tool: string; data: { items?: { id: string }[] } };
 type ModelContext = { request: string; query_results: QueryResult[] };
+const CHAT_FIRST = "你好，很高兴和你聊聊。";
+const CHAT_LAST = "希望今天也能遇到让你开心的事情。";
 const fixture = (...args: string[]) => execFileSync("uv", ["run", "--project", "../api", "python",
   path.resolve("../api/tests/browser_assistant_fixture.py"), ...args], { encoding: "utf8" });
 const test = base.extend<{ assistantIdentity: Identity }>({
@@ -20,14 +22,27 @@ const test = base.extend<{ assistantIdentity: Identity }>({
 // LangGraph/application boundary. It does not assert an external model's quality.
 async function modelServer() {
   const requests: ModelContext[] = [];
+  const chatRequests: { request: string }[] = [];
   const syntheticRequests: { messages: string[]; authenticated: boolean }[] = [];
+  let chatGate: { waiting: Promise<void>; started: () => void; release: () => void } | undefined;
+  const releases = new Set<() => void>();
+  function pauseNextChat() {
+    if (chatGate) throw new Error("A controlled chat is already waiting");
+    let started!: () => void;
+    let release!: () => void;
+    const ready = new Promise<void>((resolve) => { started = resolve; });
+    const waiting = new Promise<void>((resolve) => { release = resolve; });
+    chatGate = { waiting, started, release };
+    releases.add(release);
+    return { ready, release };
+  }
   const server = createServer(async (request, response) => {
     try {
       expect(request.url).toBe("/v1/chat/completions");
       const chunks: Buffer[] = [];
       for await (const chunk of request) chunks.push(Buffer.from(chunk));
       const body = JSON.parse(Buffer.concat(chunks).toString()) as {
-        messages: { role: string; content: string }[];
+        messages: { role: string; content: string }[]; stream?: boolean;
       };
       const userMessage = body.messages.find((message) => message.role === "user")!.content;
       if (userMessage === "这是一条连接测试，请返回约定的 JSON。") {
@@ -38,6 +53,28 @@ async function modelServer() {
         return;
       }
       const context = JSON.parse(userMessage) as ModelContext;
+      if (body.stream) {
+        chatRequests.push({ request: context.request });
+        const gate = chatGate;
+        chatGate = undefined;
+        response.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-store" });
+        const write = (content: string, finish_reason: string | null = null) => response.write(
+          "data: " + JSON.stringify({ choices: [{ index: 0, delta: { content }, finish_reason }] }) + "\n\n",
+        );
+        write(CHAT_FIRST);
+        gate?.started();
+        if (gate) {
+          response.once("close", gate.release);
+          await gate.waiting;
+          releases.delete(gate.release);
+          response.removeListener("close", gate.release);
+        }
+        if (response.destroyed) return;
+        write(CHAT_LAST);
+        write("", "stop");
+        response.end("data: [DONE]\n\n");
+        return;
+      }
       requests.push(context);
       if (context.request.includes("恢复测试") && requests.filter((item) => item.request === context.request).length === 1) {
         response.writeHead(503, { "Content-Type": "application/json" });
@@ -45,7 +82,9 @@ async function modelServer() {
         return;
       }
       let decision: unknown;
-      if (context.request.includes("自动出库")) {
+      if (context.request.startsWith("普通闲聊：")) {
+        decision = { action: "chat" };
+      } else if (context.request.includes("自动出库")) {
         decision = { action: "query", tool: "post_sales_shipment", arguments: {} };
       } else if (/创建[销采][售购]草稿/.test(context.request)) {
         const purchase = context.request.includes("创建采购草稿");
@@ -83,8 +122,12 @@ async function modelServer() {
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const address = server.address();
   if (!address || typeof address === "string") throw new Error("Missing browser model port");
-  return { baseUrl: `http://127.0.0.1:${address.port}/v1`, requests, syntheticRequests,
-    close: () => new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve())) };
+  return { baseUrl: `http://127.0.0.1:${address.port}/v1`, requests, chatRequests, syntheticRequests, pauseNextChat,
+    close: () => new Promise<void>((resolve, reject) => {
+      for (const release of releases) release();
+      server.close((error) => error ? reject(error) : resolve());
+      server.closeAllConnections();
+    }) };
 }
 async function login(page: Page, identity: Identity, role = "admin") {
   await page.goto("/login");
@@ -153,6 +196,74 @@ async function noOverflow(page: Page) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 }
 
+async function openContextPanel(page: Page) {
+  if (await page.getByRole("complementary", { name: "业务依据与草稿", exact: true }).isVisible()) return;
+  const desktop = page.getByRole("button", { name: "切换业务依据与草稿", exact: true });
+  await (await desktop.isVisible() ? desktop : page.getByRole("button", { name: "业务依据与草稿", exact: true })).click();
+}
+
+test("assistant streams public text through the real Next proxy before completion and gently returns repeated chat to ERP", async ({ page, assistantIdentity }) => {
+  test.setTimeout(180000);
+  const model = await modelServer();
+  try {
+    await login(page, assistantIdentity);
+    await configure(page, model.baseUrl);
+    const conversation = await startConversation(page);
+    const gate = model.pauseNextChat();
+    const responseReady = page.waitForResponse((response) =>
+      response.url().endsWith(`/conversations/${conversation}/messages`) && response.status() === 200);
+    await ask(page, "普通闲聊：今天想轻松聊聊。");
+    await gate.ready;
+    const response = await responseReady;
+    expect(response.headers()["content-type"]).toContain("text/event-stream");
+    expect(response.headers()["cache-control"]).toContain("no-transform");
+    // The provider is still held at a gate. Any visible text must therefore have
+    // crossed provider -> FastAPI -> Next's compressed-browser proxy in real time.
+    const partial = page.getByLabel("正在生成的回复", { exact: true });
+    await expect(partial).toContainText(CHAT_FIRST, { timeout: 30000 });
+    await expect(partial).not.toContainText(CHAT_LAST);
+    await expect(page.getByLabel("处理过程", { exact: true })).toContainText("正在回复");
+    await expect(page.getByLabel("你的问题", { exact: true })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "发送问题", exact: true })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "复制回复", exact: true })).toHaveCount(0);
+    const pending = await get(page, `ai/conversations/${conversation}`);
+    expect(pending.turns).toHaveLength(1);
+    expect(pending.turns[0].state).toBe("RUNNING");
+    expect(pending.turns[0].answer).toBeNull();
+    expect(pending.turns[0].activity.at(-1)).toMatchObject({ kind: "reply", state: "running" });
+    gate.release();
+    await expect(page.getByLabel("完整回复", { exact: true })).toHaveText(CHAT_FIRST + CHAT_LAST);
+    await expect(page.getByLabel("你的问题", { exact: true })).toBeEnabled();
+    await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+    await page.getByRole("button", { name: "复制回复", exact: true }).click();
+    await expect(page.getByRole("status").filter({ hasText: "已复制" })).toBeVisible();
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(CHAT_FIRST + CHAT_LAST);
+    for (let index = 1; index <= 2; index++) {
+      await ask(page, "普通闲聊：还有什么轻松的话题？");
+      await expect(page.getByLabel("完整回复", { exact: true })).toHaveCount(index + 1);
+      await expect(page.getByLabel("你的问题", { exact: true })).toBeEnabled();
+    }
+    const third = page.getByLabel("完整回复", { exact: true }).last();
+    await expect(third).toContainText("我们也可以顺便看看店里的情况");
+    const history = await get(page, `ai/conversations/${conversation}`);
+    expect(history.turns.map((turn: { guided: boolean }) => turn.guided)).toEqual([false, false, true]);
+    expect(history.turns.every((turn: { state: string; interaction: string; tool_calls: number }) =>
+      turn.state === "COMPLETED" && turn.interaction === "casual" && turn.tool_calls === 0)).toBe(true);
+    await ask(page, "请查询当前库存。");
+    await expect(page.getByRole("button", { name: /^查看业务依据/ })).toBeVisible({ timeout: 30000 });
+    await expect(page.getByLabel("你的问题", { exact: true })).toBeEnabled();
+    await ask(page, "普通闲聊：忙完以后再聊聊。");
+    await expect(page.getByLabel("完整回复", { exact: true })).toHaveCount(5);
+    await expect(page.getByLabel("你的问题", { exact: true })).toBeEnabled();
+    const final = await get(page, `ai/conversations/${conversation}`);
+    expect(final.turns.at(-2)).toMatchObject({ state: "COMPLETED", interaction: "business", tool_calls: 1 });
+    expect(final.turns.at(-1)).toMatchObject({ state: "COMPLETED", interaction: "casual", guided: false, tool_calls: 0 });
+    expect(model.chatRequests).toHaveLength(4);
+    expect(model.requests).toHaveLength(6);
+    await noOverflow(page);
+  } finally { await model.close(); }
+});
+
 test("assistant uses real queries, server re-preview and replay-safe reviewed creation with a persistent receipt", async ({ page, assistantIdentity }) => {
   test.setTimeout(180000);
   const model = await modelServer();
@@ -196,9 +307,7 @@ test("assistant uses real queries, server re-preview and replay-safe reviewed cr
     await page.getByRole("button", { name: "重试原提交", exact: true }).click();
     await retried;
     await expect(page.getByRole("button", { name: "重试原提交", exact: true })).toBeHidden();
-    if (!(await page.getByRole("complementary", { name: "业务依据与草稿", exact: true }).isVisible())) {
-      await page.getByRole("button", { name: "业务依据与草稿", exact: true }).click();
-    }
+    await openContextPanel(page);
     await expect(page.getByRole("region", { name: "草稿创建结果" })).toBeVisible();
     expect(attempts).toHaveLength(2);
     expect(attempts[1]).toEqual(attempts[0]);
@@ -213,9 +322,7 @@ test("assistant uses real queries, server re-preview and replay-safe reviewed cr
     const inventory = await get(page, `inventory/balances?product_id=${data.product.id}`);
     expect(inventory.items[0]).toMatchObject({ on_hand_qty: "10.000000", reserved_qty: "0.000000", available_qty: "10.000000" });
     await page.reload();
-    if (!(await page.getByRole("complementary", { name: "业务依据与草稿", exact: true }).isVisible())) {
-      await page.getByRole("button", { name: "业务依据与草稿", exact: true }).click();
-    }
+    await openContextPanel(page);
     await expect(page.getByRole("region", { name: "草稿创建结果" })).toBeVisible();
     await expect(page.getByRole("link", { name: "查看已创建草稿", exact: true })).toHaveAttribute("href", receipt.href);
     expect(model.requests.length).toBe(4);
@@ -245,6 +352,7 @@ test("assistant private conversations, permission-filtered facts and forbidden m
     expect((await viewer.request.get("/api/v1/ai/provider")).status()).toBe(403);
     await startConversation(viewer);
     await ask(viewer, "AI-BOLT 现在有多少可用库存？");
+    await viewer.getByRole("button", { name: /^查看业务依据/ }).last().click({ timeout: 30000 });
     const evidence = viewer.getByRole("region", { name: "库存余额", exact: true });
     await expect(evidence).toContainText("10.000000", { timeout: 30000 });
     await expect(evidence).not.toContainText("平均成本");
@@ -265,6 +373,7 @@ test("provider revisions invalidate old conversations and a new conversation res
     await configure(page, model.baseUrl);
     const previous = await startConversation(page);
     await ask(page, "AI-BOLT 现在有多少可用库存？");
+    await page.getByRole("button", { name: /^查看业务依据/ }).last().click({ timeout: 30000 });
     await expect(page.getByRole("region", { name: "库存余额", exact: true })).toBeVisible({ timeout: 30000 });
     await configure(page, model.baseUrl, 1);
     await ask(page, "再查询一次 AI-BOLT");
@@ -274,6 +383,7 @@ test("provider revisions invalidate old conversations and a new conversation res
     await expect(page.getByLabel("你的问题", { exact: true })).toBeEnabled();
     expect(new URL(page.url()).searchParams.get("conversation")).not.toBe(previous);
     await ask(page, "AI-BOLT 现在有多少可用库存？");
+    await page.getByRole("button", { name: /^查看业务依据/ }).last().click({ timeout: 30000 });
     await expect(page.getByRole("region", { name: "库存余额", exact: true })).toBeVisible({ timeout: 30000 });
     expect(model.requests).toHaveLength(4);
   } finally { await model.close(); }
@@ -313,6 +423,7 @@ test("purchase edits are server-priced, rejected proposals create no order, and 
     expect(brief.tool_calls).toBe(1);
     expect(model.requests).toHaveLength(2);
     await page.reload();
+    await openContextPanel(page);
     await expect(page.getByRole("region", { name: "经营概览", exact: true })).toContainText(selectedDay);
   } finally { await model.close(); }
 });
@@ -334,6 +445,7 @@ test("a transport failure resumes the persisted turn after refresh without creat
     const response = page.waitForResponse((result) => result.url().endsWith(`/turns/${initial.id}/retry`) && result.status() === 200);
     await page.getByRole("button", { name: "恢复本次处理", exact: true }).click();
     await response;
+    await page.getByRole("button", { name: /^查看业务依据/ }).last().click({ timeout: 30000 });
     await expect(page.getByRole("region", { name: "库存余额", exact: true })).toContainText("10.000000");
     const history = await get(page, `ai/conversations/${conversation}`);
     expect(history.turns).toHaveLength(1);

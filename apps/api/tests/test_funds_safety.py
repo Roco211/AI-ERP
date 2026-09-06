@@ -116,7 +116,7 @@ async def facts(identity):
                 extra = " AND action LIKE 'funds.%'"
             elif table == "outbox_events":
                 extra = " AND event_type LIKE 'funds.%'"
-            result[table] = (
+            rows = (
                 (
                     await db.execute(
                         text(
@@ -129,7 +129,19 @@ async def facts(identity):
                 .mappings()
                 .all()
             )
+            result[table] = [committed_fact(table, row) for row in rows]
     return result
+
+
+def committed_fact(table, row):
+    # The running worker can independently advance delivery while a command is
+    # being rejected. Atomicity compares the committed event identity/payload,
+    # not unrelated attempts or processing timestamps.
+    return {
+        key: value
+        for key, value in dict(row).items()
+        if table != "outbox_events" or key not in {"processed_at", "attempts"}
+    }
 
 
 async def expire(identity, key, mode):
@@ -511,8 +523,30 @@ async def business_facts(identity):
                     text(f"SELECT * FROM forge.{table} WHERE organization_id=:org"), identity
                 )
             ).mappings()
-            result[table] = sorted((dict(row) for row in rows), key=str)
+            result[table] = sorted((committed_fact(table, row) for row in rows), key=str)
     return result
+
+
+async def test_fact_snapshot_tracks_committed_events_but_ignores_worker_delivery(funds_case):
+    case = funds_case
+    before = await business_facts(case["identity"])
+    assert before["outbox_events"]
+    async with sessions.begin() as db:
+        await set_tenant(db, case["identity"]["org"])
+        await db.execute(
+            text(
+                "UPDATE forge.outbox_events SET processed_at=clock_timestamp(), "
+                "attempts=attempts+1 WHERE organization_id=:org"
+            ),
+            case["identity"],
+        )
+    assert await business_facts(case["identity"]) == before
+    assert (
+        await create(case["c"], "customers", {"code": "AFTER-DELIVERY", "name": "新增事件"})
+    ).status_code == 201
+    after = await business_facts(case["identity"])
+    assert len(after["outbox_events"]) == len(before["outbox_events"]) + 1
+    assert after != before
 
 
 async def commercial_documents(c, sale, side, count=1):

@@ -51,7 +51,8 @@ export function useFundsSubmission(messages?: {
         const rejected =
           error instanceof ApiError &&
           error.status >= 400 &&
-          error.status < 500;
+          error.status < 500 &&
+          !("submissionUncertain" in error && error.submissionUncertain === true);
         // A later rejection cannot establish whether the first request committed.
         if (!rejected) request.uncertain = true;
         if (rejected && !request.uncertain) {
