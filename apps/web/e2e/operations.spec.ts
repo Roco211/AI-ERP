@@ -43,7 +43,8 @@ async function login(page: Page, identity: Identity, role = "admin") {
     .getByLabel("密码", { exact: true })
     .fill("operations-browser-fixture-only-4827");
   await page.getByRole("button", { name: "进入工作空间" }).click();
-  await expect(page.getByRole("navigation", { name: "主导航" })).toBeVisible();
+  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page.getByRole("button", { name: "切换导航", exact: true })).toBeVisible();
 }
 async function create(page: Page, resource: string, body: unknown) {
   const response = await page.request.post("/api/v1/" + resource, {
