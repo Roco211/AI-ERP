@@ -515,7 +515,7 @@ test("isolated funds roles and lost receipt preserve one cash fact across Back a
     .getByRole("navigation", { name: "主导航" })
     .getByRole("link", { name: "资金", exact: true })
     .click();
-  await expect(page.getByRole("button", { name: "应付与付款" })).toHaveCount(0);
+  await expect(page.getByRole("tab", { name: "应付与付款" })).toHaveCount(0);
   const dialog = await recordUI(
     page,
     "收款",

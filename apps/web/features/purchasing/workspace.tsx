@@ -1,15 +1,12 @@
 "use client";
+import { BusinessStatus } from "@/features/operations/business-status";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { OrderFundsSummary } from "@/features/funds/order-summary";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useId, useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  useReactTable,
-  getCoreRowModel,
-  flexRender,
-  type ColumnDef,
-} from "@tanstack/react-table";
+import { BusinessTable } from "@/features/operations/business-table";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { Dialog } from "@base-ui/react/dialog";
@@ -98,62 +95,14 @@ function Grid({
   headers: string[];
   rows: { id: string; cells: ReactNode[] }[];
 }) {
-  const columns: ColumnDef<{ id: string; cells: ReactNode[] }>[] = headers.map(
-    (header, n) => ({
-      id: String(n),
-      header,
-      cell: ({ row }) => row.original.cells[n],
-    }),
-  );
-  const table = useReactTable({
-    data: rows,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    manualPagination: true,
-    getRowId: (r) => r.id,
-  });
-  return (
-    <div className="overflow-x-auto rounded-xl border border-border bg-white">
-      <table className="w-full text-left text-sm">
-        <thead className="bg-[#f4f6f2] text-xs text-muted-foreground">
-          {table.getHeaderGroups().map((group) => (
-            <tr key={group.id}>
-              {group.headers.map((h) => (
-                <th
-                  className="px-4 py-3 whitespace-nowrap font-normal"
-                  key={h.id}
-                >
-                  {flexRender(h.column.columnDef.header, h.getContext())}
-                </th>
-              ))}
-            </tr>
-          ))}
-        </thead>
-        <tbody>
-          {table.getRowModel().rows.map((row) => (
-            <tr className="border-t border-border" key={row.id}>
-              {row.getVisibleCells().map((cell) => (
-                <td className="px-4 py-3 tabular-nums" key={cell.id}>
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      {!rows.length && (
-        <p className="p-8 text-center text-sm text-muted-foreground">
-          暂无采购记录。
-        </p>
-      )}
-    </div>
-  );
+  return <BusinessTable headers={headers} rows={rows} empty={"暂无采购记录。"} />;
 }
 export function PurchasingWorkspace({
   permissions,
 }: {
   permissions: string[];
 }) {
+  const tabId = useId();
   const params = useSearchParams(),
     qc = useQueryClient(),
     read = permissions.includes("purchase.read"),
@@ -550,24 +499,19 @@ export function PurchasingWorkspace({
       <p className="text-sm text-muted-foreground">
         确认采购，再按实收数量入库。采购金额与资金结算分别按来源核对。
       </p>
-      <div className="flex flex-wrap gap-2">
-        {tabs
-          .filter((t) => t.id !== "prices" || cost)
-          .map((t) => (
-            <Button
-              key={t.id}
-              variant={tab === t.id ? "default" : "outline"}
-              disabled={locked}
-              onClick={() => {
-                setTab(t.id);
-                setPage(1);
-                setSelected(null);
-              }}
-            >
-              {t.label}
-            </Button>
+      <Tabs value={tab} variant="underline" onValueChange={(value) => {
+        if (locked) return;
+        setTab(value as Tab);
+        setPage(1);
+        setSelected(null);
+      }}>
+        <TabsList aria-label="采购记录分类" className="flex w-full flex-wrap justify-start">
+          {tabs.filter((item) => item.id !== "prices" || cost).map((item) => (
+            <TabsTrigger id={`${tabId}-records-tab-${item.id}`} aria-controls={`${tabId}-records-panel`} key={item.id} value={item.id} disabled={locked}>{item.label}</TabsTrigger>
           ))}
-      </div>
+        </TabsList>
+      </Tabs>
+      <div role="tabpanel" id={`${tabId}-records-panel`} aria-labelledby={`${tabId}-records-tab-${tab}`} tabIndex={0} className="min-w-0 space-y-5">
       <div className="flex flex-wrap items-center gap-3">
         {tab === "orders" && (
           <Input
@@ -632,8 +576,8 @@ export function PurchasingWorkspace({
                   {r.warehouse_name}
                 </p>
               </div>,
-              names[r.status],
-              names[r.receiving_status],
+              <BusinessStatus key="status" status={r.status}>{names[r.status]}</BusinessStatus>,
+              <BusinessStatus key="receiving_status" status={r.receiving_status}>{names[r.receiving_status]}</BusinessStatus>,
               ...(cost ? [number(r.amount)] : []),
               <Button
                 key="view"
@@ -664,7 +608,7 @@ export function PurchasingWorkspace({
               r.number,
               r.order_number,
               r.supplier_name,
-              names[r.status],
+              <BusinessStatus key="status" status={r.status}>{names[r.status]}</BusinessStatus>,
               r.reason,
               ...(cost ? [number(r.amount)] : []),
               <Button
@@ -733,7 +677,7 @@ export function PurchasingWorkspace({
       {order && (
         <section
           aria-label="采购订单详情"
-          className="space-y-4 rounded-xl border bg-white p-5"
+          className="space-y-4 rounded-2xl border bg-background p-5"
         >
           <div className="flex justify-between gap-3">
             <div>
@@ -833,7 +777,7 @@ export function PurchasingWorkspace({
       {document && (
         <section
           aria-label="采购库存单据详情"
-          className="space-y-4 rounded-xl border bg-white p-5"
+          className="space-y-4 rounded-2xl border bg-background p-5"
         >
           <div className="flex justify-between gap-3">
             <div>
@@ -973,7 +917,7 @@ export function PurchasingWorkspace({
       >
         <Dialog.Portal>
           <Dialog.Backdrop className="fixed inset-0 z-40 bg-black/30" />
-          <Dialog.Popup className="fixed top-[5vh] left-1/2 z-50 max-h-[90vh] w-[min(94vw,960px)] -translate-x-1/2 overflow-y-auto rounded-xl bg-white p-6 shadow-xl">
+          <Dialog.Popup className="fixed top-[5vh] left-1/2 z-50 max-h-[90vh] w-[min(94vw,960px)] -translate-x-1/2 overflow-y-auto rounded-[30px] bg-background p-6 shadow-2xl border border-border">
             <Dialog.Title className="text-lg font-semibold">
               {editor?.kind === "ORDER"
                 ? "采购订单草稿"
@@ -1003,7 +947,7 @@ export function PurchasingWorkspace({
                       采购供应商
                       <select
                         aria-label="采购供应商"
-                        className="h-10 rounded-md border px-3"
+                        className="border h-11 min-w-0 max-w-full rounded-full bg-background px-4 focus:border-foreground/40 focus:outline-none focus:ring-2 focus:ring-ring/40 disabled:opacity-60"
                         {...form.register("supplier")}
                       >
                         <option value="">请选择供应商</option>
@@ -1018,7 +962,7 @@ export function PurchasingWorkspace({
                       收货仓库
                       <select
                         aria-label="收货仓库"
-                        className="h-10 rounded-md border px-3"
+                        className="border h-11 min-w-0 max-w-full rounded-full bg-background px-4 focus:border-foreground/40 focus:outline-none focus:ring-2 focus:ring-ring/40 disabled:opacity-60"
                         {...form.register("warehouse")}
                       >
                         <option value="">请选择仓库</option>
@@ -1142,7 +1086,7 @@ export function PurchasingWorkspace({
       >
         <Dialog.Portal>
           <Dialog.Backdrop className="fixed inset-0 z-50 bg-black/30" />
-          <Dialog.Popup className="fixed top-[20vh] left-1/2 z-50 w-[min(92vw,520px)] -translate-x-1/2 rounded-xl bg-white p-6 shadow-xl">
+          <Dialog.Popup className="fixed top-[20vh] left-1/2 z-50 w-[min(92vw,520px)] -translate-x-1/2 rounded-[30px] bg-background p-6 shadow-2xl border border-border">
             <Dialog.Title className="text-lg font-semibold">
               复核{confirmation ? actionNames[confirmation.action] : "操作"}
             </Dialog.Title>
@@ -1186,6 +1130,7 @@ export function PurchasingWorkspace({
           </Dialog.Popup>
         </Dialog.Portal>
       </Dialog.Root>
+      </div>
     </div>
   );
 }

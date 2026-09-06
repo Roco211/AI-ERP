@@ -361,7 +361,7 @@ test("isolated sales keyboard order, partial shipment lost response, return, rev
   await expect(
     order.getByText("已实现净毛利：240", { exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "客户成交历史", exact: true }).click();
+  await page.getByRole("tab", { name: "客户成交历史", exact: true }).click();
   await expect(
     page.getByRole("row").filter({ hasText: data.product.sku }),
   ).toBeVisible();
@@ -453,7 +453,7 @@ test("real quantity warehouse performs shipment and return without receiving pri
   await expect(page.getByRole("button", { name: "新建销售订单" })).toHaveCount(
     0,
   );
-  await expect(page.getByRole("button", { name: "客户成交历史" })).toHaveCount(
+  await expect(page.getByRole("tab", { name: "客户成交历史" })).toHaveCount(
     0,
   );
   expectNoFinancialFields(await readOrder(page, saved.id));
@@ -537,7 +537,7 @@ test("same-document Forward preserves an uncertain shipment and retries the orig
     .getByRole("navigation", { name: "主导航" })
     .getByRole("link", { name: "销售", exact: true })
     .click();
-  await page.getByRole("button", { name: "销售出库", exact: true }).click();
+  await page.getByRole("tab", { name: "销售出库", exact: true }).click();
   await page.getByRole("button", { name: "查看", exact: true }).click();
   await expect(
     page.getByRole("region", { name: "销售库存单据详情" }),

@@ -1,5 +1,7 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { BusinessStatus } from "@/features/operations/business-status";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useId, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -79,9 +81,10 @@ const actionNames: Record<Action, string> = {
   reverse: "冲销",
 };
 const selectClass =
-  "h-10 min-w-0 max-w-full rounded-md border bg-white px-3 text-sm";
+  "h-11 min-w-0 max-w-full rounded-full border border-border bg-background px-4 text-sm focus:border-foreground/40 focus:outline-none focus:ring-2 focus:ring-ring/40 disabled:opacity-60";
 
 export function SalesWorkspace({ permissions }: { permissions: string[] }) {
+  const tabId = useId();
   const params = useSearchParams(),
     qc = useQueryClient();
   const read = permissions.includes("sales.read"),
@@ -754,25 +757,20 @@ export function SalesWorkspace({ permissions }: { permissions: string[] }) {
       <p className="text-sm text-muted-foreground">
         确认订单占用库存，按实发数量出库；退货沿用原成交与成本。销售金额与资金结算分别按来源核对。
       </p>
-      <div className="flex flex-wrap gap-2">
-        {tabs
-          .filter((item) => item.id !== "prices" || price)
-          .map((item) => (
-            <Button
-              key={item.id}
-              variant={tab === item.id ? "default" : "outline"}
-              disabled={locked}
-              onClick={() => {
-                setTab(item.id);
-                setPage(1);
-                setStatusFilter("");
-                setSelected(null);
-              }}
-            >
-              {item.label}
-            </Button>
+      <Tabs value={tab} variant="underline" onValueChange={(value) => {
+        if (locked) return;
+        setTab(value as Tab);
+        setPage(1);
+        setStatusFilter("");
+        setSelected(null);
+      }}>
+        <TabsList aria-label="销售记录分类" className="flex w-full flex-wrap justify-start">
+          {tabs.filter((item) => item.id !== "prices" || price).map((item) => (
+            <TabsTrigger id={`${tabId}-records-tab-${item.id}`} aria-controls={`${tabId}-records-panel`} key={item.id} value={item.id} disabled={locked}>{item.label}</TabsTrigger>
           ))}
-      </div>
+        </TabsList>
+      </Tabs>
+      <div role="tabpanel" id={`${tabId}-records-panel`} aria-labelledby={`${tabId}-records-tab-${tab}`} tabIndex={0} className="min-w-0 space-y-5">
       <div className="flex min-w-0 flex-wrap items-center gap-3">
         {tab !== "prices" && (
           <Input
@@ -899,8 +897,8 @@ export function SalesWorkspace({ permissions }: { permissions: string[] }) {
                   {row.warehouse_name}
                 </p>
               </div>,
-              names[row.status],
-              names[row.fulfillment_status],
+              <BusinessStatus key="status" status={row.status}>{names[row.status]}</BusinessStatus>,
+              <BusinessStatus key="fulfillment_status" status={row.fulfillment_status}>{names[row.fulfillment_status]}</BusinessStatus>,
               ...(price ? [number(row.amount)] : []),
               <Button
                 key="view"
@@ -933,7 +931,7 @@ export function SalesWorkspace({ permissions }: { permissions: string[] }) {
               row.number,
               row.order_number,
               row.customer_name,
-              names[row.status],
+              <BusinessStatus key="status" status={row.status}>{names[row.status]}</BusinessStatus>,
               row.reason,
               ...(price ? [number(row.amount)] : []),
               <Button
@@ -1006,7 +1004,7 @@ export function SalesWorkspace({ permissions }: { permissions: string[] }) {
       {order && (
         <section
           aria-label="销售订单详情"
-          className="min-w-0 space-y-4 rounded-xl border bg-white p-4 sm:p-5"
+          className="min-w-0 space-y-4 rounded-2xl border bg-background p-4 sm:p-5"
         >
           <div className="flex flex-wrap justify-between gap-3">
             <div className="min-w-0">
@@ -1085,7 +1083,7 @@ export function SalesWorkspace({ permissions }: { permissions: string[] }) {
             待发与已退分别记录；退货不会恢复待发或占用。已关闭订单的可执行数量为零。
           </p>
           {price && (
-            <div className="grid gap-2 rounded-lg bg-[#f4f6f2] p-4 text-sm sm:grid-cols-3">
+            <div className="grid gap-2 rounded-lg bg-card p-4 text-sm sm:grid-cols-3">
               <p>有效出库销售金额：{number(order.shipment_amount)}</p>
               <p>有效退货销售冲减：{number(order.return_amount)}</p>
               <p>净销售金额：{number(order.net_sales_amount)}</p>
@@ -1159,7 +1157,7 @@ export function SalesWorkspace({ permissions }: { permissions: string[] }) {
       {stockDocument && (
         <section
           aria-label="销售库存单据详情"
-          className="min-w-0 space-y-4 rounded-xl border bg-white p-4 sm:p-5"
+          className="min-w-0 space-y-4 rounded-2xl border bg-background p-4 sm:p-5"
         >
           <div className="flex flex-wrap justify-between gap-3">
             <div className="min-w-0">
@@ -1359,7 +1357,7 @@ export function SalesWorkspace({ permissions }: { permissions: string[] }) {
       >
         <Dialog.Portal>
           <Dialog.Backdrop className="fixed inset-0 z-40 bg-black/30" />
-          <Dialog.Popup className="fixed left-1/2 top-[5vh] z-50 max-h-[90vh] w-[min(94vw,960px)] min-w-0 -translate-x-1/2 overflow-y-auto rounded-xl bg-white p-4 shadow-xl sm:p-6">
+          <Dialog.Popup className="fixed left-1/2 top-[5vh] z-50 max-h-[90vh] w-[min(94vw,960px)] min-w-0 -translate-x-1/2 overflow-y-auto rounded-[30px] bg-background p-4 shadow-2xl sm:p-6 border border-border">
             <Dialog.Title className="text-lg font-semibold">
               {editor?.kind === "ORDER"
                 ? "销售订单草稿"
@@ -1681,7 +1679,7 @@ export function SalesWorkspace({ permissions }: { permissions: string[] }) {
       >
         <Dialog.Portal>
           <Dialog.Backdrop className="fixed inset-0 z-50 bg-black/30" />
-          <Dialog.Popup className="fixed left-1/2 top-[15vh] z-50 max-h-[75vh] w-[min(92vw,520px)] -translate-x-1/2 overflow-y-auto rounded-xl bg-white p-5 shadow-xl">
+          <Dialog.Popup className="fixed left-1/2 top-[15vh] z-50 max-h-[75vh] w-[min(92vw,520px)] -translate-x-1/2 overflow-y-auto rounded-[30px] bg-background p-5 shadow-2xl border border-border">
             <Dialog.Title className="text-lg font-semibold">
               复核{confirmation ? actionNames[confirmation.action] : "操作"}
             </Dialog.Title>
@@ -1729,6 +1727,7 @@ export function SalesWorkspace({ permissions }: { permissions: string[] }) {
           </Dialog.Popup>
         </Dialog.Portal>
       </Dialog.Root>
+      </div>
     </div>
   );
 }

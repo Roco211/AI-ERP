@@ -5,8 +5,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { ArrowRight, Hexagon, ShieldCheck } from "lucide-react";
+import { ArrowRight, ShieldCheck } from "lucide-react";
 import { api } from "@/lib/api";
+import { ThemeToggle } from "@/components/motion/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -42,27 +43,21 @@ export default function LoginPage() {
     } catch { setError("网络连接中断，请重试本次登录。"); }
     })(event);
   }
-  return <main className="grid min-h-screen lg:grid-cols-[1.08fr_1fr]">
-    <section className="relative flex flex-col justify-between overflow-hidden bg-[#203e30] px-10 py-9 text-white lg:px-16 lg:py-12">
-      <div className="flex items-center gap-3 text-xl font-semibold tracking-tight"><Hexagon size={30} /> FORGE <span className="ml-1 text-xs font-normal tracking-[.18em] text-white/45">ERP</span></div>
-      <div className="py-16 lg:py-24"><p className="mb-6 text-xs tracking-[.25em] text-[#a0bda9]">为每一天的经营，打好基础</p>
-        <h1 className="max-w-lg text-4xl leading-snug font-medium lg:text-5xl">生意有条理。<br /><span className="text-[#adcaad]">经营更从容。</span></h1>
-        <p className="mt-7 max-w-sm text-sm leading-7 text-white/60">从一个清晰、有序的工作台开始，<br />让团队在同一个空间协作。</p>
-        <div aria-hidden className="mt-12 flex items-end gap-3 opacity-40"><div className="h-12 w-16 rounded-t bg-[#88ac95]"/><div className="h-20 w-16 rounded-t bg-[#88ac95]"/><div className="h-28 w-16 rounded-t bg-[#c2d7c0]"/><div className="h-36 w-16 rounded-t bg-[#eef2dc]"/></div>
-      </div>
-      <p className="text-xs text-white/40">FORGE ERP · 企业工作空间</p>
-    </section>
-    <section className="flex items-center justify-center px-7 py-14">
-      <div className="w-full max-w-sm"><p className="mb-3 text-xs font-medium tracking-widest text-muted-foreground">欢迎回来</p><h2 className="text-3xl font-semibold tracking-tight">登录工作空间</h2><p className="mt-3 text-sm text-muted-foreground">使用企业分配的账户继续。</p>
-        <form onSubmit={submit} className="mt-9 space-y-5">
-          <div className="space-y-2"><Label htmlFor="organization">企业代码</Label><Input id="organization" placeholder="例如 DEMO" autoComplete="organization" {...register("organization_code")} aria-invalid={!!errors.organization_code}/>{errors.organization_code && <p className="text-xs text-destructive">{errors.organization_code.message}</p>}</div>
-          <div className="space-y-2"><Label htmlFor="email">邮箱</Label><Input id="email" type="email" placeholder="name@company.com" autoComplete="username" {...register("email")} aria-invalid={!!errors.email}/>{errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}</div>
-          <div className="space-y-2"><Label htmlFor="password">密码</Label><Input id="password" type="password" autoComplete="current-password" placeholder="输入密码" {...register("password")} aria-invalid={!!errors.password}/>{errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}</div>
-          {error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-destructive">{error}</p>}
+  return <main className="flex min-h-svh flex-col bg-background px-5 py-7 sm:px-10">
+    <header className="flex items-center gap-2.5 text-sm font-medium"><span className="grid size-7 place-items-center rounded-lg bg-foreground text-background">F</span> Forge ERP<ThemeToggle aria-label="切换明暗主题" variant="circle" className="ml-auto size-9 rounded-full hover:bg-muted" iconClassName="size-4" /></header>
+    <section className="flex flex-1 items-center justify-center py-16">
+      <div className="w-full max-w-[380px]">
+        <div className="mb-8"><span className="mb-5 inline-flex rounded-full border border-border bg-card px-3 py-1 text-xs text-muted-foreground">企业工作空间</span><h1 className="text-[28px] font-medium tracking-tight">登录工作空间</h1><p className="mt-2 text-sm leading-6 text-muted-foreground">欢迎回来。使用企业分配的账户继续。</p></div>
+        <form onSubmit={submit} className="space-y-5">
+          <div className="space-y-2"><Label htmlFor="organization">企业代码</Label><Input id="organization" placeholder="例如 DEMO" autoComplete="organization" {...register("organization_code")} aria-invalid={!!errors.organization_code} aria-describedby={errors.organization_code ? "organization-error" : undefined}/>{errors.organization_code && <p id="organization-error" className="text-xs text-destructive">{errors.organization_code.message}</p>}</div>
+          <div className="space-y-2"><Label htmlFor="email">邮箱</Label><Input id="email" type="email" placeholder="name@company.com" autoComplete="username" {...register("email")} aria-invalid={!!errors.email} aria-describedby={errors.email ? "email-error" : undefined}/>{errors.email && <p id="email-error" className="text-xs text-destructive">{errors.email.message}</p>}</div>
+          <div className="space-y-2"><Label htmlFor="password">密码</Label><Input id="password" type="password" autoComplete="current-password" placeholder="输入密码" {...register("password")} aria-invalid={!!errors.password} aria-describedby={errors.password ? "password-error" : undefined}/>{errors.password && <p id="password-error" className="text-xs text-destructive">{errors.password.message}</p>}</div>
+          {error && <p role="alert" className="rounded-xl border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive">{error}</p>}
           <Button type="submit" disabled={isSubmitting} className="h-11 w-full">{isSubmitting ? "正在登录…" : "进入工作空间"}<ArrowRight className="ml-2 size-4" /></Button>
         </form>
         <div className="mt-8 flex gap-2 border-t border-border pt-5 text-xs leading-5 text-muted-foreground"><ShieldCheck className="mt-0.5 size-4 shrink-0"/><p>账户仅用于所属企业。需要开通或找回账户，请联系企业管理员。</p></div>
       </div>
     </section>
+    <footer className="text-center text-xs text-muted-foreground/70">Forge ERP · 让经营更从容</footer>
   </main>;
 }

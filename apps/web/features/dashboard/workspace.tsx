@@ -128,11 +128,11 @@ export function DashboardWorkspace({ permissions }: { permissions: string[] }) {
     return (
       <section
         aria-label={title}
-        className="min-w-0 space-y-4 rounded-xl border bg-white p-4 sm:p-6"
+        className="min-w-0 space-y-5 rounded-2xl border border-border bg-card/30 p-5 sm:p-6 [&_dl>div:first-child_dd]:text-2xl [&_dl>div:first-child_dd]:leading-9"
       >
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="font-medium">{title}</h3>
-          <Button variant="outline" onClick={() => openSources(sourceMetric)}>
+          <h3 className="text-sm font-medium text-muted-foreground">{title}</h3>
+          <Button size="sm" variant="ghost" onClick={() => openSources(sourceMetric)}>
             查看来源
           </Button>
         </div>
@@ -548,7 +548,7 @@ export function DashboardWorkspace({ permissions }: { permissions: string[] }) {
       >
         <Dialog.Portal>
           <Dialog.Backdrop className="fixed inset-0 z-40 bg-black/25" />
-          <Dialog.Popup className="fixed top-1/2 left-1/2 z-50 max-h-[88vh] w-[min(96vw,1050px)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl bg-white p-4 sm:p-6">
+          <Dialog.Popup className="fixed top-1/2 left-1/2 z-50 max-h-[88vh] w-[min(96vw,1050px)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-[30px] bg-background p-4 sm:p-6 border border-border">
             <div className="flex flex-wrap justify-between gap-2">
               <Dialog.Title className="text-lg font-medium">
                 {metric ? metricNames[metric] : "指标来源"}

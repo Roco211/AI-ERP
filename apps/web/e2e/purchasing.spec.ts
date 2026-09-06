@@ -143,7 +143,7 @@ test("purchase order, split receiving, lost response, return and inventory sourc
   await expect(doc.getByText(/已冲销 ·/)).toBeVisible();
   await doc.getByRole("button", { name: /来源订单/ }).click();
   await expect(order.getByText(/已确认 · 已收齐/)).toBeVisible();
-  await page.getByRole("button", { name: "历史采购价", exact: true }).click();
+  await page.getByRole("tab", { name: "历史采购价", exact: true }).click();
   await expect(
     page.getByRole("row").filter({ hasText: product.sku }).first(),
   ).toBeVisible();
@@ -190,7 +190,7 @@ test("real purchase quantity reader has no price or mutation access", async ({
     ).toBeVisible();
     await page.goto("/purchase");
     await expect(
-      page.getByRole("button", { name: "采购订单", exact: true }),
+      page.getByRole("tab", { name: "采购订单", exact: true }),
     ).toBeVisible();
     await expect(
       page.getByRole("columnheader", { name: "订单金额" }),
@@ -198,7 +198,7 @@ test("real purchase quantity reader has no price or mutation access", async ({
     await expect(
       page.getByRole("button", { name: "新建采购订单" }),
     ).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "历史采购价" })).toHaveCount(
+    await expect(page.getByRole("tab", { name: "历史采购价" })).toHaveCount(
       0,
     );
     const r = await page.request.post("/api/v1/purchasing/orders", {

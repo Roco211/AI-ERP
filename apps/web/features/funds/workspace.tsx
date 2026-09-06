@@ -1,6 +1,8 @@
 "use client";
+import { BusinessStatus } from "@/features/operations/business-status";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-import { useEffect, useRef, useState } from "react";
+import { useId, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -66,7 +68,7 @@ type Fields = {
   allocations: Allocation[];
 };
 const selectClass =
-  "h-10 min-w-0 max-w-full rounded-md border bg-white px-3 text-sm";
+  "h-11 min-w-0 max-w-full rounded-full border border-border bg-background px-4 text-sm focus:border-foreground/40 focus:outline-none focus:ring-2 focus:ring-ring/40 disabled:opacity-60";
 const money = z.string().regex(/^-?\d+(?:\.\d{1,4})?$/);
 const explanation = z.string().trim().min(1).max(2000);
 const names: Record<string, string> = {
@@ -119,6 +121,7 @@ function actionPermission(side: Side, kind: CashKind) {
 }
 
 export function FundsWorkspace({ permissions }: { permissions: string[] }) {
+  const tabId = useId();
   const params = useSearchParams();
   const qc = useQueryClient();
   const submission = useFundsSubmission();
@@ -664,7 +667,7 @@ export function FundsWorkspace({ permissions }: { permissions: string[] }) {
       {submission.error && (
         <p
           role="alert"
-          className="my-3 rounded-lg bg-red-50 p-3 text-sm text-red-800"
+          className="my-3 rounded-lg bg-destructive/5 p-3 text-sm text-destructive"
         >
           {submission.error}
         </p>
@@ -737,24 +740,14 @@ export function FundsWorkspace({ permissions }: { permissions: string[] }) {
       {canView && (
         <>
           <div className="flex flex-wrap items-center gap-2">
-            {canAR && (
-              <Button
-                variant={side === "AR" ? "default" : "outline"}
-                disabled={locked}
-                onClick={() => changeSide("AR")}
-              >
-                应收与收款
-              </Button>
-            )}
-            {canAP && (
-              <Button
-                variant={side === "AP" ? "default" : "outline"}
-                disabled={locked}
-                onClick={() => changeSide("AP")}
-              >
-                应付与付款
-              </Button>
-            )}
+            <Tabs value={side} variant="segment" onValueChange={(value) => {
+              if (!locked) changeSide(value as "AR" | "AP");
+            }}>
+              <TabsList aria-label="资金方向" className="flex flex-wrap">
+                {canAR && <TabsTrigger id={`${tabId}-side-tab-${"AR"}`} aria-controls={`${tabId}-side-panel`} value="AR" disabled={locked}>应收与收款</TabsTrigger>}
+                {canAP && <TabsTrigger id={`${tabId}-side-tab-${"AP"}`} aria-controls={`${tabId}-side-panel`} value="AP" disabled={locked}>应付与付款</TabsTrigger>}
+              </TabsList>
+            </Tabs>
             <Button
               variant="outline"
               disabled={locked}
@@ -763,6 +756,7 @@ export function FundsWorkspace({ permissions }: { permissions: string[] }) {
               刷新资金数据
             </Button>
           </div>
+      <div role="tabpanel" id={`${tabId}-side-panel`} aria-labelledby={`${tabId}-side-tab-${side}`} tabIndex={0} className="min-w-0 space-y-5">
           {settings.isPending ? (
             <p role="status">正在读取资金启用状态…</p>
           ) : settings.error ? (
@@ -773,7 +767,7 @@ export function FundsWorkspace({ permissions }: { permissions: string[] }) {
               人民币 CNY
             </p>
           ) : (
-            <div className="rounded-xl border bg-white p-5 text-sm">
+            <div className="rounded-2xl border bg-background p-5 text-sm">
               <p>
                 资金管理尚未启用。历史单据不会自动作为未收付款；启用后请按真实余额录入期初。
               </p>
@@ -811,10 +805,10 @@ export function FundsWorkspace({ permissions }: { permissions: string[] }) {
                     ].map(({ label, value }) => (
                       <div
                         key={label}
-                        className="min-w-0 rounded-xl border bg-white p-4"
+                        className="min-w-0 rounded-2xl border border-border bg-card/30 p-5"
                       >
                         <p className="text-xs text-muted-foreground">{label}</p>
-                        <p className="mt-2 break-all text-xl tabular-nums">
+                        <p className="mt-3 break-all font-mono text-2xl leading-8 tabular-nums">
                           {amountText(value)}
                         </p>
                       </div>
@@ -859,44 +853,24 @@ export function FundsWorkspace({ permissions }: { permissions: string[] }) {
                   </Button>
                 )}
               </div>
-              <div
-                className="flex flex-wrap gap-2"
-                role="tablist"
-                aria-label="资金记录分类"
-              >
-                {(
-                  [
-                    {
-                      id: "sources",
-                      label: side === "AR" ? "应收来源" : "应付来源",
-                    },
-                    {
-                      id: "cash",
-                      label: side === "AR" ? "收款与退款" : "付款与退款",
-                    },
+              <Tabs value={tab} variant="underline" onValueChange={(value) => {
+                if (!submission.isLocked()) {
+                  setTab(value as Tab);
+                  setPage(1);
+                }
+              }}>
+                <TabsList aria-label="资金记录分类" className="flex w-full flex-wrap justify-start">
+                  {([
+                    { id: "sources", label: side === "AR" ? "应收来源" : "应付来源" },
+                    { id: "cash", label: side === "AR" ? "收款与退款" : "付款与退款" },
                     { id: "parties", label: `${partyLabel}往来` },
-                    ...(has("funds.opening")
-                      ? [{ id: "legacy", label: "历史单据绑定" }]
-                      : []),
-                  ] as { id: Tab; label: string }[]
-                ).map((item) => (
-                  <Button
-                    key={item.id}
-                    role="tab"
-                    aria-selected={tab === item.id}
-                    variant={tab === item.id ? "default" : "outline"}
-                    disabled={locked}
-                    onClick={() => {
-                      if (!submission.isLocked()) {
-                        setTab(item.id);
-                        setPage(1);
-                      }
-                    }}
-                  >
-                    {item.label}
-                  </Button>
-                ))}
-              </div>
+                    ...(has("funds.opening") ? [{ id: "legacy", label: "历史单据绑定" }] : []),
+                  ] as { id: Tab; label: string }[]).map((item) => (
+                    <TabsTrigger id={`${tabId}-records-tab-${item.id}`} aria-controls={`${tabId}-records-panel`} key={item.id} value={item.id} disabled={locked}>{item.label}</TabsTrigger>
+                  ))}
+                </TabsList>
+              </Tabs>
+      <div role="tabpanel" id={`${tabId}-records-panel`} aria-labelledby={`${tabId}-records-tab-${tab}`} tabIndex={0} className="min-w-0 space-y-5">
               <div className="flex min-w-0 flex-wrap gap-2">
                 {(tab === "sources" || tab === "parties") && (
                   <Input
@@ -1003,7 +977,7 @@ export function FundsWorkspace({ permissions }: { permissions: string[] }) {
                         cells: [
                           item.number,
                           item.party_name,
-                          `${names[item.kind]} / ${names[item.status]}`,
+                          <div key="kind-status" className="flex flex-wrap items-center gap-2"><span>{names[item.kind]}</span><BusinessStatus status={item.status}>{names[item.status]}</BusinessStatus></div>,
                           amountText(item.commercial_amount),
                           amountText(item.settlement_amount),
                           amountText(item.refund_amount),
@@ -1037,7 +1011,7 @@ export function FundsWorkspace({ permissions }: { permissions: string[] }) {
                         cells: [
                           item.number,
                           item.party_name,
-                          `${cashName(side, item.kind)} / ${names[item.status]}`,
+                          <div key="kind-status" className="flex flex-wrap items-center gap-2"><span>{cashName(side, item.kind)}</span><BusinessStatus status={item.status}>{names[item.status]}</BusinessStatus></div>,
                           item.business_date,
                           amountText(item.amount),
                           names[item.method],
@@ -1177,7 +1151,7 @@ export function FundsWorkspace({ permissions }: { permissions: string[] }) {
               {source && !sourceDetail.error && (
                 <section
                   aria-label="资金来源详情"
-                  className="min-w-0 space-y-4 rounded-xl border bg-white p-4 sm:p-6"
+                  className="min-w-0 space-y-4 rounded-2xl border bg-background p-4 sm:p-6"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
@@ -1331,7 +1305,7 @@ export function FundsWorkspace({ permissions }: { permissions: string[] }) {
               {cashRecord && !cashDetail.error && (
                 <section
                   aria-label="收付款详情"
-                  className="min-w-0 space-y-4 rounded-xl border bg-white p-4 sm:p-6"
+                  className="min-w-0 space-y-4 rounded-2xl border bg-background p-4 sm:p-6"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
@@ -1413,9 +1387,13 @@ export function FundsWorkspace({ permissions }: { permissions: string[] }) {
                   />
                 </section>
               )}
-            </>
+
+      </div>
+</>
           )}
-        </>
+
+      </div>
+</>
       )}
 
       <Dialog.Root
@@ -1426,7 +1404,7 @@ export function FundsWorkspace({ permissions }: { permissions: string[] }) {
       >
         <Dialog.Portal>
           <Dialog.Backdrop className="fixed inset-0 z-40 bg-black/35" />
-          <Dialog.Popup className="fixed left-1/2 top-1/2 z-50 max-h-[90vh] w-[calc(100vw-2rem)] max-w-4xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl border bg-white p-4 shadow-xl sm:p-6">
+          <Dialog.Popup className="fixed left-1/2 top-1/2 z-50 max-h-[90vh] w-[calc(100vw-2rem)] max-w-4xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-[30px] border bg-background p-4 shadow-2xl sm:p-6">
             <Dialog.Title className="text-lg font-medium">
               {dialogTitle}
             </Dialog.Title>
@@ -1847,7 +1825,7 @@ export function FundsWorkspace({ permissions }: { permissions: string[] }) {
                   <label className="block text-sm">
                     操作说明
                     <textarea
-                      className="mt-1 min-h-24 w-full rounded-md border px-3 py-2"
+                      className="mt-1 min-h-24 w-full rounded-2xl border px-3 py-2"
                       aria-label="资金操作说明"
                       maxLength={2000}
                       {...form.register("reason")}
@@ -1857,7 +1835,7 @@ export function FundsWorkspace({ permissions }: { permissions: string[] }) {
                 {cashPreview && editor?.kind === "CASH" && canSubmit && (
                   <section
                     aria-label="收付款金额预览"
-                    className="min-w-0 space-y-3 rounded-lg bg-[#eef4e9] p-4 text-sm"
+                    className="min-w-0 space-y-3 rounded-lg bg-card p-4 text-sm"
                   >
                     <p className="break-all font-medium">
                       本次{cashName(side, editor.cashKind)}总额：

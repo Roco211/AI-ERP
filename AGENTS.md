@@ -1,4 +1,9 @@
-# Forge ERP — AI assistant v0.11 implementation
+# Forge ERP — beUI web reconstruction
+
+## Current UI authorization (2026-09-06)
+
+The user explicitly canceled the unfinished BoardUI redesign and requested installing the official beUI MCP or Skill and fully replacing the old UI to match beui.dev demos. The canceled edits are archived under task work/boardui-stopped; do not resume or publish them. Work on ui/beui from accepted AI baseline `21cb299`. Official beUI skill installed from starc007/ui-components at `04d6f76e9e67e35cded996b1b8d08a5ddcebc13a`. Use official beUI source, tokens and example compositions, replacing the old presentation rather than retaining its theme. Keep existing business APIs, records, tenant/RLS/permissions, precise server amounts, identity caches, idempotency and human draft review. beUI uses Motion/React primitives; integrate them through existing application-facing adapters, retaining Base UI for accessibility where appropriate and documenting the presentation-library choice. No backend redesign, new business stage, infrastructure, production deployment, merge or release. Verify real browser workflows, component behavior, responsive layout, keyboard access, reduced motion, frontend checks/build and CI. Report actual browser/tool limitations and reference provenance.
+
 
 ## Current AI implementation authorization (2026-09-06)
 

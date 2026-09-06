@@ -104,6 +104,36 @@ test("lost message response retries identical original body and key and reloads 
   expect(get.mock.calls.filter(([path]) => path === "/api/v1/ai/conversations/{id}").length).toBeGreaterThan(1);
 });
 
+test("official composer sends Enter once, while Shift+Enter and IME confirmation do not submit", async () => {
+  mocks(); show();
+  await screen.findByRole("region", { name: "库存余额" });
+  const input = screen.getByRole("textbox", { name: "你的问题" });
+  fireEvent.change(input, { target: { value: "查询 M8 库存" } });
+  fireEvent.keyDown(input, { key: "Enter", shiftKey: true });
+  fireEvent.keyDown(input, { key: "Enter", isComposing: true });
+  expect(post).not.toHaveBeenCalled();
+  expect(input).toHaveValue("查询 M8 库存");
+  post.mockRejectedValueOnce(new TypeError("connection lost"));
+  fireEvent.keyDown(input, { key: "Enter" });
+  fireEvent.keyDown(input, { key: "Enter" });
+  await screen.findByText(/提交结果待确认/);
+  expect(post).toHaveBeenCalledTimes(1);
+  expect(post.mock.calls[0][1]?.body).toEqual({ message: "查询 M8 库存", selected_ids: [] });
+  expect(input).toBeDisabled();
+  expect(screen.getByRole("button", { name: "发送问题" })).toBeDisabled();
+  expect(screen.queryByRole("button", { name: /Stop generating|停止生成|Add to prompt|添加附件/ })).not.toBeInTheDocument();
+});
+
+test("the scrollable official transcript keeps server facts and separate named messages", async () => {
+  mocks(); show();
+  const facts = await screen.findByRole("region", { name: "库存余额" });
+  const transcript = screen.getByRole("region", { name: "对话记录" });
+  expect(transcript).toHaveAttribute("tabindex", "0");
+  expect(within(transcript).getByRole("log")).toContainElement(facts);
+  expect(within(transcript).getByRole("article", { name: "你的消息" })).toHaveTextContent("库存多少？");
+  expect(within(transcript).getByRole("article", { name: "经营助手回复" })).toContainElement(facts);
+});
+
 test("authority change immediately hides prior facts and requires new conversation", async () => {
   mocks(); show(); await screen.findByRole("region", { name: "库存余额" });
   post.mockResolvedValueOnce({ error: { code: "AI_AUTHORITY_CHANGED", detail: "权限已变化" }, response: new Response(null, { status: 409 }) });
@@ -149,6 +179,7 @@ test("editing a draft hides stale amounts and blocks approval until server previ
   expect(editor).toHaveTextContent("45.0000");
   fireEvent.change(within(editor).getByLabelText("第 1 行数量"), { target: { value: "2.000001" } });
   expect(within(editor).getByRole("button", { name: "确认创建草稿" })).toBeDisabled();
+  expect(within(editor).getByRole("button", { name: "取消此提案" })).toBeEnabled();
   expect(editor).not.toHaveTextContent("服务器核算合计");
   const revised = { ...current, revision: 2, preview: { ...current.preview, total_amount: "30.0001", confirmation_hash: "b".repeat(64) } };
   post.mockImplementationOnce(async () => { mocks(conversation([{ ...finished, state: "WAITING", proposal: revised }])); return ok(revised); });

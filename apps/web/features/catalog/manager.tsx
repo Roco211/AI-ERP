@@ -21,6 +21,8 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { BusinessTable } from "@/features/operations/business-table";
+import { BusinessStatus } from "@/features/operations/business-status";
 import { Label } from "@/components/ui/label";
 import { configs, type Field } from "./config";
 import { resourceClients, unwrap, type ViewRow } from "./client";
@@ -58,7 +60,7 @@ function AttributeTemplate({
           />
           <select
             aria-label={`属性${i + 1}类型`}
-            className="rounded-md border border-border p-1.5 text-sm"
+            className="border border-border p-1.5 text-sm h-11 min-w-0 max-w-full rounded-full bg-background px-4 focus:border-foreground/40 focus:outline-none focus:ring-2 focus:ring-ring/40 disabled:opacity-60"
             value={item.kind}
             onChange={(e) =>
               onChange(
@@ -203,7 +205,7 @@ function ReferenceField({
         value={value}
         required={field.required}
         onChange={(e) => onChange(e.target.value)}
-        className="h-9 w-full rounded-lg border border-border bg-background px-2 text-sm"
+        className="w-full border border-border text-sm h-11 min-w-0 max-w-full rounded-full bg-background px-4 focus:border-foreground/40 focus:outline-none focus:ring-2 focus:ring-ring/40 disabled:opacity-60"
       >
         <option value="">请选择{field.required ? "" : "（可不选）"}</option>
         {options
@@ -394,11 +396,9 @@ export function CatalogManager({
       id: "active",
       header: "状态",
       cell: ({ row }) => (
-        <span
-          className={`rounded-full px-2 py-1 text-[11px] ${row.original.active ? "bg-emerald-50 text-emerald-800" : "bg-gray-100 text-gray-500"}`}
-        >
+        <BusinessStatus status={row.original.active ? "ACTIVE" : "INACTIVE"}>
           {row.original.active ? "启用" : "停用"}
-        </span>
+        </BusinessStatus>
       ),
     },
     {
@@ -469,13 +469,12 @@ export function CatalogManager({
           {error}
         </p>
       )}
-      <div className="rounded-xl border border-border bg-white">
+      <div className="rounded-2xl border border-border bg-background">
         <div className="flex flex-wrap items-center gap-3 border-b border-border p-4">
           <div className="relative min-w-48 flex-1 sm:max-w-sm">
-            <Search className="absolute top-2 left-2.5 size-4 text-muted-foreground" />
             <Input
               aria-label="搜索资料"
-              className="pl-8"
+              leftIcon={<Search aria-hidden className="size-4" />}
               placeholder="搜索编码或名称…"
               value={q}
               onChange={(e) => {
@@ -486,7 +485,7 @@ export function CatalogManager({
           </div>
           <select
             aria-label="状态筛选"
-            className="h-8 rounded-lg border border-border px-3 text-sm"
+            className="border border-border text-sm h-11 min-w-0 max-w-full rounded-full bg-background px-4 focus:border-foreground/40 focus:outline-none focus:ring-2 focus:ring-ring/40 disabled:opacity-60"
             value={status}
             onChange={(e) => {
               setStatus(e.target.value);
@@ -520,40 +519,16 @@ export function CatalogManager({
             </Button>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full whitespace-nowrap text-left text-sm">
-              <thead className="bg-muted/40 text-xs text-muted-foreground">
-                {table.getHeaderGroups().map((group) => (
-                  <tr key={group.id}>
-                    {group.headers.map((h) => (
-                      <th key={h.id} className="px-5 py-3 font-medium">
-                        {flexRender(h.column.columnDef.header, h.getContext())}
-                      </th>
-                    ))}
-                  </tr>
-                ))}
-              </thead>
-              <tbody>
-                {table.getRowModel().rows.map((row) => (
-                  <tr
-                    key={row.id}
-                    className="border-t border-border hover:bg-muted/20"
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <td
-                        key={cell.id}
-                        className="max-w-80 truncate px-5 py-3 text-muted-foreground"
-                      >
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext(),
-                        )}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div>
+            <BusinessTable
+              headers={table.getFlatHeaders().map((header) => flexRender(header.column.columnDef.header, header.getContext()))}
+              rows={table.getRowModel().rows.map((row) => ({
+                id: row.original.id,
+                cells: row.getVisibleCells().map((cell) => flexRender(cell.column.columnDef.cell, cell.getContext())),
+              }))}
+              empty={null}
+              className="rounded-none border-0"
+            />
             {!list.data?.items.length && (
               <div className="p-12 text-center">
                 <p className="text-sm font-medium">
@@ -596,7 +571,7 @@ export function CatalogManager({
       >
         <Dialog.Portal>
           <Dialog.Backdrop className="fixed inset-0 z-40 bg-black/25" />
-          <Dialog.Popup className="fixed inset-y-0 right-0 z-50 flex w-full max-w-xl flex-col border-l border-border bg-white shadow-xl">
+          <Dialog.Popup className="fixed inset-y-0 right-0 z-50 flex w-full max-w-xl flex-col border-l border-border bg-background shadow-2xl">
             <div className="flex items-center justify-between border-b border-border px-6 py-5">
               <div>
                 <Dialog.Title className="text-lg font-semibold">
@@ -660,7 +635,7 @@ export function CatalogManager({
                                 <select
                                   id={`attr-${a.key}`}
                                   required={a.required}
-                                  className="w-full rounded-lg border border-border p-2 text-sm"
+                                  className="w-full border border-border p-2 text-sm h-11 min-w-0 max-w-full rounded-full bg-background px-4 focus:border-foreground/40 focus:outline-none focus:ring-2 focus:ring-ring/40 disabled:opacity-60"
                                   value={
                                     attributes[a.key] === undefined
                                       ? ""
@@ -717,7 +692,7 @@ export function CatalogManager({
                         id={f.key}
                         aria-label={f.label}
                         rows={3}
-                        className="w-full rounded-lg border border-border p-2 text-sm"
+                        className="w-full rounded-2xl border border-border p-2 text-sm"
                         {...form.register(f.key)}
                       />
                     ) : f.kind === "select" ? (
@@ -725,7 +700,7 @@ export function CatalogManager({
                         id={f.key}
                         aria-label={f.label}
                         required={f.required}
-                        className="h-9 w-full rounded-lg border border-border px-2 text-sm"
+                        className="w-full border border-border text-sm h-11 min-w-0 max-w-full rounded-full bg-background px-4 focus:border-foreground/40 focus:outline-none focus:ring-2 focus:ring-ring/40 disabled:opacity-60"
                         {...form.register(f.key)}
                       >
                         <option value="">请选择</option>

@@ -1,5 +1,6 @@
 "use client";
-import { useState } from "react";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useId, useState } from "react";
 import Link from "next/link";
 import { CatalogManager } from "./manager";
 import { ProductPicker } from "./picker";
@@ -12,6 +13,7 @@ export function CatalogWorkspace({
   section: string;
   permissions: string[];
 }) {
+  const tabId = useId();
   const [tab, setTab] = useState(section);
   const tabs =
     section === "products"
@@ -21,16 +23,14 @@ export function CatalogWorkspace({
         : ["customers"];
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center gap-2 border-b border-border pb-3">
-        {tabs.map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`rounded-lg px-3 py-2 text-sm ${tab === t ? "bg-primary text-primary-foreground" : "bg-white text-muted-foreground"}`}
-          >
-            {t === "picker" ? "快捷选品" : configs[t].title}
-          </button>
-        ))}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <Tabs value={tab} onValueChange={setTab} variant="pill">
+          <TabsList aria-label="资料分类" className="flex flex-wrap">
+            {tabs.map((value) => <TabsTrigger id={`${tabId}-records-tab-${value}`} aria-controls={`${tabId}-records-panel`} key={value} value={value}>
+              {value === "picker" ? "快捷选品" : configs[value].title}
+            </TabsTrigger>)}
+          </TabsList>
+        </Tabs>
         {section === "products" && (
           <Link
             href="/settings/categories"
@@ -40,11 +40,13 @@ export function CatalogWorkspace({
           </Link>
         )}
       </div>
+      <div role="tabpanel" id={`${tabId}-records-panel`} aria-labelledby={`${tabId}-records-tab-${tab}`} tabIndex={0} className="min-w-0 space-y-5">
       {tab === "picker" ? (
         <ProductPicker permissions={permissions} />
       ) : (
         <CatalogManager key={tab} resource={tab} permissions={permissions} />
       )}
+      </div>
     </div>
   );
 }

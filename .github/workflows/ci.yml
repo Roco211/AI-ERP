@@ -2,7 +2,7 @@ name: Forge ERP CI
 on:
   pull_request:
   push:
-    branches: [main, 'bootstrap/**', 'catalog/**', 'inventory/**', 'purchasing/**', 'sales/**', 'funds/**', 'operations/**', 'ai/**']
+    branches: [main, 'bootstrap/**', 'catalog/**', 'inventory/**', 'purchasing/**', 'sales/**', 'funds/**', 'operations/**', 'ai/**', 'ui/**']
 permissions:
   contents: read
 jobs:

@@ -1,4 +1,5 @@
 "use client";
+import { BusinessStatus } from "@/features/operations/business-status";
 
 import { useEffect, useRef, useState, type SetStateAction } from "react";
 import { useSearchParams } from "next/navigation";
@@ -367,7 +368,7 @@ export function ImportsWorkspace({ permissions }: { permissions: string[] }) {
         <p role="alert">当前没有查看资料导入的权限。</p>
       ) : (
         <>
-          <div className="flex min-w-0 flex-wrap items-center gap-3">
+          <div className="flex min-w-0 flex-wrap items-center gap-3 rounded-2xl border border-border bg-card/25 p-4">
             <label className="text-sm">
               模板类型
               <select
@@ -458,7 +459,7 @@ export function ImportsWorkspace({ permissions }: { permissions: string[] }) {
                         </p>
                       </div>,
                       item.worksheet,
-                      names[item.status],
+                      <BusinessStatus key="status" status={item.status}>{names[item.status]}</BusinessStatus>,
                       `成功 ${item.succeeded} / 共 ${item.total} · 失败 ${item.failed}`,
                       <Button
                         key="open"
@@ -501,7 +502,7 @@ export function ImportsWorkspace({ permissions }: { permissions: string[] }) {
           {batch && !batchQuery.error && (
             <section
               aria-label="导入批次详情"
-              className="min-w-0 space-y-4 rounded-xl border bg-white p-4 sm:p-6"
+              className="min-w-0 space-y-4 rounded-2xl border bg-background p-4 sm:p-6"
             >
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <h2 className="break-all text-lg font-medium">
@@ -739,7 +740,7 @@ export function ImportsWorkspace({ permissions }: { permissions: string[] }) {
       >
         <Dialog.Portal>
           <Dialog.Backdrop className="fixed inset-0 z-40 bg-black/25" />
-          <Dialog.Popup className="fixed top-1/2 left-1/2 z-50 max-h-[88vh] w-[min(96vw,720px)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl bg-white p-4 sm:p-6">
+          <Dialog.Popup className="fixed top-1/2 left-1/2 z-50 max-h-[88vh] w-[min(96vw,720px)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-[30px] bg-background p-4 sm:p-6 border border-border">
             <Dialog.Title className="text-lg font-medium">
               {uploadOpen
                 ? "上传并预览资料"
@@ -895,7 +896,7 @@ export function ImportsWorkspace({ permissions }: { permissions: string[] }) {
       >
         <Dialog.Portal>
           <Dialog.Backdrop className="fixed inset-0 z-40 bg-black/25" />
-          <Dialog.Popup className="fixed top-1/2 left-1/2 z-50 max-h-[88vh] w-[min(96vw,750px)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl bg-white p-4 sm:p-6">
+          <Dialog.Popup className="fixed top-1/2 left-1/2 z-50 max-h-[88vh] w-[min(96vw,750px)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-[30px] bg-background p-4 sm:p-6 border border-border">
             <Dialog.Title className="text-lg font-medium">
               已保存的资料
             </Dialog.Title>

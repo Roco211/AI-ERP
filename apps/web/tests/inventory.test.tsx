@@ -70,7 +70,7 @@ test("quantity readers do not see costs or mutation controls", async () => {
   renderInventory(["inventory.read"]);
   expect(await screen.findByText("螺栓")).toBeVisible();
   expect(screen.queryByText("库存金额")).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: "期初库存" }));
+  fireEvent.click(screen.getByRole("tab", { name: "期初库存" }));
   expect(
     screen.queryByRole("button", { name: "新建期初库存" }),
   ).not.toBeInTheDocument();
@@ -82,7 +82,7 @@ test("an incomplete opening draft cannot be saved", async () => {
     error: undefined,
   } as never);
   renderInventory(["inventory.read", "inventory.opening", "product.cost.read"]);
-  fireEvent.click(screen.getByRole("button", { name: "期初库存" }));
+  fireEvent.click(screen.getByRole("tab", { name: "期初库存" }));
   fireEvent.click(screen.getByRole("button", { name: "新建期初库存" }));
   fireEvent.click(screen.getByRole("button", { name: "保存草稿" }));
   await waitFor(() =>
@@ -135,7 +135,7 @@ test("late document responses cannot replace the latest selection", async () => 
     ) as never;
   });
   renderInventory(["inventory.read"]);
-  fireEvent.click(screen.getByRole("button", { name: "期初库存" }));
+  fireEvent.click(screen.getByRole("tab", { name: "期初库存" }));
   await screen.findByText("reason-A");
   const view = (reason: string) =>
     within(screen.getByText(reason).closest("tr")!).getByRole("button", {

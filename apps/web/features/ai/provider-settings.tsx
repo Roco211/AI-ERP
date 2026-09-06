@@ -1,9 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { ArrowUpRight, Bot, Check, KeyRound, Plug, RefreshCw, Server, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/motion/checkbox";
 import { ApiError } from "@/lib/api";
 import { usePendingNavigationGuard } from "@/features/sales/navigation";
 import {
@@ -222,33 +225,24 @@ function ProviderForm({ initial, onSaved, reload }: {
     }
   }
 
-  return <section className="mt-8 max-w-3xl space-y-5" aria-label="模型服务设置">
-    <div className="rounded-xl border border-border bg-white p-6">
-      <h2 className="text-lg font-semibold">企业对话模型</h2>
-      <p className="mt-2 text-sm leading-6 text-muted-foreground">
-        对话时，会把本轮问题所需、且你有权读取的资料发送到所选服务。
-        这些设置供当前企业使用；更换服务后请开始新对话，旧对话不会自动转交。
-      </p>
-      <p className="mt-2 text-xs leading-5 text-muted-foreground">
-        支持兼容 OpenAI 接口的服务。本地商品语义搜索继续使用独立的模型，不受这里的设置影响。
-      </p>
-      <form onSubmit={save} className="mt-6 space-y-5">
-        <fieldset disabled={locked || conflict} className="space-y-5">
-          <label className="block text-sm">快速填写
-            <select aria-label="服务商预设" defaultValue="" className="mt-2 h-10 w-full rounded-lg border border-input bg-white px-3"
-              onChange={(event) => {
-                const preset = presets[event.target.value as keyof typeof presets];
-                if (preset) setFields((value) => ({ ...value, ...preset }));
-                setError(""); setNotice("");
-              }}>
-              <option value="">选择服务商（可直接自定义填写）</option>
-              <option value="commandcode">CommandCode</option>
-              <option value="deepseek">DeepSeek</option>
-              <option value="openai">OpenAI</option>
-              <option value="ollama">Ollama · 本机或服务器</option>
-              <option value="custom">自定义服务</option>
-            </select>
-          </label>
+  return <section className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_280px]" aria-label="模型服务设置">
+    <div className="min-w-0 overflow-hidden rounded-3xl border border-border/70 bg-background">
+      <header className="flex flex-wrap items-start gap-3 border-b border-border/60 p-5 sm:p-6">
+        <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-muted"><Bot className="size-5" aria-hidden /></span>
+        <div className="min-w-0 flex-1"><h2 className="text-lg font-medium tracking-tight">企业对话模型</h2>
+          <p className="mt-1 text-sm leading-6 text-muted-foreground">对话所需资料会发送到所选服务，设置供当前企业使用。</p></div>
+        <span className="rounded-full border border-border/70 px-3 py-1 text-xs text-muted-foreground">{saved.enabled ? "已启用" : "未启用"}{dirty ? " · 有未保存修改" : ""}</span>
+      </header>
+      <form onSubmit={save} className="space-y-6 p-5 sm:p-6">
+        <fieldset disabled={locked || conflict} className="min-w-0 space-y-6">
+          <div role="group" aria-label="服务商预设" className="space-y-3">
+            <div><h3 className="text-sm font-medium">快速填写</h3><p className="mt-1 text-xs leading-5 text-muted-foreground">选择现有服务商，或直接在下方填写自定义服务。</p></div>
+            <div className="flex flex-wrap gap-2">{Object.entries(presets).map(([key, preset]) =>
+              <Button key={key} type="button" variant="outline" size="sm" disabled={locked || conflict}
+                onClick={() => { setFields((value) => ({ ...value, ...preset })); setError(""); setNotice(""); }}>
+                {key === "ollama" && <Server className="size-3.5" aria-hidden />}{key === "ollama" ? "Ollama · 本机或服务器" : preset.name}
+              </Button>)}</div>
+          </div>
           <div className="grid gap-5 sm:grid-cols-2">
             <label className="block text-sm" htmlFor="provider-name">服务名称
               <Input id="provider-name" className="mt-2" value={fields.name} required maxLength={80}
@@ -266,7 +260,7 @@ function ProviderForm({ initial, onSaved, reload }: {
               onChange={(e) => setFields({ ...fields, base_url: e.target.value })} />
             <span className="mt-2 block text-xs text-muted-foreground">填写基础地址，通常以 /v1 结尾。</span>
           </label>
-          <label className="block text-sm" htmlFor="provider-key">服务密钥
+          <label className="block text-sm" htmlFor="provider-key"><span className="inline-flex items-center gap-2"><KeyRound className="size-3.5 text-muted-foreground" aria-hidden />服务密钥</span>
             <Input id="provider-key" aria-label="服务密钥" className="mt-2" type="password" value={secret} maxLength={4096}
               autoComplete="new-password" spellCheck={false} placeholder={saved.key_set ? "留空保留已保存的密钥" : "填写密钥；本地免密服务可留空"}
               onChange={(e) => { setSecret(e.target.value); if (e.target.value) setClearKey(false); }} />
@@ -274,36 +268,41 @@ function ProviderForm({ initial, onSaved, reload }: {
               {saved.key_set ? "已保存密钥，不会显示原文。" : "尚未保存密钥。"}
             </span>
           </label>
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={clearKey} onChange={(e) => {
-              setClearKey(e.target.checked); if (e.target.checked) setSecret("");
-            }} />清除已保存密钥
-          </label>
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={fields.allow_private_network}
-              onChange={(e) => setFields({ ...fields, allow_private_network: e.target.checked })} />
-            允许连接本机或内网服务
-          </label>
+          <Checkbox label="清除已保存密钥" checked={clearKey} disabled={locked || conflict}
+            onCheckedChange={(checked) => { setClearKey(checked); if (checked) setSecret(""); }} />
+          <div className="space-y-3 rounded-2xl bg-muted/45 p-4">
+          <Checkbox className="flex w-full" label="允许连接本机或内网服务" checked={fields.allow_private_network}
+            disabled={locked || conflict} onCheckedChange={(checked) => setFields({ ...fields, allow_private_network: checked })} />
           {fields.allow_private_network && <p className="text-xs leading-5 text-muted-foreground">
             请填写运行 Forge ERP 的电脑或服务器能够访问的地址。Ollama 需另行安装对话模型。
           </p>}
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={fields.enabled}
-              onChange={(e) => setFields({ ...fields, enabled: e.target.checked })} />启用对话模型
-          </label>
+          <Checkbox className="flex w-full" label="启用对话模型" checked={fields.enabled} disabled={locked || conflict}
+            onCheckedChange={(checked) => setFields({ ...fields, enabled: checked })} />
+          </div>
         </fieldset>
         <div className="flex flex-wrap items-center gap-3">
-          <Button type="submit" disabled={locked || conflict}>保存模型服务</Button>
+          <Button type="submit" disabled={locked || conflict}><Check className="size-4" aria-hidden />保存模型服务</Button>
           <Button type="button" variant="outline" disabled={locked || conflict || dirty || !saved.enabled}
-            onClick={testConnection}>测试已保存的连接</Button>
-          <Button type="button" variant="ghost" disabled={locked} onClick={refresh}>重新读取设置</Button>
+            onClick={testConnection}><Plug className="size-4" aria-hidden />测试已保存的连接</Button>
+          <Button type="button" variant="ghost" disabled={locked} onClick={refresh}><RefreshCw className="size-4" aria-hidden />重新读取设置</Button>
         </div>
         <p className="text-xs leading-5 text-muted-foreground">连接测试只发送固定测试文本。请先保存修改，再测试连接。</p>
       </form>
+      <div className="space-y-3 px-5 pb-5 sm:px-6 sm:pb-6">
+        {busy && <p role="status" className="text-sm text-muted-foreground">正在处理，请稍候…</p>}
+        {error && <div role="alert" className="rounded-2xl border border-destructive/30 p-4 text-sm text-destructive">{error}</div>}
+        {notice && <p role="status" className="rounded-2xl bg-muted/55 p-4 text-sm">{notice}</p>}
+        {uncertain && <Button disabled={busy} onClick={() => void execute()}>重试原提交</Button>}
+      </div>
     </div>
-    {busy && <p role="status" className="text-sm">正在处理，请稍候…</p>}
-    {error && <div role="alert" className="rounded-lg border border-destructive/30 p-4 text-sm text-destructive">{error}</div>}
-    {notice && <p role="status" className="rounded-lg border border-border p-4 text-sm">{notice}</p>}
-    {uncertain && <Button disabled={busy} onClick={() => void execute()}>重试原提交</Button>}
+    <aside className="min-w-0 space-y-5 rounded-3xl bg-muted/35 p-5 xl:self-start">
+      <ShieldCheck className="size-5 text-muted-foreground" aria-hidden />
+      <div><h3 className="text-sm font-medium">服务与数据</h3>
+        <p className="mt-2 text-sm leading-6 text-muted-foreground">对话时，会把本轮问题所需、且你有权读取的资料发送到所选服务。</p>
+        <p className="mt-3 text-sm leading-6 text-muted-foreground">这些设置供当前企业使用；更换服务后请开始新对话，旧对话不会自动转交。</p></div>
+      <div className="border-t border-border/60 pt-4"><h3 className="text-sm font-medium">本地语义搜索</h3>
+        <p className="mt-2 text-xs leading-5 text-muted-foreground">支持兼容 OpenAI 接口的服务。本地商品语义搜索继续使用独立的模型，不受这里的设置影响。</p></div>
+      <Link href="/ai" className="inline-flex items-center gap-1 text-sm text-foreground underline decoration-border underline-offset-4">返回 AI 助手<ArrowUpRight className="size-3.5" aria-hidden /></Link>
+    </aside>
   </section>;
 }
