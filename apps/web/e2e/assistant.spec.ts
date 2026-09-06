@@ -128,14 +128,24 @@ async function commerce(page: Page) {
   await create(page, `inventory/documents/${opening.id}/post`, { expected_version: opening.version });
   return { customer, unit, warehouse, product };
 }
+function newConversationButton(page: Page) {
+  return page.getByRole("complementary", { name: "对话历史", exact: true }).locator("header")
+    .getByRole("button", { name: "新对话", exact: true });
+}
 async function startConversation(page: Page) {
   await page.goto("/ai");
-  await page.getByRole("button", { name: "新对话", exact: true }).click();
+  await expect(page.getByRole("region", { name: "AI 助手", exact: true })).toBeVisible();
+  if (!(await newConversationButton(page).isVisible())) {
+    await page.getByRole("button", { name: "历史会话", exact: true }).click();
+  }
+  await newConversationButton(page).click();
   await expect(page.getByLabel("你的问题", { exact: true })).toBeEnabled();
   await expect(page).toHaveURL(/\/ai\?conversation=/);
   return new URL(page.url()).searchParams.get("conversation")!;
 }
 async function ask(page: Page, message: string) {
+  const back = page.getByRole("button", { name: "返回对话", exact: true });
+  if (await back.isVisible()) await back.click();
   await page.getByLabel("你的问题", { exact: true }).fill(message);
   await page.getByRole("button", { name: "发送问题", exact: true }).click();
 }
@@ -153,6 +163,7 @@ test("assistant uses real queries, server re-preview and replay-safe reviewed cr
     const conversation = await startConversation(page);
     await page.setViewportSize({ width: 390, height: 844 });
     await ask(page, "AI-BOLT 现在有多少可用库存？");
+    await page.getByRole("button", { name: /^查看业务依据/ }).last().click({ timeout: 30000 });
     const evidence = page.getByRole("region", { name: "库存余额", exact: true });
     await expect(evidence).toContainText("10.000000", { timeout: 30000 });
     await expect(evidence).toContainText("查询时间");
@@ -160,6 +171,7 @@ test("assistant uses real queries, server re-preview and replay-safe reviewed cr
     await expect(evidence.getByRole("link").first()).toHaveAttribute("href", "/inventory");
     await noOverflow(page);
     await ask(page, "为客户 AI-C 从仓库 AI-W 创建销售草稿，商品 AI-BOLT，数量 3 助手个（AI-EACH），使用自动报价。");
+    await page.getByRole("button", { name: "复核草稿", exact: true }).last().click({ timeout: 30000 });
     const proposal = page.getByRole("region", { name: "开单复核", exact: true });
     await expect(proposal).toContainText("45.0000", { timeout: 30000 });
     expect((await get(page, "sales/orders")).total).toBe(0);
@@ -184,6 +196,9 @@ test("assistant uses real queries, server re-preview and replay-safe reviewed cr
     await page.getByRole("button", { name: "重试原提交", exact: true }).click();
     await retried;
     await expect(page.getByRole("button", { name: "重试原提交", exact: true })).toBeHidden();
+    if (!(await page.getByRole("complementary", { name: "业务依据与草稿", exact: true }).isVisible())) {
+      await page.getByRole("button", { name: "业务依据与草稿", exact: true }).click();
+    }
     await expect(page.getByRole("region", { name: "草稿创建结果" })).toBeVisible();
     expect(attempts).toHaveLength(2);
     expect(attempts[1]).toEqual(attempts[0]);
@@ -198,6 +213,9 @@ test("assistant uses real queries, server re-preview and replay-safe reviewed cr
     const inventory = await get(page, `inventory/balances?product_id=${data.product.id}`);
     expect(inventory.items[0]).toMatchObject({ on_hand_qty: "10.000000", reserved_qty: "0.000000", available_qty: "10.000000" });
     await page.reload();
+    if (!(await page.getByRole("complementary", { name: "业务依据与草稿", exact: true }).isVisible())) {
+      await page.getByRole("button", { name: "业务依据与草稿", exact: true }).click();
+    }
     await expect(page.getByRole("region", { name: "草稿创建结果" })).toBeVisible();
     await expect(page.getByRole("link", { name: "查看已创建草稿", exact: true })).toHaveAttribute("href", receipt.href);
     expect(model.requests.length).toBe(4);
@@ -252,7 +270,7 @@ test("provider revisions invalidate old conversations and a new conversation res
     await ask(page, "再查询一次 AI-BOLT");
     await expect(page.getByRole("alert").filter({ hasText: "旧对话已停止展示" })).toBeVisible();
     await expect(page.getByRole("region", { name: "库存余额", exact: true })).toHaveCount(0);
-    await page.getByRole("button", { name: "新对话", exact: true }).click();
+    await newConversationButton(page).click();
     await expect(page.getByLabel("你的问题", { exact: true })).toBeEnabled();
     expect(new URL(page.url()).searchParams.get("conversation")).not.toBe(previous);
     await ask(page, "AI-BOLT 现在有多少可用库存？");
@@ -270,6 +288,7 @@ test("purchase edits are server-priced, rejected proposals create no order, and 
     await configure(page, model.baseUrl);
     const conversation = await startConversation(page);
     await ask(page, "为供应商 AI-S 向仓库 AI-W 创建采购草稿，商品 AI-BOLT，数量 2 助手个（AI-EACH），单价 7 元。");
+    await page.getByRole("button", { name: "复核草稿", exact: true }).last().click({ timeout: 30000 });
     const proposal = page.getByRole("region", { name: "开单复核", exact: true });
     await expect(proposal).toContainText("采购草稿复核", { timeout: 30000 });
     await expect(proposal).toContainText("14.0000");
@@ -281,6 +300,7 @@ test("purchase edits are server-priced, rejected proposals create no order, and 
     await expect(page.getByText("已取消此提案。", { exact: true })).toBeVisible();
     expect((await get(page, "purchasing/orders")).total).toBe(0);
     const selectedDay = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    await page.getByText("每日简报", { exact: true }).click();
     await page.getByLabel("简报日期", { exact: true }).fill(selectedDay);
     await page.getByRole("button", { name: "生成每日简报", exact: true }).click();
     const overview = page.getByRole("region", { name: "经营概览", exact: true });
@@ -367,6 +387,7 @@ test("web provider settings save a private credential, test only synthetic text 
     await noOverflow(page);
     await startConversation(page);
     await ask(page, "AI-BOLT 现在有多少可用库存？");
+    await page.getByRole("button", { name: /^查看业务依据/ }).last().click({ timeout: 30000 });
     await expect(page.getByRole("region", { name: "库存余额", exact: true })).toContainText("10.000000", { timeout: 30000 });
     expect(second.requests).toHaveLength(2);
     expect(first.requests).toHaveLength(0);

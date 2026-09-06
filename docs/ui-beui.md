@@ -32,6 +32,8 @@ Local preview: http://localhost:3100. The theme switch is in the top-right corne
 
 ## Verification contract and recorded checks
 
+The following counts describe the initial beUI acceptance at `80c5f1b`. The subsequent assistant workspace experience increment and its verification contract are documented in [ai-experience.md](ai-experience.md).
+
 The rebuilt UI passed the complete local frontend suite (155 tests in 15 files) and the eight new browser scenarios. Production compilation and type checking passed. Lint reports zero errors and 20 visible warnings. Full cross-module browser and GitHub Actions results are recorded with their exact revision in [PR #8](https://github.com/Roco211/AI-ERP/pull/8), which is the final verification record. Historical Bootstrap/AI results do not constitute evidence for this UI branch. New focused coverage includes real native input/RHF setValue/reset, preserved exact decimal strings, file inputs, controlled fields, actual submit/disabled behavior, tab permission changes, complete multiline server pages and browser keyboard/mobile/theme/AI submission flows.
 
 Browser reference screenshots and local UI screenshots are generated using the repository's Chromium runner. The Codex in-app browser automation tool fails at its sandbox URI initialization in this environment; opening a tab through the UI tool alone is not counted as browser verification.

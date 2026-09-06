@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, expect, test, vi, type Mock } from "vitest";
 import { AssistantWorkspace } from "@/features/ai/workspace";
@@ -124,14 +124,16 @@ test("official composer sends Enter once, while Shift+Enter and IME confirmation
   expect(screen.queryByRole("button", { name: /Stop generating|停止生成|Add to prompt|添加附件/ })).not.toBeInTheDocument();
 });
 
-test("the scrollable official transcript keeps server facts and separate named messages", async () => {
+test("the scrollable transcript links named messages to server facts in the context panel", async () => {
   mocks(); show();
   const facts = await screen.findByRole("region", { name: "库存余额" });
   const transcript = screen.getByRole("region", { name: "对话记录" });
   expect(transcript).toHaveAttribute("tabindex", "0");
-  expect(within(transcript).getByRole("log")).toContainElement(facts);
+  expect(within(transcript).getByRole("log")).not.toContainElement(facts);
   expect(within(transcript).getByRole("article", { name: "你的消息" })).toHaveTextContent("库存多少？");
-  expect(within(transcript).getByRole("article", { name: "经营助手回复" })).toContainElement(facts);
+  expect(within(transcript).getByRole("article", { name: "经营助手回复" })).toHaveTextContent("已根据当前记录核对。");
+  expect(within(transcript).getByRole("button", { name: /^查看业务依据/ })).toBeEnabled();
+  expect(screen.getByRole("complementary", { name: "业务依据与草稿" })).toContainElement(facts);
 });
 
 test("authority change immediately hides prior facts and requires new conversation", async () => {
@@ -155,6 +157,7 @@ test("revoking assistant permission clears visible conversation", async () => {
 test("daily brief uses selected date and no freeform question", async () => {
   mocks(); show(); await screen.findByRole("region", { name: "库存余额" });
   post.mockResolvedValueOnce(ok({ ...finished, id: "brief-1" }));
+  fireEvent.click(screen.getByText("每日简报", { exact: true }));
   fireEvent.change(screen.getByLabelText("简报日期"), { target: { value: "2026-09-05" } });
   fireEvent.click(screen.getByRole("button", { name: "生成每日简报" }));
   await waitFor(() => expect(post).toHaveBeenCalled());
@@ -228,6 +231,7 @@ test("running work disables new questions and prior proposal approval until refr
   expect(screen.getByRole("button", { name: "发送问题" })).toBeDisabled();
   expect(screen.getByRole("button", { name: "确认创建草稿" })).toBeDisabled();
   mocks(conversation([{ ...finished, state: "WAITING", proposal: proposal() }]));
+  fireEvent.click(screen.getByLabelText("对话操作"));
   fireEvent.click(screen.getByRole("button", { name: "重新读取记录" }));
   await waitFor(() => expect(screen.getByRole("button", { name: "确认创建草稿" })).toBeEnabled());
 });
@@ -237,6 +241,7 @@ test("expiry and missing business permissions never expose an enabled approval a
   mocks(conversation([{ ...finished, state: "WAITING", proposal: current }])); show(["ai.use"]);
   expect(await screen.findByText("提案已过期，请重新提出开单请求。")).toBeVisible();
   expect(screen.getByRole("button", { name: "确认创建草稿" })).toBeDisabled();
+  fireEvent.click(screen.getByText("每日简报", { exact: true }));
   expect(screen.getByRole("button", { name: "生成每日简报" })).toBeDisabled();
   expect(screen.getByText(/没有创建此类草稿的全部权限/)).toBeVisible();
 });
@@ -305,4 +310,189 @@ test("purchase preview preserves entered decimal strings and displays only serve
   const body = post.mock.calls[0][1]?.body as { draft: { kind: string; order: { lines: Record<string, unknown>[] } } };
   expect(body.draft.kind).toBe("PURCHASE");
   expect(body.draft.order.lines[0]).toEqual({ product_id: "product-1", unit_id: "unit-1", qty: "2.000001", unit_price: "12.345678" });
+});
+
+test("selecting another turn preserves an edited draft and its required server re-preview", async () => {
+  const current = proposal();
+  const draftTurn = { ...finished, state: "WAITING", prompt: "请准备销售草稿", proposal: current };
+  const newer = { ...finished, id: "turn-2", prompt: "再查询库存", evidence: [{ ...evidence, id: "fact-2", title: "较新的库存依据" }] };
+  mocks(conversation([draftTurn, newer])); show();
+  await screen.findByRole("region", { name: "较新的库存依据" });
+  const transcript = screen.getByRole("region", { name: "对话记录" });
+  fireEvent.click(within(transcript).getByRole("button", { name: "复核草稿" }));
+  const editor = await screen.findByRole("region", { name: "开单复核" });
+  fireEvent.change(within(editor).getByLabelText("第 1 行数量"), { target: { value: "2.000001" } });
+  expect(within(editor).getByRole("button", { name: "确认创建草稿" })).toBeDisabled();
+  const input = within(editor).getByLabelText("第 1 行数量");
+  fireEvent.click(within(transcript).getAllByRole("button", { name: /^查看业务依据/ }).at(-1)!);
+  expect(await screen.findByRole("region", { name: "较新的库存依据" })).toBeVisible();
+  expect(screen.queryByRole("region", { name: "开单复核" })).not.toBeInTheDocument();
+  expect(input.isConnected).toBe(true);
+  fireEvent.click(within(transcript).getByRole("button", { name: "复核草稿" }));
+  expect(await screen.findByRole("region", { name: "开单复核" })).toBe(editor);
+  expect(within(editor).getByLabelText("第 1 行数量")).toHaveValue("2.000001");
+  expect(within(editor).getByRole("button", { name: "确认创建草稿" })).toBeDisabled();
+  expect(editor).not.toHaveTextContent("服务器核算合计");
+  expect(post).not.toHaveBeenCalled();
+});
+
+test("unsent text belongs to its conversation and returns only when that conversation is selected", async () => {
+  const second = { ...summary, id: documentId, title: "另一位客户的对话" };
+  get.mockImplementation(async (path, options) => {
+    if (path === "/api/v1/ai/status") return ok(status);
+    if (path === "/api/v1/ai/conversations") return ok({ items: [summary, second], total: 2, page: 1, page_size: 20 });
+    if (path === "/api/v1/ai/conversations/{id}") return ok(options?.params?.path?.id === documentId
+      ? { ...second, turns: [], older_turns_omitted: false } : conversation());
+    return ok({ items: [], total: 0 });
+  });
+  show(); await screen.findByRole("region", { name: "库存余额" });
+  fireEvent.change(screen.getByLabelText("你的问题"), { target: { value: "只给第一个对话的未发送内容" } });
+  const history = screen.getByRole("complementary", { name: "历史会话" });
+  fireEvent.click(within(history).getByRole("button", { name: /另一位客户的对话/ }));
+  await waitFor(() => expect(new URL(window.location.href).searchParams.get("conversation")).toBe(documentId));
+  await waitFor(() => expect(screen.getByLabelText("你的问题")).toHaveValue(""));
+  fireEvent.change(screen.getByLabelText("你的问题"), { target: { value: "第二个对话独立输入" } });
+  fireEvent.click(within(history).getByRole("button", { name: /库存问答/ }));
+  await waitFor(() => expect(screen.getByLabelText("你的问题")).toHaveValue("只给第一个对话的未发送内容"));
+  fireEvent.click(within(history).getByRole("button", { name: /另一位客户的对话/ }));
+  await waitFor(() => expect(screen.getByLabelText("你的问题")).toHaveValue("第二个对话独立输入"));
+  expect(post).not.toHaveBeenCalled();
+});
+
+test("quick prompts fill an empty conversation without sending a message or creating a draft", async () => {
+  mocks(conversation([])); show([...full, "purchase.order.write", "supplier.read"]);
+  await waitFor(() => expect(screen.getByLabelText("你的问题")).toBeEnabled());
+  for (const [label, expected] of [["查询库存", /库存/], ["了解经营情况", /经营/], ["准备销售草稿", /销售/], ["准备采购草稿", /采购/]] as const) {
+    fireEvent.click(await screen.findByRole("button", { name: label }));
+    expect((screen.getByLabelText("你的问题") as HTMLTextAreaElement).value).toMatch(expected);
+    expect(screen.getAllByRole("textbox", { name: "你的问题" })).toHaveLength(1);
+    expect(post).not.toHaveBeenCalled();
+  }
+});
+
+
+test("temporary history read failure preserves the dirty editor and blocks approval until recovery", async () => {
+  const value = conversation([{ ...finished, state: "WAITING", proposal: proposal() }]);
+  mocks(value); show();
+  const editor = await screen.findByRole("region", { name: "开单复核" });
+  const input = within(editor).getByLabelText("第 1 行数量");
+  fireEvent.change(input, { target: { value: "2.000001" } });
+  get.mockImplementation(async (path) => path === "/api/v1/ai/conversations/{id}"
+    ? { error: { code: "SERVICE_UNAVAILABLE", detail: "临时读取失败" }, response: new Response(null, { status: 503 }) }
+    : path === "/api/v1/ai/status" ? ok(status) : ok({ items: [summary], total: 1, page: 1, page_size: 20 }));
+  fireEvent.click(screen.getByLabelText("对话操作"));
+  fireEvent.click(screen.getByRole("button", { name: "重新读取记录" }));
+  const context = screen.getByRole("complementary", { name: "业务依据与草稿" });
+  await within(context).findByText(/当前编辑已保留/);
+  expect(within(editor).getByRole("button", { name: "重新预览" })).toBeDisabled();
+  expect(within(editor).getByLabelText("第 1 行数量")).toBe(input);
+  expect(input).toHaveValue("2.000001");
+  expect(within(editor).getByRole("button", { name: "确认创建草稿" })).toBeDisabled();
+  expect(editor).not.toHaveTextContent("服务器核算合计");
+  mocks(value);
+  fireEvent.click(within(context).getByRole("button", { name: "重新读取记录" }));
+  await waitFor(() => expect(within(context).queryByText(/当前编辑已保留/)).not.toBeInTheDocument());
+  expect(within(editor).getByLabelText("第 1 行数量")).toBe(input);
+  expect(input).toHaveValue("2.000001");
+  expect(within(editor).getByRole("button", { name: "确认创建草稿" })).toBeDisabled();
+  expect(within(editor).getByRole("button", { name: "重新预览" })).toBeEnabled();
+  expect(post).not.toHaveBeenCalled();
+});
+
+
+test("a passive history refresh cannot replace the conversation of an unknown original submission", async () => {
+  const second = { ...summary, id: documentId, title: "后来插入的对话" };
+  let items = [summary];
+  get.mockImplementation(async (path, options) => {
+    if (path === "/api/v1/ai/status") return ok(status);
+    if (path === "/api/v1/ai/conversations") return ok({ items, total: items.length, page: 1, page_size: 20 });
+    if (path === "/api/v1/ai/conversations/{id}") return ok(options?.params?.path?.id === documentId
+      ? { ...second, turns: [], older_turns_omitted: false } : conversation());
+    return ok({ items: [], total: 0 });
+  });
+  const { qc } = show(); await screen.findByRole("region", { name: "库存余额" });
+  post.mockRejectedValueOnce(new TypeError("connection lost"));
+  post.mockResolvedValueOnce(ok({ ...finished, id: "turn-2" }));
+  fireEvent.change(screen.getByLabelText("你的问题"), { target: { value: "A 对话尚未确认的问题" } });
+  fireEvent.click(screen.getByRole("button", { name: "发送问题" }));
+  await screen.findByText(/提交结果待确认/);
+  const original = post.mock.calls[0];
+  items = [second, summary];
+  const list = qc.getQueryCache().getAll().find((query) => query.queryKey.includes("list"))!;
+  act(() => { qc.setQueryData(list.queryKey, { items, total: 2, page: 1, page_size: 20 }); });
+  await screen.findByRole("button", { name: second.title });
+  expect(screen.getByRole("heading", { name: "库存问答" })).toBeVisible();
+  expect(screen.getByLabelText("你的问题")).toHaveValue("A 对话尚未确认的问题");
+  expect(screen.getByLabelText("你的问题")).toBeDisabled();
+  expect(original[1]?.params?.path).toEqual({ id });
+  fireEvent.click(screen.getByRole("button", { name: "重试原提交" }));
+  await waitFor(() => expect(post).toHaveBeenCalledTimes(2));
+  expect(post.mock.calls[1]).toEqual(original);
+  await waitFor(() => expect(screen.getByLabelText("你的问题")).toHaveValue(""));
+  expect(screen.getByRole("heading", { name: "库存问答" })).toBeVisible();
+});
+
+test("confirmed deletion selects the surviving conversation without reloading the deleted record", async () => {
+  const second = { ...summary, id: documentId, title: "保留的对话" };
+  let deleted = false;
+  get.mockImplementation(async (path, options) => {
+    if (path === "/api/v1/ai/status") return ok(status);
+    if (path === "/api/v1/ai/conversations") return ok({ items: deleted ? [second] : [summary, second], total: deleted ? 1 : 2, page: 1, page_size: 20 });
+    if (path === "/api/v1/ai/conversations/{id}") return ok(options?.params?.path?.id === documentId
+      ? { ...second, turns: [], older_turns_omitted: false } : conversation());
+    return ok({ items: [], total: 0 });
+  });
+  const remove = api.DELETE as unknown as Mock;
+  remove.mockImplementation(async () => { deleted = true; return ok({ deleted: true }); });
+  show(); await screen.findByRole("region", { name: "库存余额" });
+  fireEvent.change(screen.getByLabelText("你的问题"), { target: { value: "随已删除对话移除的输入" } });
+  fireEvent.click(screen.getByLabelText("对话操作"));
+  fireEvent.click(screen.getByRole("button", { name: "删除对话" }));
+  get.mockClear();
+  fireEvent.click(screen.getByRole("button", { name: "确认删除对话" }));
+  await screen.findByRole("heading", { name: "保留的对话" });
+  expect(remove.mock.calls[0][1].params.path).toEqual({ id });
+  expect(remove.mock.calls[0][1].params.header["Idempotency-Key"]).toBeTruthy();
+  expect(screen.getByLabelText("你的问题")).toHaveValue("");
+  expect(screen.queryByRole("region", { name: "库存余额" })).not.toBeInTheDocument();
+  expect(get.mock.calls.filter(([path, options]) => path === "/api/v1/ai/conversations/{id}" && options?.params?.path?.id === id)).toEqual([]);
+});
+
+test.each([true, false])("copy reply uses the selected server answer and reports clipboard availability: %s", async (available) => {
+  const descriptor = Object.getOwnPropertyDescriptor(navigator, "clipboard");
+  const writeText = available ? vi.fn().mockResolvedValue(undefined) : vi.fn().mockRejectedValue(new Error("unavailable"));
+  Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+  try {
+    mocks(); show(); await screen.findByRole("region", { name: "库存余额" });
+    fireEvent.click(screen.getByRole("button", { name: "复制回复" }));
+    await screen.findByText(available ? "已复制" : "无法访问剪贴板，请选中文字复制。");
+    expect(writeText).toHaveBeenCalledExactlyOnceWith(finished.answer);
+    expect(post).not.toHaveBeenCalled();
+  } finally {
+    if (descriptor) Object.defineProperty(navigator, "clipboard", descriptor);
+    else Reflect.deleteProperty(navigator, "clipboard");
+  }
+});
+
+test.each([404, 410])("a terminal history response clears retained facts and dirty drafts: %s", async (statusCode) => {
+  mocks(conversation([{ ...finished, state: "WAITING", proposal: proposal() }])); show();
+  const editor = await screen.findByRole("region", { name: "开单复核" });
+  const input = within(editor).getByLabelText("第 1 行数量");
+  fireEvent.change(input, { target: { value: "2.000001" } });
+  get.mockImplementation(async (path) => path === "/api/v1/ai/conversations/{id}"
+    ? { error: { code: statusCode === 410 ? "AI_HISTORY_EXPIRED" : "NOT_FOUND",
+      detail: statusCode === 410 ? "对话正文已到期或删除，请开始新对话" : "对话不存在或无权访问" },
+    response: new Response(null, { status: statusCode }) }
+    : path === "/api/v1/ai/status" ? ok(status) : ok({ items: [summary], total: 1, page: 1, page_size: 20 }));
+  fireEvent.click(screen.getByLabelText("对话操作"));
+  fireEvent.click(screen.getByRole("button", { name: "重新读取记录" }));
+  await waitFor(() => expect(screen.queryByRole("region", { name: "库存余额" })).not.toBeInTheDocument());
+  expect(screen.queryByRole("region", { name: "开单复核" })).not.toBeInTheDocument();
+  expect(input.isConnected).toBe(false);
+  expect(screen.queryByText(finished.answer)).not.toBeInTheDocument();
+  expect(screen.queryByText(finished.prompt)).not.toBeInTheDocument();
+  expect(screen.getByLabelText("你的问题")).toBeDisabled();
+  expect(screen.getByRole("button", { name: "新对话" })).toBeEnabled();
+  expect(screen.getByRole("alert")).toHaveTextContent(/对话.*(失效|到期|删除|无法)/);
+  expect(post).not.toHaveBeenCalled();
 });

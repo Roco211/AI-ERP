@@ -338,3 +338,18 @@
   :focus-visible { outline: 2px solid var(--foreground); outline-offset: 3px; }
   input, select, textarea { min-width: 0; }
 }
+
+/* AI workspace: one mounted editor per proposal across panels and breakpoints. */
+.assistant-grid { display: grid; grid-template-columns: minmax(0, 1fr); min-height: 0; }
+.assistant-grid > [data-assistant-panel] { display: none; }
+.assistant-grid[data-panel="chat"] > .assistant-chat,
+.assistant-grid[data-panel="history"] > .assistant-history,
+.assistant-grid[data-panel="context"] > .assistant-context { display: flex; }
+@media (min-width: 1280px) {
+  .assistant-grid { grid-template-columns: 208px minmax(0, 1fr) 336px; }
+  .assistant-grid > [data-assistant-panel] { display: flex; }
+}
+@media (min-width: 1600px) {
+  .assistant-grid { grid-template-columns: 224px minmax(0, 1fr) 380px; }
+}
+.assistant-actions summary::-webkit-details-marker { display: none; }

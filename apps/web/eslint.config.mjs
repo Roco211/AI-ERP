@@ -4,6 +4,7 @@ import nextTs from "eslint-config-next/typescript";
 // Official beUI source is not React Compiler transformed. Keep compiler migration
 // diagnostics visible as warnings, while all application code retains strict defaults.
 const beuiFiles = [
+  "components/agents/chat-app.tsx",
   "components/motion/theme-toggle.tsx",
   "components/motion/action-swap.tsx",
   "components/motion/animated-sidebar.tsx",

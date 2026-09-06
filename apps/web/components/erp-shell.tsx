@@ -36,6 +36,7 @@ import {
 import { api, ApiError, getProfile } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { SalesWorkspace } from "@/features/sales/workspace";
+import { runGuardedNavigation } from "@/features/sales/navigation";
 import { FundsWorkspace } from "@/features/funds/workspace";
 import { ReplenishmentWorkspace } from "@/features/replenishment/workspace";
 import { ImportsWorkspace } from "@/features/imports/workspace";
@@ -78,6 +79,7 @@ export function ERPShell({
   const [open, setOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [logoutError, setLogoutError] = useState("");
+  const [navigationBlocked, setNavigationBlocked] = useState(false);
   const {
     data: me,
     error,
@@ -90,7 +92,15 @@ export function ERPShell({
       router.replace("/login");
     }
   }, [error, router, client]);
-  async function logout() {
+  function navigate(href: string) {
+    const allowed = runGuardedNavigation(() => router.push(href));
+    setNavigationBlocked(!allowed);
+  }
+  function logout() {
+    const allowed = runGuardedNavigation(() => { void performLogout(); });
+    setNavigationBlocked(!allowed);
+  }
+  async function performLogout() {
     setLogoutError("");
     try {
       const result = await api.POST("/api/v1/auth/logout");
@@ -152,7 +162,7 @@ export function ERPShell({
                 {navigation.filter((item) => group.paths.includes(item.path)).map(({ path: slug, label, icon: Icon }) => (
                   <AnimatedSidebarMenuItem key={slug}>
                     <AnimatedSidebarMenuButton href={`/${slug}`} icon={<Icon className="size-4" />} isActive={isCurrent(slug)}
-                      onNavigate={(event) => { if (event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) { event.preventDefault(); router.push(`/${slug}`); } }}>
+                      onNavigate={(event) => { if (event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) { event.preventDefault(); navigate(`/${slug}`); } }}>
                       {label}
                     </AnimatedSidebarMenuButton>
                   </AnimatedSidebarMenuItem>
@@ -185,20 +195,20 @@ export function ERPShell({
             <Button variant="ghost" size="icon" aria-label="退出登录" onClick={logout}><LogOut className="size-4" /></Button>
           </div>
         </header>
-        <main id="workspace" tabIndex={-1} className="mx-auto w-full max-w-[1600px] min-w-0 p-4 outline-none sm:p-7 lg:p-8">
-          {logoutError && (
+        <main id="workspace" tabIndex={-1} className={section === "ai" ? "h-[calc(100dvh-4rem)] min-h-0 min-w-0 w-full overflow-hidden outline-none" : "mx-auto w-full max-w-[1600px] min-w-0 p-4 outline-none sm:p-7 lg:p-8"}>
+          {logoutError && section !== "ai" && (
             <p role="alert" className="mb-4 text-sm text-destructive">
               {logoutError}
             </p>
           )}
-          <h1 className="text-2xl font-medium tracking-tight">
+          <h1 className={section === "ai" ? "sr-only" : "text-2xl font-medium tracking-tight"}>
             {section === "profile"
               ? "个人信息"
               : section === "dashboard"
                 ? `欢迎回来，${me.display_name}`
                 : current?.label}
           </h1>
-          <p className="mt-2 text-sm leading-6 text-muted-foreground">
+          <p className={section === "ai" ? "sr-only" : "mt-2 text-sm leading-6 text-muted-foreground"}>
             {section === "profile"
               ? "你的账户与所属企业。"
               : section === "llm"
@@ -314,10 +324,26 @@ export function ERPShell({
           )}
         </main>
       </AnimatedSidebarInset>
+      {(navigationBlocked || (section === "ai" && logoutError)) && (
+        <div className="fixed top-20 right-4 left-4 z-[250] flex flex-col gap-2 sm:left-auto sm:max-w-md">
+          {navigationBlocked && (
+            <div role="alert" className="flex items-start gap-3 rounded-2xl border border-border bg-card p-4 shadow-lg">
+              <p className="text-sm leading-6">当前提交的结果尚未确认，请先等待结果或重试原提交，再离开此页面。</p>
+              <Button variant="ghost" size="icon" aria-label="关闭导航提示" className="shrink-0" onClick={() => setNavigationBlocked(false)}><X className="size-4" /></Button>
+            </div>
+          )}
+          {section === "ai" && logoutError && (
+            <div role="alert" className="flex items-start gap-3 rounded-2xl border border-border bg-card p-4 shadow-lg">
+              <p className="text-sm leading-6 text-destructive">{logoutError}</p>
+              <Button variant="ghost" size="icon" aria-label="关闭退出提示" className="shrink-0" onClick={() => setLogoutError("")}><X className="size-4" /></Button>
+            </div>
+          )}
+        </div>
+      )}
       <CommandPalette open={open} onOpenChange={(next) => { if (next) setMobileOpen(false); setOpen(next); }}
         dialogLabel="快捷导航" inputLabel="搜索页面" closeLabel="关闭快捷导航" listLabel="页面"
         placeholder="搜索页面…" emptyMessage="没有匹配的页面"
-        items={navigation.map((item) => ({ id: item.path, label: item.label, icon: item.icon, group: "工作空间", keywords: [item.path], onSelect: () => router.push(`/${item.path}`) }))} />
+        items={navigation.map((item) => ({ id: item.path, label: item.label, icon: item.icon, group: "工作空间", keywords: [item.path], onSelect: () => navigate(`/${item.path}`) }))} />
     </AnimatedSidebarProvider>
   );
 }

@@ -5,7 +5,8 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { afterAll, afterEach, expect, test, vi } from "vitest";
-import { usePendingNavigationGuard } from "@/features/sales/navigation";
+import { StrictMode } from "react";
+import { runGuardedNavigation, usePendingNavigationGuard } from "@/features/sales/navigation";
 import { historyEntry, installHistoryTracking } from "@/lib/navigation-history";
 
 const replaceUntracked = window.history.replaceState.bind(window.history);
@@ -204,4 +205,57 @@ test("only unresolved submissions block links and page unload, and cleanup remov
   window.dispatchEvent(clearedUnload);
   expect(clearedUnload.defaultPrevented).toBe(false);
   link.remove();
+});
+
+test.each(["first", "second"] as const)(
+  "settling the %s owner leaves programmatic and history navigation guarded until the last owner settles",
+  async (settled) => {
+    installHistoryTracking();
+    window.history.replaceState(state("dashboard"), "", "/dashboard");
+    window.history.pushState(state("sales"), "", "/sales");
+    const first = renderHook(({ locked }) => usePendingNavigationGuard(locked), {
+      initialProps: { locked: true },
+    });
+    const second = renderHook(({ locked }) => usePendingNavigationGuard(locked), {
+      initialProps: { locked: true },
+    });
+    const navigate = vi.fn();
+    expect(runGuardedNavigation(navigate)).toBe(false);
+    (settled === "first" ? first : second).rerender({ locked: false });
+    expect(runGuardedNavigation(navigate)).toBe(false);
+    expect(navigate).not.toHaveBeenCalled();
+    const unload = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(unload);
+    expect(unload.defaultPrevented).toBe(true);
+    const { paths, router } = observe();
+    window.history.back();
+    await waitFor(() => expect(paths).toEqual(["/dashboard", "/sales"]));
+    expect(router).not.toHaveBeenCalled();
+    expect(window.location.pathname).toBe("/sales");
+    (settled === "first" ? second : first).unmount();
+    expect(runGuardedNavigation(navigate)).toBe(true);
+    expect(navigate).toHaveBeenCalledTimes(1);
+    const clearedUnload = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(clearedUnload);
+    expect(clearedUnload.defaultPrevented).toBe(false);
+    await traverse(-1, "/dashboard");
+    expect(router).toHaveBeenCalledTimes(1);
+  },
+);
+
+test("Strict Mode and repeated lock transitions leave no stale programmatic owner", () => {
+  const navigate = vi.fn();
+  const view = renderHook(({ locked }) => usePendingNavigationGuard(locked), {
+    initialProps: { locked: false },
+    wrapper: StrictMode,
+  });
+  expect(runGuardedNavigation(navigate)).toBe(true);
+  view.rerender({ locked: true });
+  expect(runGuardedNavigation(navigate)).toBe(false);
+  view.rerender({ locked: false });
+  expect(runGuardedNavigation(navigate)).toBe(true);
+  view.rerender({ locked: true });
+  view.unmount();
+  expect(runGuardedNavigation(navigate)).toBe(true);
+  expect(navigate).toHaveBeenCalledTimes(3);
 });
