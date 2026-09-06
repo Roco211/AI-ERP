@@ -372,7 +372,11 @@ test("beUI prompt preserves multiline and IME input and blocks unconfigured or p
     expect(keys[1]).toBe(keys[0]);
     expect(messages[1]).toEqual(messages[0]);
     await expect(assistant.getByRole("alert")).toContainText("本次请求未执行");
-    await expect(prompt).toBeEnabled();
+    // A later rejection cannot prove that the original request did not commit.
+    // The existing submission contract requires a successful receipt to unlock.
+    await expect(prompt).toBeDisabled();
+    await expect(send).toBeDisabled();
+    await expect(assistant.getByRole("button", { name: "重试原提交", exact: true })).toBeEnabled();
     await expect(prompt).toHaveValue("查询库存\n保留这一行");
   } finally { release(); }
 });
